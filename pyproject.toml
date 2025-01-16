@@ -4,4 +4,8 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "coloredlogs>=15.0.1",
+    "logging>=0.4.9.6",
+    "pandas>=2.2.3",
+]

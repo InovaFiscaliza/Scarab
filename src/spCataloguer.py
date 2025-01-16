@@ -30,7 +30,8 @@ import pandas as pd
 import time
 
 # Global Constants
-CONFIG_FILE = "C:/ProgramData/Anatel/FileCataloger/config.json"
+CONFIG_FILE = os.path.join(os.path.dirname(__file__),"config.json")
+"""File config.json is expected in the same folder as the script."""
 
 # Global variables
 config = None
