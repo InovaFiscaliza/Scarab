@@ -1,0 +1,236 @@
+#!/usr/bin/python
+"""
+Module class that handle the configuration file for the script.
+
+Args (stdin): ctrl+c will soft stop the process similar to kill command or systemd stop <service>. kill -9 will hard stop.
+
+Returns (stdout): As log messages, if target_screen in log is set to True.
+
+Raises:
+    Exception: If any error occurs, the exception is raised with a message describing the error.
+"""
+
+# --------------------------------------------------------------
+import json
+import os
+import pandas as pd
+
+# --------------------------------------------------------------
+class Config:
+    """Class to load and store the configuration values from a JSON file."""
+
+    def __init__(self, filename: str) -> None:
+        """Load the configuration values from a JSON file encoded with UTF-8 and with the following tags:
+            {
+                "name": "Regulatron",
+                "check period in seconds": 30,
+                "clean period in hours": 24,
+                "last clean": "2024-11-05 20:33:29",
+                "overwrite data in trash": true,
+                "log": {
+                    "level": "INFO",
+                    "screen output": true,
+                    "file output": true,
+                    "file name": "log.txt",
+                    "file path": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Logs",
+                    "format": ["%(asctime)s", "%(module)s: %(funcName)s:%(lineno)d", "%(name)s[%(process)d]", "%(levelname)s", "%(message)s"],
+                    "colour sequence": ["32m", "35m", "34m", "30m", "0m"],
+                    "separator": " | ",
+                    "overwrite log in trash": false
+                },
+                "folders": {
+                    "root": "C:/Users/sfi.office365.pd/ANATEL",
+                    "post": "InovaFiscaliza - DataHub - TEMP/Regulatron",
+                    "temp": "InovaFiscaliza - DataHub - TEMP/Regulatron",
+                    "trash": "InovaFiscaliza - DataHub - TRASH/Regulatron",
+                    "store": "InovaFiscaliza - DataHub - STORE/Regulatron",
+                    "get" : "InovaFiscaliza - DataHub - GET/Regulatron",
+                    "raw": "InovaFiscaliza - DataHub - GET/Regulatron/Screenshots",
+                },
+                "files" : {
+                    "catalogExtension": ".xlsx",
+                    "catalogName": "Anuncios",
+                    "rawExtension": ".pdf",
+                },    
+                "columns":{
+                    "in":["nome", "preço", "avaliações", "nota", "imagem", "url", "data", "palavra_busca", "página_de_busca", "certificado", "características", "descrição", "ean_gtin", "estado", "estoque", "imagens", "fabricante", "modelo", "product_id", "vendas", "vendedor", "screenshot", "indice", "subcategoria", "nome_sch", "fabricante_sch", "modelo_sch", "tipo_sch", "nome_score", "modelo_score", "passível?", "probabilidade", "marketplace"],
+                    "out":["nome", "preço", "avaliações", "nota", "imagem", "url", "data", "palavra_busca", "página_de_busca", "certificado", "características", "descrição", "ean_gtin", "estado", "estoque", "imagens", "fabricante", "modelo", "product_id", "vendas", "vendedor", "screenshot", "indice", "subcategoria", "nome_sch", "fabricante_sch", "modelo_sch", "tipo_sch", "nome_score", "modelo_score", "passível?", "probabilidade", "marketplace", "status_screenshot"],
+                    "key":"screenshot"}
+            }
+        """
+        self.config_file = filename
+        
+        self.__load_config__(filename)
+        
+        self.name = self.raw["name"]
+
+        self.check_period = self.raw["check period in seconds"]
+        self.clean_period = self.raw["clean period in hours"]
+        self.last_clean = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
+        
+        self.data_overwrite = self.raw["overwrite data in trash"]
+        
+        self.log_level = self.raw["log"]["level"]
+        self.log_to_screen = self.raw["log"]["screen output"]
+        self.log_to_file = self.raw["log"]["file output"]
+        self.log_filename = os.path.join(self.raw["log"]["file path"], self.raw["log"]["file name"])
+        self.log_separator = self.raw["log"]["separator"]
+        self.log_file_format = self.__log_format_plain__()
+        self.log_screen_format = self.__log_format_colour__()
+        self.log_title = self.__log_titles__()
+        self.log_overwrite = self.raw["log"]["overwrite log in trash"]
+        
+        self.post = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["post"])        
+        self.temp = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["temp"])
+        self.trash = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["trash"])
+        self.store = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["store"])
+        self.log_folder = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["log"])
+        
+        self.catalog_file = os.path.join(self.raw["folders"]["root"], self.raw["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])
+        self.catalog_extension = self.raw["files"]["catalogExtension"]
+        self.raw_path = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["raw"])
+        self.raw_extension = self.raw["files"]["rawExtension"]
+        
+        self.columns_in = sorted(self.raw["columns"]["in"])
+        self.columns_out = self.raw["columns"]["out"]
+        self.columns_key = self.raw["columns"]["key"]
+                
+        if not self.is_config_ok():
+            exit(1)
+
+    # --------------------------------------------------------------
+    def __load_config__(self) -> None:
+        """Load the configuration values from a JSON file encoded with UTF-8.
+        
+        """
+        
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as json_file:
+                self.raw = json.load(json_file)
+        except FileNotFoundError:
+            print(f"Config file not found in path: {self.config_file}")
+            exit(1)
+    
+    # --------------------------------------------------------------
+    def __log_format_colour__(self) -> str:
+        """Return the log format string.
+
+        Returns:
+            str: Log format string.
+        """
+        
+        output_format = ""
+        colour_format = self.raw["log"]["colour sequence"]
+        colour_count = 0
+        colour_set = '\x1b['
+        separator = f"{colour_set}0m{self.log_separator}"
+        for item in self.raw["log"]["format"]:
+            output_format = f"{output_format}{colour_set}{colour_format[colour_count]}{item}{separator}"
+            colour_count += 1
+            if colour_count == len(colour_format):
+                colour_count = 0
+        
+        return output_format[:-len(self.raw['log']['separator'])]
+
+    # --------------------------------------------------------------
+    def __log_format_plain__(self) -> str:
+        """Return the log format string.
+
+        Returns:
+            str: Log format string.
+        """
+        
+        output_format = ""
+        for item in self.raw["log"]["format"]:
+            output_format = f"{output_format}{item}{self.log_separator}"
+        
+        return output_format[:-len(self.log_separator)]
+
+    # --------------------------------------------------------------
+    def __log_titles__(self) -> str:
+        """Return the log column titles as a string.
+        
+            "%(asctime)s" result title = "asctime"
+            "%(module)s: %(funcName)s:%(lineno)d" result title = "module: funcName:lineno"
+            "%(name)s[%(process)d]" result title = "name [process]"
+            "%(levelname)s" result title = "levelname"
+            "%(message)s" result title = "message"
+
+        Returns:
+            str: Log titles string.
+        """
+        
+        non_title = ["%(", ")s", ")d"]
+        output_format = ""
+        for item in self.raw["log"]["format"]:
+
+            for non in non_title:
+                item = item.replace(non, "")
+            
+            output_format = f"{output_format}{item}{self.raw['log']['separator']}"
+        
+        return output_format[:-len(self.raw['log']['separator'])]
+    # --------------------------------------------------------------
+    def set_last_clean(self) -> None:
+        """Write current datetime to JSON file."""
+        
+        self.raw["last clean"] = pd.to_datetime("now").strftime("%Y-%m-%d %H:%M:%S")
+        
+        try:
+            with open(self.config_file, 'w', encoding='utf-8') as json_file:
+                json.dump(self.raw, json_file, indent=4)
+        except Exception as e:
+            print(f"Error writing to config file: {e}")
+    
+    # --------------------------------------------------------------
+    def is_config_ok(self) -> bool:
+        """Test if the configuration folders and files exist. Test if log folder is writable. Test if config file is writable.
+
+        Returns:
+            bool: True if all folders and files exist and are writable.
+        """
+        
+        if not os.path.exists(self.post):
+            print(f"Post folder not found: {self.post}")
+            return False
+        
+        if not os.path.exists(self.store):
+            print(f"Store folder not found: {self.store}")
+            return False
+        
+        if not os.path.exists(self.temp):
+            print(f"Temp folder not found: {self.temp}")
+            return False
+        
+        if not os.path.exists(self.trash):
+            print(f"Trash folder not found: {self.trash}")
+            return False
+        
+        if not os.path.exists(self.screenshots):
+            print(f"Screenshots folder not found: {self.screenshots}")
+            return False
+        
+        if not os.path.exists(self.catalog):
+            print(f"Catalog file not found: {self.catalog}")
+            return False
+        
+        if self.log_file:
+            if not os.path.exists(os.path.dirname(self.log_filename)):
+                print(f"Log folder not found: {os.path.dirname(self.log_filename)}")
+                return False
+            try:
+                with open(self.log_filename, 'a') as log_file:
+                    pass
+            except Exception as e:
+                print(f"Error writing to log file: {e}")
+                return False
+        
+        try:
+            with open(self.config_file, 'a') as json_file:  
+                pass
+        except Exception as e:
+            print(f"Error writing to config file: {e}")
+            return False
+        
+        return True
+

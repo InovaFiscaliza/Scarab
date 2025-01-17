@@ -1,22 +1,15 @@
 {
+    "name": "Regulatron",
     "check period in seconds": 30,
     "clean period in hours": 24,
     "last clean": "2024-11-05 20:33:29",
     "overwrite data in trash": true,
-    "folders": {
-        "root": "D:/Documents/Anatel/Aplicativos/GitHub/Tools/FileCataloger/test/root",
-        "post": "post/Regulatron",
-        "temp": "temp/Regulatron",
-        "trash": "trash/Regulatron",
-        "store": "store/Regulatron",
-        "screenshots": "get/Regulatron/Screenshots"
-    },
-    "catalog": "get/Regulatron/Anuncios.xlsx",
     "log": {
         "level": "INFO",
         "screen output": true,
         "file output": true,
-        "file path": "get/Regulatron/log.txt",
+        "file name": "log.txt",
+        "file path": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Logs",
         "format": [
             "%(asctime)s",
             "%(module)s: %(funcName)s:%(lineno)d",
@@ -34,6 +27,20 @@
         "separator": " | ",
         "overwrite log in trash": false
     },
+    "folders": {
+        "root": "C:/Users/sfi.office365.pd/ANATEL",
+        "post": "InovaFiscaliza - DataHub - TEMP/Regulatron",
+        "temp": "InovaFiscaliza - DataHub - TEMP/Regulatron",
+        "trash": "InovaFiscaliza - DataHub - TRASH/Regulatron",
+        "store": "InovaFiscaliza - DataHub - STORE/Regulatron",
+        "get" : "InovaFiscaliza - DataHub - GET/Regulatron",
+        "raw": "InovaFiscaliza - DataHub - GET/Regulatron/Screenshots",
+    },
+    "files" : {
+        "catalogExtension": ".xlsx",
+        "catalogName": "Anuncios",
+        "rawExtension": ".pdf",
+    },    
     "columns": {
         "in": [
             "nome",
