@@ -20,6 +20,7 @@ import metadata_handler as dm
 
 import signal
 import inspect
+import sys
 
 import time
 
@@ -27,6 +28,7 @@ import time
 
 # Global variables
 keep_watching = True
+log = None
 
 # --------------------------------------------------------------
 def sigterm_handler(signal=None, frame=None) -> None:
@@ -58,12 +60,12 @@ def sigint_handler(signal=None, frame=None) -> None:
 signal.signal(signal.SIGTERM, sigterm_handler)
 signal.signal(signal.SIGINT, sigint_handler)
 
-def main():
+def main(config_path: str) -> None:
     """Main function"""
     
     global keep_watching
     
-    config = cm.Config()
+    config = cm.Config(config_path)
     log = lm.start_logging(config)
     file = fm.FileHandler(config, log)
     data = dm.DataHandler(config, log)
@@ -91,4 +93,9 @@ def main():
     log.info("File catalog script stopped.")
     
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2:
+        print("Usage: python scarab.py <config_path>.json")
+        sys.exit(1)
+
+    config_path = sys.argv[1]
+    main(config_path)
