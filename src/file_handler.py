@@ -11,19 +11,19 @@ Raises:
 """
 
 # --------------------------------------------------------------
-import config_handler.py as cm
-import log_handler.py as lm
+import config_handler as cm
 
 import os
 import shutil
 import glob
+import logging
 
 import pandas as pd
 
 # --------------------------------------------------------------
 class FileHandler:
 
-    def __init__(self, config: cm.Config, log: lm.Logger) -> None:
+    def __init__(self, config: cm.Config, log: logging.Logger) -> None:
         """Initialize the FileHandler object with the configuration and self.log.er objects.
 
         Args:
@@ -134,18 +134,18 @@ class FileHandler:
                                 move: bool = True,
                                 catalog_to_process: list[str] = None,
                                 raw_to_process: list[str] = None,
-                                subfolders: list[str] = None) -> tuple[list[str], list[str], list[str]]:
-        """Sort files in the provided listo into list of xlsx and pdf files to process and subfolders to remove.
+                                subfolder: list[str] = None) -> tuple[list[str], list[str], list[str]]:
+        """Sort files in the provided list into list of xlsx and pdf files to process and subfolder to remove.
 
         Args:
             files (list[str]): List of files to sort.
             move (bool): True if required to move files to the temp folder.
             catalog_to_process (list[str]): Existing list of xlsx files to process.
             raw_to_process (list[str]): Existing list of pdf files to process.
-            subfolders (list[str]): Existing list of subfolders to remove.
+            subfolder (list[str]): Existing list of subfolder to remove.
 
         Returns:
-            tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolders to remove.
+            tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolder to remove.
         """
         
         # Initialize lists if they are None
@@ -153,8 +153,8 @@ class FileHandler:
             catalog_to_process = []
         if raw_to_process is None:
             raw_to_process = []
-        if subfolders is None:
-            subfolders = []
+        if subfolder is None:
+            subfolder = []
             
         for item in folder_content:
             
@@ -180,20 +180,20 @@ class FileHandler:
                     case _: 
                         self.trash_it(item, overwrite_trash=self.config.data_overwrite)
             else:
-                subfolders.append(item)
+                subfolder.append(item)
                 
-        return catalog_to_process, raw_to_process, subfolders
+        return catalog_to_process, raw_to_process, subfolder
 
     # --------------------------------------------------------------
-    def remove_unused_subfolders(self, subfolders: list[str]) -> None:
-        """Remove empty subfolders from the post folder.
+    def remove_unused_subfolder(self, subfolder: list[str]) -> None:
+        """Remove empty subfolder from the post folder.
 
         Args:
-            subfolders (list[str]): List of subfolders to remove.
+            subfolder (list[str]): List of subfolder to remove.
         """
                 
-        if subfolders:
-            for folder in subfolders:
+        if subfolder:
+            for folder in subfolder:
                 if not os.listdir(os.path.join(self.config.post, folder)):
                     try:
                         os.rmdir(os.path.join(self.config.post, folder))
@@ -220,7 +220,7 @@ class FileHandler:
             folder_content = list(map(lambda x: os.path.join(self.config.temp, x), folder_content))
             self.log.info(f"TEMP Folder has {len(folder_content)} files/folders to process.")
 
-        catalog_to_process, raw_to_process, subfolders = sort_files_into_lists(folder_content, move=False)
+        catalog_to_process, raw_to_process, subfolder = self.sort_files_into_lists(folder_content, move=False)
         
         # Get files from post folder
         folder_content = glob.glob("**", root_dir=self.config.post, recursive=True)
@@ -232,10 +232,10 @@ class FileHandler:
             folder_content = list(map(lambda x: os.path.join(self.config.post, x), folder_content))
             self.log.info(f"POST Folder has {len(folder_content)} files/folders to process.")
             
-        catalog_to_process, raw_to_process, subfolders = sort_files_into_lists(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process, subfolders=subfolders)
+        catalog_to_process, raw_to_process, subfolder = self.sort_files_into_lists(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process, subfolder=subfolder)
                 
-        # Remove empty subfolders after moving files. New files that may have appeared in the subfolders will be processed in the next run
-        remove_unused_subfolders(subfolders)
+        # Remove empty subfolder after moving files. New files that may have appeared in the subfolder will be processed in the next run
+        self.remove_unused_subfolder(subfolder)
         
         return catalog_to_process, raw_to_process
 
@@ -264,10 +264,10 @@ class FileHandler:
                 else:
                     folder_to_remove.append(item)
 
-        # Remove empty subfolders after moving files. 
+        # Remove empty subfolder after moving files. 
         if folder_to_remove:
             for item in folder_to_remove:
-                # New files that may have appeared in the subfolders will be processed in the next run, so test if it is empty before removing
+                # New files that may have appeared in the subfolder will be processed in the next run, so test if it is empty before removing
                 if not os.listdir(item):
                     try:
                         os.rmdir(item)
@@ -279,7 +279,7 @@ class FileHandler:
     def clean_folders(self) -> None:
         """Check if it's time to clean the post folder and update the last clean time in the config file."""
 
-        if pd.to_datetime("now") - config.last_clean > pd.Timedelta(hours=self.config.clean_period):
+        if pd.to_datetime("now") - self.config.last_clean > pd.Timedelta(hours=self.config.clean_period):
             self.clean_old_in_folder(self.config.post)
             self.clean_old_in_folder(self.config.temp)
             self.config.set_last_clean()

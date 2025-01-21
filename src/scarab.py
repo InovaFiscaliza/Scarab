@@ -13,10 +13,10 @@ Returns (stdout): As log messages, if target_screen in log is set to True.
 Raises:
     Exception: If any error occurs, the exception is raised with a message describing the error.
 """
-import config_handler.py as cm
-import log_handler.py as lm
-import file_handler.py as fm
-import metadata_handler.py as dm
+import config_handler as cm
+import log_handler as lm
+import file_handler as fm
+import metadata_handler as dm
 
 import signal
 import inspect
@@ -64,22 +64,23 @@ def main():
     global keep_watching
     
     config = cm.Config()
-    
     log = lm.start_logging(config)
+    file = fm.FileHandler(config, log)
+    data = dm.DataHandler(config, log)
     
-    # keep thread running until a crtl+C or kill command is received, even if an error occurs
+    # keep thread running until a ctrl+C or kill command is received, even if an error occurs
     while keep_watching:
         
         try:
-            xlsx_to_process, raw_to_process = fm.get_files_to_process()
+            metadata_to_process, raw_to_process = fm.get_files_to_process()
             
-            if xlsx_to_process:
-                fm.process_xlsx_files(xlsx_to_process)
+            if metadata_to_process:
+                data.process_metadata_files(metadata_to_process)
                     
             if raw_to_process:
-                fm.process_raw_files(raw_to_process)
+                data.process_raw_files(raw_to_process)
             
-            fm.clean_folders()
+            file.clean_folders()
             
             time.sleep(config.check_period)
         

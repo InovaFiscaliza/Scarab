@@ -10,21 +10,11 @@
     </ol>
 </details>
 
-# About Scarab  <img align="right" width="100" height="100" src="./docs/images/Kheper.svg">
+# About Scarab
 
-This app perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing simple file processing tasks including: file type checking, metadata aggregation and logging.
+<img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> This app is intended to run as a service and perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation (concatenate tables and row updata based on key columns) and logging.
 
-Current version process metadata in XLSX format and row key bindings can be used to avoid metadata duplication and allows for metadata updates, where new files overwrite old ones.
-
-Expected folder structure includes those for input (post), output (get), temp, backup (store) and trash folders.
-
-A log is used to keep track of the script execution, being possible to have the log presented in the terminal and/or saved to a file.
-
-Script is made to run as a service continuously, looking for files at regular intervals and cleaning the input and temp folders regularly.
-
-To stop, the script monitor the occurrence of kill signal from the system or ctrl+c if running in the terminal.
-
-The configuration file in json must be specified in the service call to define application parameters.
+Application is written in Python and uses the UV package for environment management and intended to run as a service.
 
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
@@ -38,8 +28,24 @@ The configuration file in json must be specified in the service call to define a
 | [file_handler.py](./src/file_handler.py) | module responsible for handling the file operations |
 | [log_handler.py](./src/log_handler.py) | module responsible for handling the log operations |
 | [metadata_handler.py](./src/metadata_handler.py) | module responsible for handling the metadata operations |
-| 
 
+
+Script is made to run as a service continuously, looking for files at input folders (post folders) at regular intervals.
+
+The configuration file in json format must be specified in the service call to define application parameters, such as folder paths, folder revisit timing, log method, log level, and log file name, among others.
+
+As they are detected, raw data files (that are not processed) are moved to the output folder and metadata files are moved to a temp folder.
+
+Metadata files are expected to be tables in XLSX format, with the first row as the header.
+
+One or several columns might be used as key columns to update the metadata file with new data.
+
+The script will concatenate the tables and update the rows based on the key columns, producing the final metadata file that is published along with the raw data files.
+
+A log is used to keep track of the script execution, being possible to have the log presented in the terminal and/or saved to a file.
+Information in the metadata files are consolidated  and cleaning the input and temp folders regularly.
+
+To stop, the script monitor the occurrence of kill signal from the system or ctrl+c if running in the terminal.
 
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 

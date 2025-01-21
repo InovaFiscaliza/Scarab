@@ -10,17 +10,18 @@ Raises:
     Exception: If any error occurs, the exception is raised with a message describing the error.
 """
 
-import config_handler.py as cm
-import log_handler.py as lm
+import config_handler as cm
+import file_handler as fm
 
 import os
+import logging
 
 import pandas as pd
 
 # --------------------------------------------------------------
 class DataHandler:
 
-    def __init__(self, config: cm.Config, log: lm.Logger) -> None:
+    def __init__(self, config: cm.Config, log: logging.Logger) -> None:
         """Initialize the FileHandler object with the configuration and self.log.er objects.
 
         Args:
@@ -30,10 +31,12 @@ class DataHandler:
         self.config = config
         self.log = log
         
+        self.file = fm.FileHandler(config, log)
+        
 
     # --------------------------------------------------------------
     def read_excel(self, file: str) -> pd.DataFrame:
-        """Read an Excel file and return a DataFrame.
+        """Read an Excel file and return a DataFrame indexed according to the defined keys
 
         Args:
             file (str): Excel file to read.
@@ -76,23 +79,23 @@ class DataHandler:
         return True
 
     # --------------------------------------------------------------
-    def process_xlsx_files(self, xlsx_to_process: list[str]) -> pd.DataFrame:
+    def process_metadata_files(self, metadata_to_process: list[str]) -> pd.DataFrame:
         """Process the list of xlsx files and update the reference data file.
 
         Args:
-            xlsx_to_process (list[str]): List of xlsx files to process.
+            metadata_to_process (list[str]): List of xlsx files to process.
             config (Config): Configuration object.
             log (logging.Logger): Logger object.
         """
         
         
-        reference_df = read_excel(self.config.catalog)
+        reference_df = self.read_excel(self.config.catalog_file)
         
-        for file in xlsx_to_process:
-            new_data_df = read_excel(file)
+        for file in metadata_to_process:
+            new_data_df = self.read_excel(file)
 
-            if not valid_data(new_data_df):
-                trash_it(file, overwrite_trash=self.config.data_overwrite)
+            if not self.valid_data(new_data_df):
+                self.file.trash_it(file, overwrite_trash=self.config.data_overwrite)
                 continue
             
             # update the reference data with the new data where index matches
@@ -101,28 +104,28 @@ class DataHandler:
             # add new_data_df rows where index does not match
             reference_df = reference_df.combine_first(new_data_df)
             
-            persist_reference(reference_df)
+            self.persist_reference(reference_df)
             
-            move_to_store(file)
+            self.file.move_to_store(file)
 
     # --------------------------------------------------------------
-    def process_pdf_files(self, pdf_to_process: list[str]) -> None:
+    def process_raw_files(self, raw_to_process: list[str]) -> None:
         """Process the list of pdf files and update the reference data file.
 
         Args:
-            pdf_to_process (list[str]): List of pdf files to process.
+            raw_to_process (list[str]): List of pdf files to process.
             reference_df (pd.DataFrame): Reference data DataFrame.
             log (logging.Logger): Logger object.
         """
             
-        reference_df = read_excel(self.config.catalog)
+        reference_df = self.read_excel(self.config.catalog_file)
         
-        for item in pdf_to_process:
+        for item in raw_to_process:
             filename = os.path.basename(item)
             if filename in reference_df.index:
                 reference_df.at[filename, "status_screenshot"] = 1
-                if publish_raw(item):
-                    persist_reference(reference_df)
+                if self.file.publish_raw(item):
+                    self.persist_reference(reference_df)
                 
             else:
                 # if file is not present in the reference_df, just do nothing and wait for it to appear later.
@@ -147,7 +150,7 @@ class DataHandler:
         reference_df = reference_df[self.config.columns_out]
         
         try:
-            reference_df.to_excel(self.config.catalog, index=False)
-            self.log.info(f"Reference data file updated: {self.config.catalog}")
+            reference_df.to_excel(self.config.catalog_file, index=False)
+            self.log.info(f"Reference data file updated: {self.config.catalog_file}")
         except Exception as e:
             self.log.error(f"Error saving reference data: {e}")

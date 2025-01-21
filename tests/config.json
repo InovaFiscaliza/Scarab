@@ -34,12 +34,12 @@
         "trash": "InovaFiscaliza - DataHub - TRASH/Regulatron",
         "store": "InovaFiscaliza - DataHub - STORE/Regulatron",
         "get" : "InovaFiscaliza - DataHub - GET/Regulatron",
-        "raw": "InovaFiscaliza - DataHub - GET/Regulatron/Screenshots",
+        "raw": "InovaFiscaliza - DataHub - GET/Regulatron/Screenshots"
     },
     "files" : {
         "catalogExtension": ".xlsx",
         "catalogName": "Anuncios",
-        "rawExtension": ".pdf",
+        "rawExtension": ".pdf"
     },    
     "columns": {
         "in": [

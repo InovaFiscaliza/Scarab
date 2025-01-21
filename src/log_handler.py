@@ -4,8 +4,8 @@ Module that handle the logging specific uses for scarab.
 """
 
 # --------------------------------------------------------------
-import config_handler.py as cm
-import file_handler.py as fm
+import config_handler as cm
+import file_handler as fm
 
 import logging
 import sys
@@ -24,7 +24,7 @@ def start_logging(config: cm.Config) -> logging.Logger:
         logging.Logger: Logger object
     """
     
-    log = logging.getLogger('Regulatron Catalog')
+    log = logging.getLogger(config.name)
     
     # Drop all existing handlers
     log.handlers.clear()

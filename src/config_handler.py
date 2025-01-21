@@ -14,6 +14,7 @@ Raises:
 import json
 import os
 import pandas as pd
+from typing import Any, Dict, List
 
 # --------------------------------------------------------------
 class Config:
@@ -59,41 +60,48 @@ class Config:
             }
         """
         self.config_file = filename
+        self.raw: Dict[str, Any] = {}
         
         self.__load_config__(filename)
         
-        self.name = self.raw["name"]
 
-        self.check_period = self.raw["check period in seconds"]
-        self.clean_period = self.raw["clean period in hours"]
-        self.last_clean = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
-        
-        self.data_overwrite = self.raw["overwrite data in trash"]
-        
-        self.log_level = self.raw["log"]["level"]
-        self.log_to_screen = self.raw["log"]["screen output"]
-        self.log_to_file = self.raw["log"]["file output"]
-        self.log_filename = os.path.join(self.raw["log"]["file path"], self.raw["log"]["file name"])
-        self.log_separator = self.raw["log"]["separator"]
-        self.log_file_format = self.__log_format_plain__()
-        self.log_screen_format = self.__log_format_colour__()
-        self.log_title = self.__log_titles__()
-        self.log_overwrite = self.raw["log"]["overwrite log in trash"]
-        
-        self.post = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["post"])        
-        self.temp = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["temp"])
-        self.trash = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["trash"])
-        self.store = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["store"])
-        self.log_folder = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["log"])
-        
-        self.catalog_file = os.path.join(self.raw["folders"]["root"], self.raw["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])
-        self.catalog_extension = self.raw["files"]["catalogExtension"]
-        self.raw_path = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["raw"])
-        self.raw_extension = self.raw["files"]["rawExtension"]
-        
-        self.columns_in = sorted(self.raw["columns"]["in"])
-        self.columns_out = self.raw["columns"]["out"]
-        self.columns_key = self.raw["columns"]["key"]
+        try:
+            self.name: str = self.raw["name"]  # Name of the configuration
+
+            self.check_period: int = self.raw["check period in seconds"]  # Period to check input folders in seconds
+            self.clean_period: int = self.raw["clean period in hours"]  # Period to clean temp folders in hours
+            self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")  # Timestamp of the last clean operation
+
+            self.data_overwrite: bool = self.raw["overwrite data in trash"]  # Flag to indicate if data should be overwritten in trash
+
+            self.log_level: str = self.raw["log"]["level"]  # Logging level
+            self.log_to_screen: bool = self.raw["log"]["screen output"]  # Flag to log to screen
+            self.log_to_file: bool = self.raw["log"]["file output"]  # Flag to log to file
+            self.log_filename: str = os.path.join(self.raw["log"]["file path"], self.raw["log"]["file name"])  # Log file name with path
+            self.log_separator: str = self.raw["log"]["separator"]  # Log column separator
+            self.log_file_format: str = self.__log_format_plain__()  # Data columns to be presented in the log file using logging syntax
+            self.log_screen_format: str = self.__log_format_colour__()  # Data columns to be presented in the terminal using logging syntax, with colours
+            self.log_title: str = self.__log_titles__()  # Log header line based on the log format
+            self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]  # Flag to overwrite log in trash
+
+            self.post: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["post"])  # Folder path where users post files
+            self.temp: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["temp"])  # Temp folder used form metadata processing
+            self.trash: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["trash"])  # Trash folder path used for files posted using wrong format
+            self.store: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["store"])  # Store folder path used to store processed files
+            self.log_folder: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["log"])  # Log folder path used to store log files
+
+            self.catalog_file: str = os.path.join(self.raw["folders"]["root"], self.raw["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])  # Full path to the catalog file, where metadata is stored
+            self.catalog_extension: str = self.raw["files"]["catalogExtension"]  # Extension used to identify the metadata files
+            self.raw_path: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["raw"])  # Folder path where raw files are to be stored
+            self.raw_extension: str = self.raw["files"]["rawExtension"]  # Raw file extension
+
+            self.columns_in: List[str] = sorted(self.raw["columns"]["in"])  # Input columns
+            self.columns_out: List[str] = self.raw["columns"]["out"]  # Output columns
+            self.columns_key: List[str] = self.raw["columns"]["key"]  # Key columns
+
+        except Exception as e:
+            print(f"Configuration files missing parameters: {e}")
+            exit(1)
                 
         if not self.is_config_ok():
             exit(1)
@@ -189,48 +197,51 @@ class Config:
         Returns:
             bool: True if all folders and files exist and are writable.
         """
+
+        test_result = True
         
         if not os.path.exists(self.post):
             print(f"Post folder not found: {self.post}")
-            return False
+            test_result = False
         
         if not os.path.exists(self.store):
             print(f"Store folder not found: {self.store}")
-            return False
+            test_result = False
         
         if not os.path.exists(self.temp):
             print(f"Temp folder not found: {self.temp}")
-            return False
+            test_result = False
         
         if not os.path.exists(self.trash):
             print(f"Trash folder not found: {self.trash}")
-            return False
+            test_result = False
         
-        if not os.path.exists(self.screenshots):
-            print(f"Screenshots folder not found: {self.screenshots}")
-            return False
+        if not os.path.exists(self.raw_path):
+            print(f"raw folder not found: {self.raw_path}")
+            test_result = False
         
-        if not os.path.exists(self.catalog):
-            print(f"Catalog file not found: {self.catalog}")
-            return False
+        if not os.path.exists(self.catalog_file):
+            print(f"Catalog file not found: {self.catalog_file}")
+            test_result = False
         
-        if self.log_file:
+        if self.log_to_file:
             if not os.path.exists(os.path.dirname(self.log_filename)):
                 print(f"Log folder not found: {os.path.dirname(self.log_filename)}")
-                return False
-            try:
-                with open(self.log_filename, 'a') as log_file:
-                    pass
-            except Exception as e:
-                print(f"Error writing to log file: {e}")
-                return False
+                test_result = False
+            else:
+                try:
+                    with open(self.log_filename, 'a') as self.log_filename:
+                        pass
+                except Exception as e:
+                    print(f"Error writing to log file: {e}")
+                    test_result = False
         
         try:
             with open(self.config_file, 'a') as json_file:  
                 pass
         except Exception as e:
             print(f"Error writing to config file: {e}")
-            return False
+            test_result = False
         
-        return True
+        return test_result
 
