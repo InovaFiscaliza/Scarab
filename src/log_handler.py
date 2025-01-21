@@ -1,10 +1,10 @@
 #!/usr/bin/python
 """
-Module that handle the logging system for the script.
+Module that handle the logging specific uses for scarab.
 """
 
 # --------------------------------------------------------------
-import cataloguer_config.py as cm
+import config_handler.py as cm
 import file_handler.py as fm
 
 import logging

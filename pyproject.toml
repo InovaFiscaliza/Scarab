@@ -1,7 +1,7 @@
 [project]
-name = "spcataloguer"
+name = "scarab"
 version = "0.1.0"
-description = "Add your description here"
+description = "Move your shit around"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

@@ -11,10 +11,8 @@ Raises:
 """
 
 # --------------------------------------------------------------
-import cataloguer_config.py as conf_module
-import log.with_logging.py as log_module
-import file_handler.py as file_module
-import spCataloguer.py as main_module
+import config_handler.py as cm
+import log_handler.py as lm
 
 import os
 import shutil
@@ -25,12 +23,12 @@ import pandas as pd
 # --------------------------------------------------------------
 class FileHandler:
 
-    def __init__(self, config: conf_module.Config, log: log_module.Logger) -> None:
+    def __init__(self, config: cm.Config, log: lm.Logger) -> None:
         """Initialize the FileHandler object with the configuration and self.log.er objects.
 
         Args:
-            config (conf_module.Config): Configuration object.
-            self.log.(log_module.Logger): self.log.er object.
+            config (cm.Config): Configuration object.
+            self.log.(lm.Logger): self.log.er object.
         """
         self.config = config
         self.log = log

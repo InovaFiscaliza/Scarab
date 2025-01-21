@@ -10,37 +10,21 @@
     </ol>
 </details>
 
-# About Simple File Cataloger
+# About Scarab  <img align="right" width="100" height="100" src="./docs/images/Kheper.svg">
 
-This script monitor at regular intervals an input folder (post), consolidating metadata from files in XLSX format and moving files to an output folder (get).
+This app perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing simple file processing tasks including: file type checking, metadata aggregation and logging.
 
-Incoming files in XLSX format containing metadata are posted by users using a sync application (onedrive).
+Current version process metadata in XLSX format and row key bindings can be used to avoid metadata duplication and allows for metadata updates, where new files overwrite old ones.
 
-Files in XLSX format contain metadata associated with PDF files, that are placed in the same folder or subfolders.
+Expected folder structure includes those for input (post), output (get), temp, backup (store) and trash folders.
 
-Data in XLSX format is consolidate into a single file.
-
-Using one column as key, rows might be updated.
-
-The consolidated metadata is published as a XLSX file at an output folder (get)
-
-PDF files associated with rows in the consolidated XLSX are also moved to a subfolder branching from the output path.
-
-Rows in the consolidated XLSX are marked to indicate if the associated PDF is present or not in the output publish folder.
-
-While processing, files are moved to a temporary folder (temp) to avoid changes by users.
-
-After processing, files are moved to a backup folder (store) to keep track of changes.
-
-If file are found to be not compatible with the script, they are moved to a trash folder (trash).
-
-PDF files that are not associated with any row in the consolidated XLSX are also moved to a trash folder (trash) after a period of time.
+A log is used to keep track of the script execution, being possible to have the log presented in the terminal and/or saved to a file.
 
 Script is made to run as a service continuously, looking for files at regular intervals and cleaning the input and temp folders regularly.
 
 To stop, the script monitor the occurrence of kill signal from the system or ctrl+c if running in the terminal.
 
-A log file is also generated to keep track of the script execution, being also possible to have the log presented in the terminal.
+The configuration file in json must be specified in the service call to define application parameters.
 
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
@@ -48,9 +32,12 @@ A log file is also generated to keep track of the script execution, being also p
 
 | Script module | Description |
 | --- | --- |
-| [config.json](./src/config.json) | get the value used to represent no data in a geotiff |
-| [file_catalog.py](./src/file_catalog.py) | merge overlapping tiles and delete empty tiles from a list of geotiff files. |
-| [environment.yml](./src/environment.yml) | Conda environment to run the geoprocessing scripts. Core includes OSWGeo GDAL and Python |
+| [config.json](./src/config.json) | define application parameters |
+| [scarab.py](./src/scarab.py) | main script to run the service |
+| [config_handler.py](./src/config_handler.py) | module responsible for handling the configuration file |
+| [file_handler.py](./src/file_handler.py) | module responsible for handling the file operations |
+| [log_handler.py](./src/log_handler.py) | module responsible for handling the log operations |
+| [metadata_handler.py](./src/metadata_handler.py) | module responsible for handling the metadata operations |
 | 
 
 
@@ -58,31 +45,9 @@ A log file is also generated to keep track of the script execution, being also p
 
 # Setup
 
-Scripts were intended to be used in a Windows machine with conda installed.
+Scripts were intended to be used in a Windows machine with UV package and environment management.
 
-To install Miniconda as described in the [conda website](https://docs.anaconda.com/free/miniconda/)
-
-create the environment
-
-```powershell
-(base) conda env create -f environment.yml
-```
-
-Activate the environment
-
-```powershell
-conda activate regulatron-catalog
-```
-
-Create the expected folder structure. You may use the test example in the [test](./test) folder.
-
-Configure the script by editing the [config.json](./src/config.json) file.
-
-Call the desired script, for example
-
-```powershell
-(regulatron-catalog).\python file_catalog.py
-```
+For more details, see the [UV documentation](https://docs.astral.sh/uv/)
 
 # Roadmap
 
@@ -90,7 +55,15 @@ This section presents a simplified view of the roadmap and knwon issues.
 
 For more details, see the [open issues](https://github.com/FSLobao/RF.Fusion/issues)
 
-* [ ] Configure service and update documentation
+* [ ] Initial deployment
+  * [x] Create the project structure
+  * [x] Create the configuration file
+  * [x] Create the main script
+  * [x] Create the configuration handler
+  * [x] Create the file handler
+  * [x] Create the log handler
+  * [x] Create the metadata handler
+  * [ ] Create tests and validate release candidate
   
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
@@ -125,7 +98,7 @@ Further reading material can be found at:
 <!-- ACKNOWLEDGMENTS -->
 ## References
 
-* [Conda Cheat Sheet](https://docs.conda.io/projects/conda/en/4.6.0/_downloads/52a95608c49671267e40c689e0bc00ca/conda-cheatsheet.pdf)
+* [UV Short Guide](https://www.saaspegasus.com/guides/uv-deep-dive/)
 * [Readme Template](https://github.com/othneildrew/Best-README-Template)
 
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>

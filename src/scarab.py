@@ -13,10 +13,10 @@ Returns (stdout): As log messages, if target_screen in log is set to True.
 Raises:
     Exception: If any error occurs, the exception is raised with a message describing the error.
 """
-import cataloguer_config.py as cm
-import log_with_logging.py as lm
+import config_handler.py as cm
+import log_handler.py as lm
 import file_handler.py as fm
-import data_handler.py as dm
+import metadata_handler.py as dm
 
 import signal
 import inspect
