@@ -122,7 +122,7 @@ class DataHandler:
             filename = os.path.basename(item)
             if filename in reference_df.index:
                 reference_df.at[filename, "status_screenshot"] = 1
-                if publish(item):
+                if publish_raw(item):
                     persist_reference(reference_df)
                 
             else:
