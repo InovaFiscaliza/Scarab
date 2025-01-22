@@ -73,7 +73,7 @@ class Config:
         self.config_file = filename
         self.raw: Dict[str, Any] = {}
         
-        self.__load_config__()      
+        self.__load_config()      
         
         try:
             self.name: str = self.raw["name"]
@@ -96,11 +96,11 @@ class Config:
             """ Log file name with path"""
             self.log_separator: str = self.raw["log"]["separator"]
             """ Log column separator"""
-            self.log_file_format: str = self.__log_format_plain__()
+            self.log_file_format: str = self.__log_format_plain()
             """ Data columns to be presented in the log file using logging syntax"""
-            self.log_screen_format: str = self.__log_format_colour__()
+            self.log_screen_format: str = self.__log_format_colour()
             """ Data columns to be presented in the terminal using logging syntax, with colours"""
-            self.log_title: str = self.__log_titles__()
+            self.log_title: str = self.__log_titles()
             """ Log header line based on the log format"""
             self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]
             """ Flag to overwrite log in trash"""
@@ -112,7 +112,7 @@ class Config:
             """ Trash folder path used for files posted using wrong format"""
             self.store: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["store"])
             """ Store folder path used to store processed files"""
-            self.catalog_file: str = os.path.join(self.raw["folders"]["root"], self.raw["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])
+            self.catalog_file: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])
             """ Full path to the catalog file, where metadata is stored"""
             self.catalog_extension: str = self.raw["files"]["catalogExtension"]
             """ Extension used to identify the metadata files"""
@@ -121,9 +121,9 @@ class Config:
             self.raw_extension: str = self.raw["files"]["rawExtension"]
             """ Raw file extension"""
             self.columns_in: List[str] = sorted(self.raw["columns"]["in"])
-            """ Input columns"""
+            """ Columns required in the input metadata file"""
             self.columns_out: List[str] = self.raw["columns"]["out"]
-            """ Output columns"""
+            """ Columns required in the output metadata file"""
             self.columns_key: List[str] = self.raw["columns"]["key"]
             """ Key columns"""
 
@@ -135,7 +135,7 @@ class Config:
             exit(1)
 
     # --------------------------------------------------------------
-    def __load_config__(self) -> None:
+    def __load_config(self) -> None:
         """Load the configuration values from a JSON file encoded with UTF-8.
         
         Args: None
@@ -154,7 +154,7 @@ class Config:
             exit(1)
     
     # --------------------------------------------------------------
-    def __log_format_colour__(self) -> str:
+    def __log_format_colour(self) -> str:
         """Return the log format string.
 
         Args: None
@@ -175,11 +175,11 @@ class Config:
             colour_count += 1
             if colour_count == len(colour_format):
                 colour_count = 0
-        
+                        
         return output_format[:-len(self.raw['log']['separator'])]
 
     # --------------------------------------------------------------
-    def __log_format_plain__(self) -> str:
+    def __log_format_plain(self) -> str:
         """Return the log format string.
 
         Args: None
@@ -197,7 +197,7 @@ class Config:
         return output_format[:-len(self.log_separator)]
 
     # --------------------------------------------------------------
-    def __log_titles__(self) -> str:
+    def __log_titles(self) -> str:
         """Return the log column titles as a string.
         
         Args: None

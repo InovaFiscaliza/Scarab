@@ -13,25 +13,18 @@ Raises:
 # --------------------------------------------------------------
 import config_handler as cm
 
+import logging
 import os
 import shutil
 import glob
-import logging
-
 import pandas as pd
-
+from dataclasses import dataclass
 # --------------------------------------------------------------
+@dataclass
 class FileHandler:
-
-    def __init__(self, config: cm.Config, log: logging.Logger) -> None:
-        """Initialize the FileHandler object with the configuration and self.log.er objects.
-
-        Args:
-            config (cm.Config): Configuration object.
-            self.log.(lm.Logger): self.log.er object.
-        """
-        self.config = config
-        self.log = log
+    
+    config: cm.Config
+    log: logging.Logger
         
     # --------------------------------------------------------------
     def move_to_temp(self, file: str) -> str:
@@ -174,6 +167,7 @@ class FileHandler:
                     case self.config.raw_extension:
                         if move:
                             item = self.move_to_temp(item)
+                            # TODO : CHECK
                         
                         raw_to_process.append(item)
                     

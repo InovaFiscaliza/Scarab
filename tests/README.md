@@ -2,7 +2,13 @@
 
 This folder includes several tests to validate the scripts and modules.
 
-Tests are proposed as a set of cmd scripts to run in windows environment.
+Tests are proposed as a set of cmd scripts to run in windows environment that will set folders and files in the test folder.
+
+Afterwards, test can be performed by running the script in CMD or using the debugger configuration in Visual Studio Code.
+
+```cmd
+uv run ..\src\scarab.py config.json
+```
 
 ## TEST_BASIC.bat
 
@@ -14,4 +20,4 @@ Tests are proposed as a set of cmd scripts to run in windows environment.
 
 - Second execution:
 
-> use the command 'uv run ..\src\scarab.py config.json' under the same terminal executed before. The script will start. Log file should be moved to trash and a new log file created.
+> The script will start. Log file should be moved to trash and a new log file created.

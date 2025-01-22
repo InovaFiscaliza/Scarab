@@ -74,7 +74,7 @@ def main(config_path: str) -> None:
     while keep_watching:
         
         try:
-            metadata_to_process, raw_to_process = fm.get_files_to_process()
+            metadata_to_process, raw_to_process = file.get_files_to_process()
             
             if metadata_to_process:
                 data.process_metadata_files(metadata_to_process)
@@ -88,7 +88,6 @@ def main(config_path: str) -> None:
         
         except Exception as e:
             log.exception(f"Error in main loop: {e}")
-            continue
 
     log.info("File catalog script stopped.")
     

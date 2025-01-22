@@ -13,12 +13,12 @@ Raises:
 import config_handler as cm
 import file_handler as fm
 
-import os
 import logging
-
+import os
 import pandas as pd
 
 # --------------------------------------------------------------
+
 class DataHandler:
 
     def __init__(self, config: cm.Config, log: logging.Logger) -> None:
@@ -46,7 +46,7 @@ class DataHandler:
         """
         
         try:
-            df_from_file = pd.read_excel(file)
+            df_from_file = pd.read_excel(file, dtype="string")
         except Exception as e:
             self.log.error(f"Error reading Excel file {file}: {e}")
             return pd.DataFrame()
@@ -73,10 +73,7 @@ class DataHandler:
         df_columns = df.columns.tolist()
         df_columns.append(df.index.name)
 
-        if sorted(df_columns) != self.config.columns_in:
-            return False
-        
-        return True
+        return sorted(df_columns) != self.config.columns_in
 
     # --------------------------------------------------------------
     def process_metadata_files(self, metadata_to_process: list[str]) -> pd.DataFrame:
