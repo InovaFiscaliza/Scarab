@@ -1,8 +1,8 @@
 <details>
     <summary>Table of Contents</summary>
     <ol>
-        <li><a href="#About-File-Sorter">About File Sorter</a></li>
-        <li><a href="#Scripts_and_Files">Algorithm Overview</a></li>
+        <li><a href="#About-Scarab">About Scarab</a></li>
+        <li><a href="#Scripts_and_Files">Scripts and Files</a></li>
         <li><a href="#setup">Setup</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
         <li><a href="#contributing">Contributing</a></li>
@@ -101,7 +101,7 @@ Further reading material can be found at:
 
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
-<!-- ACKNOWLEDGMENTS -->
+<!-- REFERENCES -->
 ## References
 
 * [UV Short Guide](https://www.saaspegasus.com/guides/uv-deep-dive/)
