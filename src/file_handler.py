@@ -266,6 +266,7 @@ class FileHandler:
 
         # Remove empty subfolder after moving files. 
         if folder_to_remove:
+            # TODO: #1  Check if the subfolder corresponds to the raw data folder as defined in the config file and do not remove it
             for item in folder_to_remove:
                 # New files that may have appeared in the subfolder will be processed in the next run, so test if it is empty before removing
                 if not os.listdir(item):
