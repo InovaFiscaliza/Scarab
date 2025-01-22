@@ -73,45 +73,62 @@ class Config:
         self.config_file = filename
         self.raw: Dict[str, Any] = {}
         
-        self.__load_config__(filename)
+        self.__load_config__()      
         
-
         try:
-            self.name: str = self.raw["name"]  # Name of the configuration
-
-            self.check_period: int = self.raw["check period in seconds"]  # Period to check input folders in seconds
-            self.clean_period: int = self.raw["clean period in hours"]  # Period to clean temp folders in hours
-            self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")  # Timestamp of the last clean operation
-
-            self.data_overwrite: bool = self.raw["overwrite data in trash"]  # Flag to indicate if data should be overwritten in trash
-
-            self.log_level: str = self.raw["log"]["level"]  # Logging level
-            self.log_to_screen: bool = self.raw["log"]["screen output"]  # Flag to log to screen
-            self.log_to_file: bool = self.raw["log"]["file output"]  # Flag to log to file
-            self.log_filename: str = os.path.join(self.raw["log"]["file path"], self.raw["log"]["file name"])  # Log file name with path
-            self.log_separator: str = self.raw["log"]["separator"]  # Log column separator
-            self.log_file_format: str = self.__log_format_plain__()  # Data columns to be presented in the log file using logging syntax
-            self.log_screen_format: str = self.__log_format_colour__()  # Data columns to be presented in the terminal using logging syntax, with colours
-            self.log_title: str = self.__log_titles__()  # Log header line based on the log format
-            self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]  # Flag to overwrite log in trash
-
-            self.post: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["post"])  # Folder path where users post files
-            self.temp: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["temp"])  # Temp folder used form metadata processing
-            self.trash: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["trash"])  # Trash folder path used for files posted using wrong format
-            self.store: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["store"])  # Store folder path used to store processed files
-            self.log_folder: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["log"])  # Log folder path used to store log files
-
-            self.catalog_file: str = os.path.join(self.raw["folders"]["root"], self.raw["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])  # Full path to the catalog file, where metadata is stored
-            self.catalog_extension: str = self.raw["files"]["catalogExtension"]  # Extension used to identify the metadata files
-            self.raw_path: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["raw"])  # Folder path where raw files are to be stored
-            self.raw_extension: str = self.raw["files"]["rawExtension"]  # Raw file extension
-
-            self.columns_in: List[str] = sorted(self.raw["columns"]["in"])  # Input columns
-            self.columns_out: List[str] = self.raw["columns"]["out"]  # Output columns
-            self.columns_key: List[str] = self.raw["columns"]["key"]  # Key columns
+            self.name: str = self.raw["name"]
+            """ Name of the configuration, used for logging"""
+            self.check_period: int = self.raw["check period in seconds"]
+            """ Period to check input folders in seconds """
+            self.clean_period: int = self.raw["clean period in hours"]
+            """ Period to clean temp folders in hours"""
+            self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
+            """ Timestamp of the last clean operation"""
+            self.data_overwrite: bool = self.raw["overwrite data in trash"]
+            """ Flag to indicate if data should be overwritten in trash"""
+            self.log_level: str = self.raw["log"]["level"]
+            """ Logging level"""
+            self.log_to_screen: bool = self.raw["log"]["screen output"]
+            """ Flag to log to screen"""
+            self.log_to_file: bool = self.raw["log"]["file output"]
+            """ Flag to log to file"""
+            self.log_filename: str = os.path.join(self.raw["log"]["file path"], self.raw["log"]["file name"])
+            """ Log file name with path"""
+            self.log_separator: str = self.raw["log"]["separator"]
+            """ Log column separator"""
+            self.log_file_format: str = self.__log_format_plain__()
+            """ Data columns to be presented in the log file using logging syntax"""
+            self.log_screen_format: str = self.__log_format_colour__()
+            """ Data columns to be presented in the terminal using logging syntax, with colours"""
+            self.log_title: str = self.__log_titles__()
+            """ Log header line based on the log format"""
+            self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]
+            """ Flag to overwrite log in trash"""
+            self.post: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["post"])
+            """ Folder path where users post files"""
+            self.temp: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["temp"])
+            """ Temp folder used form metadata processing"""
+            self.trash: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["trash"])
+            """ Trash folder path used for files posted using wrong format"""
+            self.store: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["store"])
+            """ Store folder path used to store processed files"""
+            self.catalog_file: str = os.path.join(self.raw["folders"]["root"], self.raw["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])
+            """ Full path to the catalog file, where metadata is stored"""
+            self.catalog_extension: str = self.raw["files"]["catalogExtension"]
+            """ Extension used to identify the metadata files"""
+            self.raw_path: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["raw"])
+            """ Folder path where raw files are to be stored"""
+            self.raw_extension: str = self.raw["files"]["rawExtension"]
+            """ Raw file extension"""
+            self.columns_in: List[str] = sorted(self.raw["columns"]["in"])
+            """ Input columns"""
+            self.columns_out: List[str] = self.raw["columns"]["out"]
+            """ Output columns"""
+            self.columns_key: List[str] = self.raw["columns"]["key"]
+            """ Key columns"""
 
         except Exception as e:
-            print(f"Configuration files missing parameters: {e}")
+            print(f"Configuration files missing arguments: {e}")
             exit(1)
                 
         if not self.is_config_ok():
