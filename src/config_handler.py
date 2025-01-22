@@ -279,7 +279,8 @@ class Config:
                     pass
         
         try:
-            with open(self.config_file, 'a') as json_file:  
+            with open(self.config_file, 'a') as json_file:
+                json_file.writable()
                 pass
         except Exception as e:
             print(f"Error writing to config file: {e}")
