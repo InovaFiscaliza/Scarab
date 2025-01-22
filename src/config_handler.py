@@ -21,7 +21,18 @@ class Config:
     """Class to load and store the configuration values from a JSON file."""
 
     def __init__(self, filename: str) -> None:
-        """Load the configuration values from a JSON file encoded with UTF-8 and with the following tags:
+        """Load the configuration values from a JSON file encoded with UTF-8.
+        
+        Args:
+            filename (str): Configuration file name.
+            
+        Returns: None
+            
+        Raises:
+            FileNotFoundError: If the configuration file is not found.
+            Exception: If the configuration file is missing parameters.
+            
+        Example of a configuration file
             {
                 "name": "Regulatron",
                 "check period in seconds": 30,
@@ -110,6 +121,12 @@ class Config:
     def __load_config__(self) -> None:
         """Load the configuration values from a JSON file encoded with UTF-8.
         
+        Args: None
+        
+        Returns: None
+        
+        Raises:
+            FileNotFoundError: If the configuration file is not found.
         """
         
         try:
@@ -123,8 +140,12 @@ class Config:
     def __log_format_colour__(self) -> str:
         """Return the log format string.
 
+        Args: None
+            
         Returns:
             str: Log format string.
+            
+        Raises: None
         """
         
         output_format = ""
@@ -144,8 +165,12 @@ class Config:
     def __log_format_plain__(self) -> str:
         """Return the log format string.
 
+        Args: None
+            
         Returns:
             str: Log format string.
+        
+        Raises: None
         """
         
         output_format = ""
@@ -158,14 +183,17 @@ class Config:
     def __log_titles__(self) -> str:
         """Return the log column titles as a string.
         
-            "%(asctime)s" result title = "asctime"
-            "%(module)s: %(funcName)s:%(lineno)d" result title = "module: funcName:lineno"
-            "%(name)s[%(process)d]" result title = "name [process]"
-            "%(levelname)s" result title = "levelname"
-            "%(message)s" result title = "message"
-
+        Args: None
+            
         Returns:
-            str: Log titles string.
+            str: Log titles stringÇ
+                "%(asctime)s" result title = "asctime"
+                "%(module)s: %(funcName)s:%(lineno)d" result title = "module: funcName:lineno"
+                "%(name)s[%(process)d]" result title = "name [process]"
+                "%(levelname)s" result title = "levelname"
+                "%(message)s" result title = "message"
+
+        Raises: None
         """
         
         non_title = ["%(", ")s", ")d"]
@@ -180,7 +208,15 @@ class Config:
         return output_format[:-len(self.raw['log']['separator'])]
     # --------------------------------------------------------------
     def set_last_clean(self) -> None:
-        """Write current datetime to JSON file."""
+        """Write current datetime to JSON file.
+        
+        Args: None
+            
+        Returns: None
+
+        Raises:
+            Exception: Config file write error.
+        """
         
         self.raw["last clean"] = pd.to_datetime("now").strftime("%Y-%m-%d %H:%M:%S")
         
@@ -189,13 +225,18 @@ class Config:
                 json.dump(self.raw, json_file, indent=4)
         except Exception as e:
             print(f"Error writing to config file: {e}")
+            
     
     # --------------------------------------------------------------
     def is_config_ok(self) -> bool:
         """Test if the configuration folders and files exist. Test if log folder is writable. Test if config file is writable.
 
+        Args: None
+            
         Returns:
             bool: True if all folders and files exist and are writable.
+        
+        Raises: None
         """
 
         test_result = True
@@ -235,6 +276,7 @@ class Config:
                 except Exception as e:
                     print(f"Error writing to log file: {e}")
                     test_result = False
+                    pass
         
         try:
             with open(self.config_file, 'a') as json_file:  
@@ -242,6 +284,7 @@ class Config:
         except Exception as e:
             print(f"Error writing to config file: {e}")
             test_result = False
+            pass
         
         return test_result
 
