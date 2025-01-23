@@ -73,7 +73,7 @@ class DataHandler:
         df_columns = df.columns.tolist()
         df_columns.append(df.index.name)
 
-        return sorted(df_columns) != self.config.columns_in
+        return sorted(df_columns) == self.config.columns_in
 
     # --------------------------------------------------------------
     def process_metadata_files(self, metadata_to_process: list[str]) -> pd.DataFrame:

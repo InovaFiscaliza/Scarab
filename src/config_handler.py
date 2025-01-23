@@ -92,7 +92,7 @@ class Config:
             """ Flag to log to screen"""
             self.log_to_file: bool = self.raw["log"]["file output"]
             """ Flag to log to file"""
-            self.log_filename: str = os.path.join(self.raw["log"]["file path"], self.raw["log"]["file name"])
+            self.log_path: str = self.raw["log"]["file path"]
             """ Log file name with path"""
             self.log_separator: str = self.raw["log"]["separator"]
             """ Log column separator"""
@@ -255,54 +255,56 @@ class Config:
         
         Raises: None
         """
-
         test_result = True
         
+        msg = f"\nError in {self.config_file}:"
+        
         if not os.path.exists(self.post):
-            print(f"Post folder not found: {self.post}")
+            msg += f"\n  - Post folder not found: {self.post}"
             test_result = False
         
         if not os.path.exists(self.store):
-            print(f"Store folder not found: {self.store}")
+            msg += f"\n  - Store folder not found: {self.store}"
             test_result = False
         
         if not os.path.exists(self.temp):
-            print(f"Temp folder not found: {self.temp}")
+            msg += f"\n  - Temp folder not found: {self.temp}"
             test_result = False
         
         if not os.path.exists(self.trash):
-            print(f"Trash folder not found: {self.trash}")
+            msg += f"\n  - Trash folder not found: {self.trash}"
             test_result = False
         
         if not os.path.exists(self.raw_path):
-            print(f"raw folder not found: {self.raw_path}")
+            msg += f"\n  - Raw folder not found: {self.raw_path}"
             test_result = False
         
         if not os.path.exists(self.catalog_file):
-            print(f"Catalog file not found: {self.catalog_file}")
+            msg += f"\n  - Catalog file not found: {self.catalog_file}"
             test_result = False
         
-        if self.log_to_file:
-            if not os.path.exists(os.path.dirname(self.log_filename)):
-                print(f"Log folder not found: {os.path.dirname(self.log_filename)}")
+        if self.log_path:
+            if not os.path.exists(os.path.dirname(self.log_path)):
+                msg += f"\n  - Log folder not found: {os.path.dirname(self.log_path)}"
                 test_result = False
             else:
                 try:
-                    with open(self.log_filename, 'a') as self.log_filename:
-                        pass
+                    with open(self.log_path, 'a') as log_file:
+                        log_file.writable()
                 except Exception as e:
-                    print(f"Error writing to log file: {e}")
+                    msg += f"\n  - Error writing to log file: {e}"
                     test_result = False
-                    pass
         
         try:
             with open(self.config_file, 'a') as json_file:
                 json_file.writable()
-                pass
         except Exception as e:
-            print(f"Error writing to config file: {e}")
+            msg += f"\n  - Error writing to config file: {e}"
             test_result = False
-            pass
+        
+        if not test_result:
+            msg += "\n\nPlease correct the errors and restart the script."
+            print(msg)
         
         return test_result
 

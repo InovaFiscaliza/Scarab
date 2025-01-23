@@ -8,8 +8,7 @@
         "level": "INFO",
         "screen output": true,
         "file output": true,
-        "file name": "log.txt",
-        "file path": "./tests/get1",
+        "file path": "./tests/sandbox/get/log.txt",
         "format": [
             "%(asctime)s",
             "%(module)s: %(funcName)s:%(lineno)d",
@@ -28,17 +27,17 @@
         "overwrite log in trash": false
     },
     "folders": {
-        "root": "./tests",
+        "root": "./tests/sandbox",
         "post": "post",
         "temp": "temp",
         "trash": "trash",
         "store": "store",
         "get" : "get",
-        "raw": "get"
+        "raw": "get/raw"
     },
     "files" : {
         "catalogExtension": ".xlsx",
-        "catalogName": "Anuncios",
+        "catalogName": "monitorRNI",
         "rawExtension": ".pdf"
     },    
     "columns": {

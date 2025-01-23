@@ -6,12 +6,12 @@
     "configurations": [
         
         {
-            "name": "Python Debugger: Current File",
+            "name": "Test scarab with sandbox",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "src/scarab.py",
             "console": "integratedTerminal",
-            "args": ["./tests/config.json"]
+            "args": ["./tests/sandbox/config.json"]
         }
     ]
 }
