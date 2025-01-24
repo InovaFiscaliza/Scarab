@@ -14,8 +14,12 @@ uv run ..\src\scarab.py config.json
 
 - First execution:
 
-> Get metadata content from 2 files in post folder and  publish then under the get folder. Raw txt files are moved to the output folder as well. No files should remain in temp, trash and post folder. Store folder should contain the original files.
-> 
+> Get metadata content from 2 files in post folder and  publish then under the get folder.
+> Raw txt files are moved to the get folder under the raw subfolder.
+> No files or subfolders should remain in temp, trash and post folder.
+> Store folder should contain the original files.
+> trash should contain the en empty log file and the file "file_to_trash.empty" that was moved from the post folder under the delete subfolder "folder_to_delete".
+>
 > Terminal will not be closed and to finish the test, press ctrl+c.
 
 - Second execution:

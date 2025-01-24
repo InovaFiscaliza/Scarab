@@ -38,7 +38,7 @@
     "files" : {
         "catalogExtension": ".xlsx",
         "catalogName": "monitorRNI",
-        "rawExtension": ".pdf"
+        "rawExtension": ".txt"
     },    
     "columns": {
         "in": [ "ID",
