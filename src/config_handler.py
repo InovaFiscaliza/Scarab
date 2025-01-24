@@ -14,7 +14,7 @@ Raises:
 import json
 import os
 import pandas as pd
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 # --------------------------------------------------------------
 class Config:
@@ -119,9 +119,9 @@ class Config:
             """ Folder path where raw files are to be stored"""
             self.raw_extension: str = self.raw["files"]["rawExtension"]
             """ Raw file extension"""
-            self.columns_in: List[str] = sorted(self.raw["columns"]["in"])
+            self.columns_in: Set[str] = set(self.raw["columns"]["in"])
             """ Columns required in the input metadata file"""
-            self.columns_out: List[str] = self.raw["columns"]["out"]
+            self.columns_out: Set[str] = set(self.raw["columns"]["out"])
             """ Columns required in the output metadata file"""
             self.columns_key: List[str] = self.raw["columns"]["key"]
             """ Key columns"""

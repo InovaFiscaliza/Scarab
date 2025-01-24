@@ -71,9 +71,11 @@ class DataHandler:
         """
         
         df_columns = df.columns.tolist()
+        
+        # add the index column to the list of columns, such that it can be compared to the config file definition of required columns
         df_columns.append(df.index.name)
 
-        return sorted(df_columns) == self.config.columns_in
+        return self.config.columns_in.issubset(set(df_columns))
 
     # --------------------------------------------------------------
     def process_metadata_files(self, metadata_to_process: list[str]) -> pd.DataFrame:

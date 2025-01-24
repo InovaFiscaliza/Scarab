@@ -127,63 +127,6 @@ class FileHandler:
             return False
 
     # --------------------------------------------------------------
-    def sort_files_into_lists(  self, 
-                                folder_content: list[str],
-                                move: bool = True,
-                                catalog_to_process: list[str] = None,
-                                raw_to_process: list[str] = None,
-                                subfolder: list[str] = None) -> tuple[list[str], list[str], list[str]]:
-        """Sort files in the provided list into list of xlsx and pdf files to process and subfolder to remove.
-
-        Args:
-            files (list[str]): List of files to sort.
-            move (bool): True if required to move files to the temp folder.
-            catalog_to_process (list[str]): Existing list of xlsx files to process.
-            raw_to_process (list[str]): Existing list of pdf files to process.
-            subfolder (list[str]): Existing list of subfolder to remove.
-
-        Returns:
-            tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolder to remove.
-        """
-        
-        # Initialize lists if they are None
-        if catalog_to_process is None:
-            catalog_to_process = []
-        if raw_to_process is None:
-            raw_to_process = []
-        if subfolder is None:
-            subfolder = []
-            
-        for item in folder_content:
-            
-            # Check if the item is a file
-            if os.path.isfile(item):
-                
-                # Classify the file by extension
-                _, ext = os.path.splitext(item)
-                match ext:
-                    
-                    case self.config.catalog_extension:
-                        if move:                        
-                            item = self.move_to_temp(item)
-
-                        catalog_to_process.append(item)
-                        
-                    case self.config.raw_extension:
-                        if move:
-                            item = self.move_to_temp(item)
-                            # TODO : CHECK
-                        
-                        raw_to_process.append(item)
-                    
-                    case _: 
-                        self.trash_it(item)
-            else:
-                subfolder.append(item)
-                
-        return catalog_to_process, raw_to_process, subfolder
-
-    # --------------------------------------------------------------
     def remove_unused_subfolder(self, subfolder: list[str]) -> None:
         """Remove empty subfolder from the post folder.
 
@@ -199,6 +142,64 @@ class FileHandler:
                         self.log.info(f"Removed folder {folder}")
                     except Exception as e:
                         self.log.warning(f"Error removing folder {folder}: {e}")
+
+    # --------------------------------------------------------------
+    def sort_and_clean(  self, 
+                                folder_content: list[str],
+                                move: bool = True,
+                                catalog_to_process: list[str] = None,
+                                raw_to_process: list[str] = None) -> tuple[list[str], list[str], list[str]]:
+        """ Move files listed according to extension to the temp folder and return the list of files to process
+            Remove subfolder and files with unrecognized extensions.
+            
+
+        Args:
+            files (list[str]): List of files to sort.
+            move (bool): True if required to move files to the temp folder.
+            catalog_to_process (list[str]): Existing list of xlsx files to process. Default is None.
+            raw_to_process (list[str]): Existing list of pdf files to process. Default is None.
+
+        Returns:
+            tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolder to remove.
+        """
+        
+        # Initialize lists if they are None
+        if catalog_to_process is None:
+            catalog_to_process = []
+        if raw_to_process is None:
+            raw_to_process = []
+        
+        subfolder = []
+            
+        for item in folder_content:
+            
+            # Check if the item is a file
+            if os.path.isfile(item):
+                
+                # Move file by extension
+                _, ext = os.path.splitext(item)
+                match ext:
+                    
+                    case self.config.catalog_extension:
+                        if move:                        
+                            item = self.move_to_temp(item)
+
+                        catalog_to_process.append(item)
+                        
+                    case self.config.raw_extension:
+                        if move:
+                            item = self.move_to_temp(item)
+                        
+                        raw_to_process.append(item)
+                    
+                    case _: 
+                        self.trash_it(item)
+            else:
+                subfolder.append(item)
+                
+        self.remove_unused_subfolder(subfolder)
+        
+        return catalog_to_process, raw_to_process
 
     # --------------------------------------------------------------
     def get_files_to_process(self) -> tuple[list[str], list[str]]:
@@ -219,7 +220,7 @@ class FileHandler:
             folder_content = list(map(lambda x: os.path.join(self.config.temp, x), folder_content))
             self.log.info(f"TEMP Folder has {len(folder_content)} files/folders to process.")
 
-        catalog_to_process, raw_to_process, subfolder = self.sort_files_into_lists(folder_content, move=False)
+        catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, move=False)
         
         # Get files from post folder
         folder_content = glob.glob("**", root_dir=self.config.post, recursive=True)
@@ -231,11 +232,8 @@ class FileHandler:
             folder_content = list(map(lambda x: os.path.join(self.config.post, x), folder_content))
             self.log.info(f"POST Folder has {len(folder_content)} files/folders to process.")
             
-        catalog_to_process, raw_to_process, subfolder = self.sort_files_into_lists(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process, subfolder=subfolder)
-                
-        # Remove empty subfolder after moving files. New files that may have appeared in the subfolder will be processed in the next run
-        self.remove_unused_subfolder(subfolder)
-        
+        catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process)
+                        
         return catalog_to_process, raw_to_process
 
     # --------------------------------------------------------------
