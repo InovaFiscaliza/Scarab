@@ -67,33 +67,6 @@
                 "Justificativa",
                 "Observações"
         ],
-        "out": ["ID",
-                "UD",
-                "UF",
-                "Município",
-                "Tipo",
-                "Serviço",
-                "Entidade",
-                "Fistel",
-                "N° estacao",
-                "Endereco",
-                "Lat",
-                "Long",
-                "Áreas Críticas",
-                "Qtd. medidas",
-                "Qtd. medidas > 14.0 V/m",
-                "Distância mínima (km)",
-                "Emin (V/m)",
-                "Emean (V/m)",
-                "Emax (V/m)",
-                "Emax - Data da Medição",
-                "Emax - Latitude",
-                "Emax - Longitude",
-                "Fonte de dados",
-                "Justificativa",
-                "Observações",
-                "Fonte Disponível"
-        ],
         "key": "N° estacao"
     }
 }

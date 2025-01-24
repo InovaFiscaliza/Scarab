@@ -65,7 +65,6 @@ class Config:
                 },    
                 "columns":{
                     "in":["nome", "preço", "avaliações", "nota", "imagem", "url", "data", "palavra_busca", "página_de_busca", "certificado", "características", "descrição", "ean_gtin", "estado", "estoque", "imagens", "fabricante", "modelo", "product_id", "vendas", "vendedor", "screenshot", "indice", "subcategoria", "nome_sch", "fabricante_sch", "modelo_sch", "tipo_sch", "nome_score", "modelo_score", "passível?", "probabilidade", "marketplace"],
-                    "out":["nome", "preço", "avaliações", "nota", "imagem", "url", "data", "palavra_busca", "página_de_busca", "certificado", "características", "descrição", "ean_gtin", "estado", "estoque", "imagens", "fabricante", "modelo", "product_id", "vendas", "vendedor", "screenshot", "indice", "subcategoria", "nome_sch", "fabricante_sch", "modelo_sch", "tipo_sch", "nome_score", "modelo_score", "passível?", "probabilidade", "marketplace", "status_screenshot"],
                     "key":"screenshot"}
             }
         """
@@ -121,8 +120,6 @@ class Config:
             """ Raw file extension"""
             self.columns_in: Set[str] = set(self.raw["columns"]["in"])
             """ Columns required in the input metadata file"""
-            self.columns_out: Set[str] = set(self.raw["columns"]["out"])
-            """ Columns required in the output metadata file"""
             self.columns_key: List[str] = self.raw["columns"]["key"]
             """ Key columns"""
 

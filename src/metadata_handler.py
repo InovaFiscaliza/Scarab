@@ -35,14 +35,15 @@ class DataHandler:
         
 
     # --------------------------------------------------------------
-    def read_excel(self, file: str) -> pd.DataFrame:
+    def read_excel(self, file: str) -> tuple[pd.DataFrame, list]:
         """Read an Excel file and return a DataFrame indexed according to the defined keys
 
         Args:
             file (str): Excel file to read.
 
         Returns:
-            pd.DataFrame: DataFrame with the Excel data.
+            pd.DataFrame: DataFrame with the data from the Excel file.
+            list: List of columns in the DataFrame.
         """
         
         try:
@@ -51,13 +52,16 @@ class DataHandler:
             self.log.error(f"Error reading Excel file {file}: {e}")
             return pd.DataFrame()
         
+        # get the columns from df_from_file
+        columns = df_from_file.columns.tolist()
+        
         try:
             df_from_file.set_index(self.config.columns_key, inplace=True)
         except Exception as e:
             self.log.error(f"Error setting index in reference data: {e}")
             pass
 
-        return df_from_file
+        return df_from_file, columns
 
     # --------------------------------------------------------------
     def valid_data(self, df: pd.DataFrame) -> bool:
@@ -88,7 +92,7 @@ class DataHandler:
         """
         
         
-        reference_df = self.read_excel(self.config.catalog_file)
+        (reference_df,columns_out) = self.read_excel(self.config.catalog_file)
         
         for file in metadata_to_process:
             new_data_df = self.read_excel(file)
@@ -103,7 +107,7 @@ class DataHandler:
             # add new_data_df rows where index does not match
             reference_df = reference_df.combine_first(new_data_df)
             
-            self.persist_reference(reference_df)
+            self.persist_reference(reference_df, columns_out)
             
             self.file.move_to_store(file)
 
@@ -132,7 +136,7 @@ class DataHandler:
 
         
     # --------------------------------------------------------------
-    def persist_reference(self, reference_df: pd.DataFrame) -> None:
+    def persist_reference(self, reference_df: pd.DataFrame, columns_out: list) -> None:
         """Persist the reference DataFrame to the catalog file.
 
         Args:
@@ -145,8 +149,8 @@ class DataHandler:
         # change index column to a regular column so it is exported to the Excel file
         reference_df.reset_index(inplace=True)
         
-        # reorder columns to match order defined the config file as columns_out
-        reference_df = reference_df[self.config.columns_out]
+        # reorder columns to match order defined the config file as columns_out_order
+        reference_df = reference_df[columns_out]
         
         try:
             reference_df.to_excel(self.config.catalog_file, index=False)

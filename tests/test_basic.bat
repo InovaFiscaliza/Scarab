@@ -17,6 +17,4 @@ echo
 echo Run the script using: uv run ..\src\scarab.py config.json
 echo Check if the output is as expected.
 
-REM Wait for user to press any key before exiting
-pause >nul
 exit /b 0

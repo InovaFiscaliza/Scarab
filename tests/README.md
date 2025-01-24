@@ -2,13 +2,15 @@
 
 This folder includes several tests to validate the scripts and modules.
 
-Tests are proposed as a set of cmd scripts to run in windows environment that will set folders and files in the test folder.
+Tests are proposed as a set of cmd scripts to run in windows environment that will set folders and files in the tests\sandbox folder.
 
 Afterwards, test can be performed by running the script in CMD or using the debugger configuration in Visual Studio Code.
 
 ```cmd
 uv run ..\src\scarab.py config.json
 ```
+
+For VSCode, the debugger configuration is already set in the .vscode folder to run the script with the config.json file within the sandbox folder.
 
 ## TEST_BASIC.bat
 
@@ -31,3 +33,17 @@ To test script termination you maypressing `ctrl+c`
 To test script termination equivalent to service stop use the command `kill -9 <pid>` in another terminal.
 
 Where pid is number displayed in the log file and screen, between square brackets after the script name.
+
+## Creating new tests
+
+Edit the content of the sandbox folder to create the desired structure, making modifications in the config.json file if necessary.
+
+Run the following command to create the corresponding TGZ file:
+
+```cmd
+tar -czvf TEST_NAME.tgz sandbox
+```
+
+Where `TEST_NAME` is the name of the test to be used in the batch file.
+
+Create the new test modifying the `TEST_NAME.bat` file, using the TEST_NAME where required.
