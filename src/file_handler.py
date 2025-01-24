@@ -50,11 +50,16 @@ class FileHandler:
 
     # --------------------------------------------------------------
     def trash_it(self, file: str) -> None:
-        """Move a file to the trash folder, resetting the file timestamp for the current time and self.log.the event.
-
+        """Move file in argument to the trash folder.
+        If overwrite is True and file with the same name already exist in the trash folder, it will be overwritten.
+        If overwrite is False, any existing file in the trash folder with the same name will be renamed with a timestamp.
+        
         Args:
             file (str): File to move to the trash folder.
-            overwrite_trash (bool): True if the file should be overwritten in the trash folder.
+            
+        Returns: None
+        
+        Raises: None
         """
                 
         filename = os.path.basename(file)
@@ -172,7 +177,7 @@ class FileHandler:
                         raw_to_process.append(item)
                     
                     case _: 
-                        self.trash_it(item, overwrite_trash=self.config.data_overwrite)
+                        self.trash_it(item)
             else:
                 subfolder.append(item)
                 
@@ -188,9 +193,9 @@ class FileHandler:
                 
         if subfolder:
             for folder in subfolder:
-                if not os.listdir(os.path.join(self.config.post, folder)):
+                if not os.listdir(folder):
                     try:
-                        os.rmdir(os.path.join(self.config.post, folder))
+                        os.rmdir(folder)
                         self.log.info(f"Removed folder {folder}")
                     except Exception as e:
                         self.log.warning(f"Error removing folder {folder}: {e}")

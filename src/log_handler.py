@@ -58,9 +58,11 @@ def start_logging(config: cm.Config) -> logging.Logger:
     
     if config.log_to_file:
         
+        # Clean existing log file
         file = fm.FileHandler(config,log)
-            
         file.trash_it(config.log_path)
+        
+        # Create new log file with header line
         with open(config.log_path, 'w') as log_file:
             log_file.write(config.log_title + "\n")
         
