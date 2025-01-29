@@ -34,38 +34,51 @@ class Config:
             
         Example of a configuration file
             {
-                "name": "Regulatron",
-                "check period in seconds": 30,
-                "clean period in hours": 24,
+                "name": "Teste Simple",
+                "check period in seconds": 10,
+                "clean period in hours": 1,
                 "last clean": "2024-11-05 20:33:29",
                 "overwrite data in trash": true,
                 "log": {
                     "level": "INFO",
                     "screen output": true,
                     "file output": true,
-                    "file path": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Logs;log.txt",
-                    "format": ["%(asctime)s", "%(module)s: %(funcName)s:%(lineno)d", "%(name)s[%(process)d]", "%(levelname)s", "%(message)s"],
-                    "colour sequence": ["32m", "35m", "34m", "30m", "0m"],
+                    "file path": "./tests/sandbox/get/log.txt",
+                    "format": [
+                        "%(asctime)s",
+                        "%(module)s: %(funcName)s:%(lineno)d",
+                        "%(name)s[%(process)d]",
+                        "%(levelname)s",
+                        "%(message)s"
+                    ],
+                    "colour sequence": [
+                        "32m",
+                        "35m",
+                        "34m",
+                        "30m",
+                        "0m"
+                    ],
                     "separator": " | ",
                     "overwrite log in trash": false
                 },
                 "folders": {
-                    "root": "C:/Users/sfi.office365.pd/ANATEL",
-                    "post": "InovaFiscaliza - DataHub - TEMP/Regulatron",
-                    "temp": "InovaFiscaliza - DataHub - TEMP/Regulatron",
-                    "trash": "InovaFiscaliza - DataHub - TRASH/Regulatron",
-                    "store": "InovaFiscaliza - DataHub - STORE/Regulatron",
-                    "get" : "InovaFiscaliza - DataHub - GET/Regulatron",
-                    "raw": "InovaFiscaliza - DataHub - GET/Regulatron/Screenshots",
+                    "post": "./tests/sandbox/post",
+                    "temp": "./tests/sandbox/temp",
+                    "trash": "./tests/sandbox/trash",
+                    "store": "./tests/sandbox/store",
+                    "get" : "./tests/sandbox/get/raw"
                 },
                 "files" : {
-                    "catalogExtension": ".xlsx",
-                    "catalogName": "Anuncios",
-                    "rawExtension": ".pdf",
-                },    
-                "columns":{
-                    "in":["nome", "preço", "avaliações", "nota", "imagem", "url", "data", "palavra_busca", "página_de_busca", "certificado", "características", "descrição", "ean_gtin", "estado", "estoque", "imagens", "fabricante", "modelo", "product_id", "vendas", "vendedor", "screenshot", "indice", "subcategoria", "nome_sch", "fabricante_sch", "modelo_sch", "tipo_sch", "nome_score", "modelo_score", "passível?", "probabilidade", "marketplace"],
-                    "key":"screenshot"}
+                    "metadata extension": ".xlsx",
+                    "data extension": ".txt",
+                    "catalog names": "./tests/sandbox/get/monitorRNI.xlsx"
+                },
+                "metadata": {
+                    "in columns": [ "ID", "UD", "UF", "Município", "Tipo", "Serviço", "Entidade", "Fistel", "N° estacao", "Endereco", "Lat", "Long", "Áreas Críticas", "Qtd. medidas", "Qtd. medidas > 14.0 V/m", "Distância mínima (km)", "Emin (V/m)", "Emean (V/m)", "Emax (V/m)", "Emax - Data da Medição", "Emax - Latitude", "Emax - Longitude", "Fonte de dados", "Justificativa", "Observações"],
+                    "key": "N° estacao",
+                    "data filenames": "Fonte de dados",
+                    "data published flag": "Fontes Disponíveis"
+                }
             }
         """
         self.config_file = filename
@@ -90,7 +103,7 @@ class Config:
             """ Flag to log to screen"""
             self.log_to_file: bool = self.raw["log"]["file output"]
             """ Flag to log to file"""
-            self.log_path: str = self.raw["log"]["file path"]
+            self.log_file_path: str = self.raw["log"]["file path"]
             """ Log file name with path"""
             self.log_separator: str = self.raw["log"]["separator"]
             """ Log column separator"""
@@ -102,26 +115,31 @@ class Config:
             """ Log header line based on the log format"""
             self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]
             """ Flag to overwrite log in trash"""
-            self.post: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["post"])
+            self.post: List[str] = self.__ensure_list(self.raw["folders"]["post"])
             """ Folder path where users post files"""
-            self.temp: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["temp"])
+            self.temp: str = self.raw["folders"]["temp"]
             """ Temp folder used form metadata processing"""
-            self.trash: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["trash"])
+            self.trash: str = self.raw["folders"]["trash"]
             """ Trash folder path used for files posted using wrong format"""
-            self.store: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["store"])
+            self.store: str = self.raw["folders"]["store"]
             """ Store folder path used to store processed files"""
-            self.catalog_file: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["get"], self.raw["files"]["catalogName"] + self.raw["files"]["catalogExtension"])
+            self.catalog_files: List[str] = self.__ensure_list(self.raw["files"]["catalog names"])
             """ Full path to the catalog file, where metadata is stored"""
-            self.catalog_extension: str = self.raw["files"]["catalogExtension"]
+            self.metadata_extension: str = self.raw["files"]["metadata extension"]
             """ Extension used to identify the metadata files"""
-            self.raw_path: str = os.path.join(self.raw["folders"]["root"], self.raw["folders"]["raw"])
-            """ Folder path where raw files are to be stored"""
-            self.raw_extension: str = self.raw["files"]["rawExtension"]
-            """ Raw file extension"""
-            self.columns_in: Set[str] = set(self.raw["columns"]["in"])
+            self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
+            """ Folder path where data files are to be stored"""
+            self.data_extension: str = self.raw["files"]["data extension"]
+            """ Data file extension, used to identify the raw data files"""
+            self.columns_in: Set[str] = set(self.raw["metadata"]["in columns"])
             """ Columns required in the input metadata file"""
-            self.columns_key: List[str] = self.raw["columns"]["key"]
-            """ Key columns"""
+            self.columns_key: List[str] = self.__ensure_list(self.raw["metadata"]["key"])
+            """ Columns that define the uniqueness of each row in the metadata file"""
+            self.columns_data_filenames: str = self.raw["metadata"]["data filenames"]
+            """ Columns that contain the names of data files associated with each row metadata"""
+            self.columns_data_published: str = self.raw["metadata"]["data published flag"]
+            """ Columns that contain the publication status of each row"""
+            # TODO: #2 Parse file metadata separated from the data metadata since data may be aggregated from multiple files
 
         except Exception as e:
             print(f"Configuration files missing arguments: {e}")
@@ -130,6 +148,24 @@ class Config:
         if not self.is_config_ok():
             exit(1)
 
+    # --------------------------------------------------------------
+    def __ensure_list(self, item: Any) -> List[str]:
+        """Create a list from a string or a list, adding a root path if it exists.
+        
+        Args:
+            item (Any): Input string or list.
+            
+        Returns:
+            List[str]: List of strings.
+        
+        Raises: None
+        """
+        
+        if isinstance(item, str):
+            return [item]
+        else:
+            return item
+            
     # --------------------------------------------------------------
     def __load_config(self) -> None:
         """Load the configuration values from a JSON file encoded with UTF-8.
@@ -147,6 +183,9 @@ class Config:
                 self.raw = json.load(json_file)
         except FileNotFoundError:
             print(f"Config file not found in path: {self.config_file}")
+            exit(1)
+        except Exception as e:
+            print(f"Error reading config file: {e}")
             exit(1)
     
     # --------------------------------------------------------------
@@ -239,6 +278,24 @@ class Config:
         except Exception as e:
             print(f"Error writing to config file: {e}")
             
+    # --------------------------------------------------------------
+    def __test_folder(self, folder: str, folder_type: str, msg: str) -> tuple[bool, str]:
+        """Test if the folder exists and add an error message if it does not.
+
+        Args:
+            folder (str): folder path to be tested.
+            folder_type (str): folder type to be mentioned in the error message.
+            msg (str): error message to be updated.
+
+        Returns:
+            msg: error message with the folder test result.
+        """
+        test_result = True
+        if not os.path.exists(folder):
+            msg += f"\n  - {folder_type} folder not found: {folder}"
+            test_result = False
+        
+        return test_result, msg
     
     # --------------------------------------------------------------
     def is_config_ok(self) -> bool:
@@ -251,42 +308,38 @@ class Config:
         
         Raises: None
         """
+
         test_result = True
-        
         msg = f"\nError in {self.config_file}:"
+                
+        for folder in self.post:
+            test_result, msg = self.__test_folder(folder, "Post", msg)
         
-        if not os.path.exists(self.post):
-            msg += f"\n  - Post folder not found: {self.post}"
-            test_result = False
+        test_result, msg = self.__test_folder(self.store, "Store", msg)
         
-        if not os.path.exists(self.store):
-            msg += f"\n  - Store folder not found: {self.store}"
-            test_result = False
+        test_result, msg = self.__test_folder(self.temp, "Temp", msg)
         
-        if not os.path.exists(self.temp):
-            msg += f"\n  - Temp folder not found: {self.temp}"
-            test_result = False
+        test_result, msg = self.__test_folder(self.trash, "Trash", msg)
         
-        if not os.path.exists(self.trash):
-            msg += f"\n  - Trash folder not found: {self.trash}"
-            test_result = False
+        for folder in self.get:
+            test_result, msg = self.__test_folder(folder, "Get", msg)
+
+        # Test all folders in the self.catalog_files list
+        for folder in self.catalog_files:
+            test_result, msg = self.__test_folder(folder, "Catalog", msg)
         
-        if not os.path.exists(self.raw_path):
-            msg += f"\n  - Raw folder not found: {self.raw_path}"
-            test_result = False
-        
-        if not os.path.exists(self.catalog_file):
-            msg += f"\n  - Catalog file not found: {self.catalog_file}"
-            test_result = False
-        
-        if self.log_path:
-            if not os.path.exists(os.path.dirname(self.log_path)):
-                msg += f"\n  - Log folder not found: {os.path.dirname(self.log_path)}"
+        if self.log_file_path:
+            if not os.path.exists(os.path.dirname(self.log_file_path)):
+                msg += f"\n  - Log folder not found: {os.path.dirname(self.log_file_path)}"
                 test_result = False
             else:
                 try:
-                    with open(self.log_path, 'a') as log_file:
+                    with open(self.log_file_path, 'a') as log_file:
+                        # use tell() to check if the file at the beginning, thus, has been just created by the file open function call
+                        log_file_is_empty = (log_file.tell() == 0)
                         log_file.writable()
+                    if log_file_is_empty:
+                        os.remove(self.log_file_path)
                 except Exception as e:
                     msg += f"\n  - Error writing to log file: {e}"
                     test_result = False

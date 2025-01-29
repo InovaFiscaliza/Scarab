@@ -12,7 +12,9 @@
 
 # About Scarab
 
-<img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> This app is intended to run as a service and perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation (concatenate tables and row updata based on key columns) and logging.
+<img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> This app is intended to run as a service and perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation and logging.
+
+Metadata files are expected to be tables in XLSX format, with the first row as the header.
 
 Application is written in Python and uses the UV package for environment management and intended to run as a service.
 
@@ -55,6 +57,8 @@ Scripts were intended to be used in a Windows machine with UV package and enviro
 
 For more details, see the [UV documentation](https://docs.astral.sh/uv/)
 
+Tests are described in the [tests folder](./tests/README.md)
+
 # Roadmap
 
 This section presents a simplified view of the roadmap and knwon issues.
@@ -69,7 +73,9 @@ For more details, see the [open issues](https://github.com/FSLobao/RF.Fusion/iss
   * [x] Create the file handler
   * [x] Create the log handler
   * [x] Create the metadata handler
-  * [ ] Create tests and validate release candidate
+  * [x] Expand functionality to handle multiple input and output folders
+  * [x] Create tests and validate release candidate
+  * [ ] Release version 0.1.0
   
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 

@@ -80,7 +80,7 @@ def main(config_path: str) -> None:
                 data.process_metadata_files(metadata_to_process)
                     
             if raw_to_process:
-                data.process_raw_files(raw_to_process)
+                data.process_data_files(raw_to_process)
             
             file.clean_folders()
             

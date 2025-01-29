@@ -49,13 +49,14 @@ class FileHandler:
             return file
 
     # --------------------------------------------------------------
-    def trash_it(self, file: str) -> None:
+    def trash_it(self, file: str, overwrite: bool) -> None:
         """Move file in argument to the trash folder.
         If overwrite is True and file with the same name already exist in the trash folder, it will be overwritten.
         If overwrite is False, any existing file in the trash folder with the same name will be renamed with a timestamp.
         
         Args:
             file (str): File to move to the trash folder.
+            overwrite (bool): True to overwrite existing file in the trash folder with the same name. False to rename the existing file with a timestamp
             
         Returns: None
         
@@ -65,7 +66,7 @@ class FileHandler:
         filename = os.path.basename(file)
         trashed_file = os.path.join(self.config.trash, filename)
         
-        if self.config.data_overwrite:
+        if overwrite:
             try:
                 os.remove(trashed_file)
             except FileNotFoundError:
@@ -109,7 +110,7 @@ class FileHandler:
             self.log.error(f"Error moving {file} to store folder: {e}")
 
     # --------------------------------------------------------------
-    def publish_raw(self, file: str) -> bool:
+    def publish_data_file(self, file: str) -> bool:
         """Publish a file to the raw folder.
 
         Args:
@@ -119,11 +120,12 @@ class FileHandler:
         filename = os.path.basename(file)
         
         try:
-            shutil.move(file, self.config.raw)
-            self.log.info(f"Published to {self.config.raw} the file {filename}")
+            for publish_folder in self.config.get:
+                shutil.move(file, publish_folder)
+                self.log.info(f"Published to {publish_folder} the file {filename}")
             return True
         except Exception as e:
-            self.log.error(f"Error publishing {file} to raw folder: {e}")
+            self.log.error(f"Error publishing {file} to {publish_folder}: {e}")
             return False
 
     # --------------------------------------------------------------
@@ -180,20 +182,20 @@ class FileHandler:
                 _, ext = os.path.splitext(item)
                 match ext:
                     
-                    case self.config.catalog_extension:
+                    case self.config.metadata_extension:
                         if move:                        
                             item = self.move_to_temp(item)
 
                         catalog_to_process.append(item)
                         
-                    case self.config.raw_extension:
+                    case self.config.data_extension:
                         if move:
                             item = self.move_to_temp(item)
                         
                         raw_to_process.append(item)
                     
                     case _: 
-                        self.trash_it(item)
+                        self.trash_it(file=item, overwrite=self.config.data_overwrite)
             else:
                 subfolder.append(item)
                 
@@ -223,16 +225,18 @@ class FileHandler:
         catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, move=False)
         
         # Get files from post folder
-        folder_content = glob.glob("**", root_dir=self.config.post, recursive=True)
+        for post_folder in self.config.post:
         
-        if not folder_content:
-            self.log.info("POST Folder is empty.")
-        else:
-            # add path to filenames
-            folder_content = list(map(lambda x: os.path.join(self.config.post, x), folder_content))
-            self.log.info(f"POST Folder has {len(folder_content)} files/folders to process.")
+            folder_content = glob.glob("**", root_dir=post_folder, recursive=True)
             
-        catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process)
+            if not folder_content:
+                self.log.info("POST Folder {post_folder} is empty.")
+            else:
+                # add path to filenames
+                folder_content = list(map(lambda x: os.path.join(post_folder, x), folder_content))
+                self.log.info(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
+                
+            catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process)
                         
         return catalog_to_process, raw_to_process
 
@@ -257,13 +261,13 @@ class FileHandler:
                     
                     # Check if the file is older than the clean period
                     if pd.to_datetime(os.path.getctime(item_name), unit='s') < pd.to_datetime("now") - pd.Timedelta(hours=self.config.clean_period):
-                        self.trash_it(item_name, overwrite_trash=self.config.data_overwrite)
+                        self.trash_it(file=item_name, overwrite=self.config.data_overwrite)
                 else:
                     folder_to_remove.append(item)
 
         # Remove empty subfolder after moving files. 
         if folder_to_remove:
-            # TODO: #1  Check if the subfolder corresponds to the raw data folder as defined in the config file and do not remove it
+            # TODO: #1  Check if the subfolder is expected as defined in the config file and do not remove it
             for item in folder_to_remove:
                 # New files that may have appeared in the subfolder will be processed in the next run, so test if it is empty before removing
                 if not os.listdir(item):
@@ -278,7 +282,11 @@ class FileHandler:
         """Check if it's time to clean the post folder and update the last clean time in the config file."""
 
         if pd.to_datetime("now") - self.config.last_clean > pd.Timedelta(hours=self.config.clean_period):
-            self.clean_old_in_folder(self.config.post)
-            self.clean_old_in_folder(self.config.temp)
-            self.config.set_last_clean()
+            for post_folder in self.config.post:
+                self.clean_old_in_folder(post_folder)
+                
+        self.clean_old_in_folder(self.config.temp)
+        
+        # TODO: #3 Sync multiple catalog files by checking if they have same content and merge them
+        self.config.set_last_clean()
 

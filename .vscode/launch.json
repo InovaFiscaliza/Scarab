@@ -12,6 +12,13 @@
             "program": "src/scarab.py",
             "console": "integratedTerminal",
             "args": ["./tests/sandbox/config.json"]
+        },
+        {
+            "name": "Test simple",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/teste.py",
+            "console": "integratedTerminal"
         }
     ]
 }

@@ -56,21 +56,21 @@ def start_logging(config: cm.Config) -> logging.Logger:
         ch.setFormatter(screen_formatter)
         log.addHandler(ch)
     
+    log.info(f"Scarab starts rolling ({config.name})...")
+
     if config.log_to_file:
         
         # Clean existing log file
         file = fm.FileHandler(config,log)
-        file.trash_it(config.log_path)
+        file.trash_it(file=config.log_file_path, overwrite=config.log_overwrite)
         
         # Create new log file with header line
-        with open(config.log_path, 'w') as log_file:
+        with open(config.log_file_path, 'w') as log_file:
             log_file.write(config.log_title + "\n")
         
-        fh = logging.FileHandler(config.log_path)
+        fh = logging.FileHandler(config.log_file_path)
         file_formatter = logging.Formatter(fmt=config.log_file_format)
         fh.setFormatter(file_formatter)
         log.addHandler(fh)
-    
-    log.info("Starting file catalog script...")
 
     return log

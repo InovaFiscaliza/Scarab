@@ -35,11 +35,12 @@ class DataHandler:
         
 
     # --------------------------------------------------------------
-    def read_excel(self, file: str) -> tuple[pd.DataFrame, list]:
+    def read_excel(self, file: str, index_column: str) -> tuple[pd.DataFrame, list]:
         """Read an Excel file and return a DataFrame indexed according to the defined keys
 
         Args:
             file (str): Excel file to read.
+            index_column (str): Column to use as index in the DataFrame.
 
         Returns:
             pd.DataFrame: DataFrame with the data from the Excel file.
@@ -56,7 +57,7 @@ class DataHandler:
         columns = df_from_file.columns.tolist()
         
         try:
-            df_from_file.set_index(self.config.columns_key, inplace=True)
+            df_from_file.set_index(index_column, inplace=True)
         except Exception as e:
             self.log.error(f"Error setting index in reference data: {e}")
             pass
@@ -65,7 +66,7 @@ class DataHandler:
 
     # --------------------------------------------------------------
     def valid_data(self, df: pd.DataFrame) -> bool:
-        """Validate the data in the DataFrame.
+        """Check if the input table columns are a superset of the minimum required columns.
 
         Args:
             df (pd.DataFrame): DataFrame to validate.
@@ -81,24 +82,46 @@ class DataHandler:
 
         return self.config.columns_in.issubset(set(df_columns))
 
+
     # --------------------------------------------------------------
-    def process_metadata_files(self, metadata_to_process: list[str]) -> pd.DataFrame:
+    def read_reference_df(self) -> tuple[pd.DataFrame, list]:
+        """Read the most recently updated reference DataFrame from the list of catalog files.
+
+        Args: None
+
+        Returns:
+            pd.DataFrame: DataFrame with the data from the most recently updated catalog file.
+            list: List of columns in the DataFrame.
+        """
+        
+        latest_file = max(self.config.catalog_files, key=os.path.getmtime)
+        
+        self.log.info(f"Reading reference data from the most recently updated file: {latest_file}")
+        
+        return self.read_excel(file=latest_file, index_column=self.config.columns_key)
+
+        
+    # --------------------------------------------------------------
+    def process_metadata_files(self,  metadata_files: list[str]) -> pd.DataFrame:
         """Process the list of xlsx files and update the reference data file.
 
         Args:
-            metadata_to_process (list[str]): List of xlsx files to process.
+             metadata_files (list[str]): List of xlsx files to process.
             config (Config): Configuration object.
             log (logging.Logger): Logger object.
+            
+        Returns:
+            pd.DataFrame: Updated reference DataFrame.
         """
         
+        reference_df,columns_out = self.read_reference_df()
         
-        (reference_df,columns_out) = self.read_excel(self.config.catalog_file)
-        
-        for file in metadata_to_process:
-            new_data_df = self.read_excel(file)
+        for file in metadata_files:
+            new_data_df, _ = self.read_excel(   file=file,
+                                                index_column=self.config.columns_key)
 
             if not self.valid_data(new_data_df):
-                self.file.trash_it(file, overwrite_trash=self.config.data_overwrite)
+                self.file.trash_it(file=file, overwrite=self.config.data_overwrite)
                 continue
             
             # update the reference data with the new data where index matches
@@ -111,30 +134,31 @@ class DataHandler:
             
             self.file.move_to_store(file)
 
+
     # --------------------------------------------------------------
-    def process_raw_files(self, raw_to_process: list[str]) -> None:
+    def process_data_files(self, files_to_process: list[str]) -> None:
         """Process the list of pdf files and update the reference data file.
 
         Args:
-            raw_to_process (list[str]): List of pdf files to process.
+            files_to_process (list[str]): List of pdf files to process.
             reference_df (pd.DataFrame): Reference data DataFrame.
             log (logging.Logger): Logger object.
         """
             
-        reference_df = self.read_excel(self.config.catalog_file)
+        reference_df, columns_out = self.read_reference_df()
         
-        for item in raw_to_process:
+        for item in files_to_process:
             filename = os.path.basename(item)
-            if filename in reference_df.index:
-                reference_df.at[filename, "status_screenshot"] = 1
-                if self.file.publish_raw(item):
-                    self.persist_reference(reference_df)
-                
+
+            reference_df[self.config.columns_data_published] = pd.to_numeric(reference_df[self.config.columns_data_published], errors='coerce')
+            reference_df.loc[reference_df[self.config.columns_data_filenames].str.contains(filename, na=False), self.config.columns_data_published] = 1
+            
+            if self.file.publish_data_file(item):
+                self.persist_reference(reference_df=reference_df, columns_out=columns_out)
             else:
                 # if file is not present in the reference_df, just do nothing and wait for it to appear later.
-                self.log.info(f"{filename} not found in the reference data.")
-
-        
+                self.log.info(f"{filename} not found in the metadata catalog.")
+                    
     # --------------------------------------------------------------
     def persist_reference(self, reference_df: pd.DataFrame, columns_out: list) -> None:
         """Persist the reference DataFrame to the catalog file.
@@ -152,8 +176,9 @@ class DataHandler:
         # reorder columns to match order defined the config file as columns_out_order
         reference_df = reference_df[columns_out]
         
-        try:
-            reference_df.to_excel(self.config.catalog_file, index=False)
-            self.log.info(f"Reference data file updated: {self.config.catalog_file}")
-        except Exception as e:
-            self.log.error(f"Error saving reference data: {e}")
+        for catalog_file in self.config.catalog_files:
+            try:
+                reference_df.to_excel(catalog_file, index=False)
+                self.log.info(f"Reference data file updated: {catalog_file}")
+            except Exception as e:
+                self.log.error(f"Error saving reference data: {e}")

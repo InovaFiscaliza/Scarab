@@ -24,7 +24,7 @@ Use `TEST_BASIC.bat` to deploy and reset the sandbox folder structure.
 > Store folder should contain the original files.
 > trash should contain the en empty log file and the file "file_to_trash.empty" that was moved from the post folder under the delete subfolder "folder_to_delete".
 
-To test script termination you maypressing `ctrl+c` 
+To test script termination you maypressing `ctrl+c`
 
 - Second execution:
 

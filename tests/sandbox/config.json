@@ -27,21 +27,19 @@
         "overwrite log in trash": false
     },
     "folders": {
-        "root": "./tests/sandbox",
-        "post": "post",
-        "temp": "temp",
-        "trash": "trash",
-        "store": "store",
-        "get" : "get",
-        "raw": "get/raw"
+        "post": "./tests/sandbox/post",
+        "temp": "./tests/sandbox/temp",
+        "trash": "./tests/sandbox/trash",
+        "store": "./tests/sandbox/store",
+        "get" : "./tests/sandbox/get/raw"
     },
     "files" : {
-        "catalogExtension": ".xlsx",
-        "catalogName": "monitorRNI",
-        "rawExtension": ".txt"
-    },    
-    "columns": {
-        "in": [ "ID",
+        "metadata extension": ".xlsx",
+        "data extension": ".txt",
+        "catalog names": "./tests/sandbox/get/monitorRNI.xlsx"
+    },
+    "metadata": {
+        "in columns": [ "ID",
                 "UD",
                 "UF",
                 "Município",
@@ -67,6 +65,8 @@
                 "Justificativa",
                 "Observações"
         ],
-        "key": "N° estacao"
+        "key": "N° estacao",
+        "data filenames": "Fonte de dados",
+        "data published flag": "Fontes Disponíveis"
     }
 }
