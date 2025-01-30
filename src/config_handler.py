@@ -103,7 +103,7 @@ class Config:
             """ Flag to log to screen"""
             self.log_to_file: bool = self.raw["log"]["file output"]
             """ Flag to log to file"""
-            self.log_file_path: str = self.raw["log"]["file path"]
+            self.log_file_path: str = self.__ensure_list(self.raw["log"]["file path"])
             """ Log file name with path"""
             self.log_separator: str = self.raw["log"]["separator"]
             """ Log column separator"""
@@ -279,7 +279,7 @@ class Config:
             print(f"Error writing to config file: {e}")
             
     # --------------------------------------------------------------
-    def __test_folder(self, folder: str, folder_type: str, msg: str) -> tuple[bool, str]:
+    def __test_folder(self, folder: str, folder_type: str, message: str) -> tuple[bool, str]:
         """Test if the folder exists and add an error message if it does not.
 
         Args:
@@ -292,10 +292,50 @@ class Config:
         """
         test_result = True
         if not os.path.exists(folder):
-            msg += f"\n  - {folder_type} folder not found: {folder}"
+            message += f"\n  - {folder_type} folder not found: {folder}"
             test_result = False
         
-        return test_result, msg
+        return test_result, message
+    
+    # --------------------------------------------------------------
+    def __test_file(self, filename: str, file_type: str, message: str, required:bool=False) -> tuple[bool, str]:
+        """Test if the file exists and add an error message if it does not.
+
+        Args:
+            file (str): file path to be tested.
+            file_type (str): file type to be mentioned in the error message.
+            msg (str): error message to be updated.
+            required (bool): flag to indicate if the file is required.
+
+        Returns:
+            msg: error message with the file test result.
+        """
+        
+        try:
+            test_result = True
+            
+            with open(filename, 'a') as file:
+                # use tell() to check if the file at the beginning, thus, has been just created by the file open function call
+                file_is_empty = (file.tell() == 0)
+                if not file.writable():
+                    raise Exception(f"{filename} not writable")
+        
+            if file_is_empty:
+                if required:
+                    message += f"\n  - {file_type} file is empty: {filename}"
+                    test_result = False
+                    
+                os.remove(filename)
+                
+        except (FileNotFoundError, OSError) as e:
+            message += f"\n  - {file_type} file [{filename}] not available {e}"
+            test_result = False
+
+        except Exception as e:
+            message += f"\n  - {file_type} error. {e}"
+            test_result = False
+    
+        return test_result, message
     
     # --------------------------------------------------------------
     def is_config_ok(self) -> bool:
@@ -322,35 +362,25 @@ class Config:
         test_result, msg = self.__test_folder(self.trash, "Trash", msg)
         
         for folder in self.get:
-            test_result, msg = self.__test_folder(folder, "Get", msg)
+            test_result, msg = self.__test_folder(folder=folder,
+                                                folder_type="Get",
+                                                message=msg)
 
-        # Test all folders in the self.catalog_files list
-        for folder in self.catalog_files:
-            test_result, msg = self.__test_folder(folder, "Catalog", msg)
+        for file in self.catalog_files:
+            test_result, msg = self.__test_file(filename=file,
+                                                file_type="Catalog",
+                                                message=msg)
         
-        if self.log_file_path:
-            if not os.path.exists(os.path.dirname(self.log_file_path)):
-                msg += f"\n  - Log folder not found: {os.path.dirname(self.log_file_path)}"
-                test_result = False
-            else:
-                try:
-                    with open(self.log_file_path, 'a') as log_file:
-                        # use tell() to check if the file at the beginning, thus, has been just created by the file open function call
-                        log_file_is_empty = (log_file.tell() == 0)
-                        log_file.writable()
-                    if log_file_is_empty:
-                        os.remove(self.log_file_path)
-                except Exception as e:
-                    msg += f"\n  - Error writing to log file: {e}"
-                    test_result = False
-        
-        try:
-            with open(self.config_file, 'a') as json_file:
-                json_file.writable()
-        except Exception as e:
-            msg += f"\n  - Error writing to config file: {e}"
-            test_result = False
-        
+        for file in self.log_file_path:
+            test_result, msg = self.__test_file(filename=file,
+                                                file_type="Log",
+                                                message=msg)
+            
+        test_result, msg = self.__test_file(filename=self.config_file,
+                                            file_type="Config",
+                                            message=msg,
+                                            required=True)
+                
         if not test_result:
             msg += "\n\nPlease correct the errors and restart the script."
             print(msg)

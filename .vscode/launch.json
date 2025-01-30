@@ -9,16 +9,10 @@
             "name": "Test scarab with sandbox",
             "type": "debugpy",
             "request": "launch",
-            "program": "src/scarab.py",
+            "cwd": "${workspaceFolder}/tests",
+            "program": "../src/scarab.py",
             "console": "integratedTerminal",
-            "args": ["./tests/sandbox/config.json"]
-        },
-        {
-            "name": "Test simple",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "src/teste.py",
-            "console": "integratedTerminal"
+            "args": ["./sandbox/config.json"]
         }
     ]
 }

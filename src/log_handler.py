@@ -62,15 +62,16 @@ def start_logging(config: cm.Config) -> logging.Logger:
         
         # Clean existing log file
         file = fm.FileHandler(config,log)
-        file.trash_it(file=config.log_file_path, overwrite=config.log_overwrite)
+        for log_file in config.log_file_path:
+            file.trash_it(file=log_file, overwrite=config.log_overwrite)
         
-        # Create new log file with header line
-        with open(config.log_file_path, 'w') as log_file:
-            log_file.write(config.log_title + "\n")
+            # Create new log file with header line
+            with open(log_file, 'w') as log_file_handle:
+                log_file_handle.write(config.log_title + "\n")
         
-        fh = logging.FileHandler(config.log_file_path)
-        file_formatter = logging.Formatter(fmt=config.log_file_format)
-        fh.setFormatter(file_formatter)
-        log.addHandler(fh)
+            fh = logging.FileHandler(log_file)
+            file_formatter = logging.Formatter(fmt=config.log_file_format)
+            fh.setFormatter(file_formatter)
+            log.addHandler(fh)
 
     return log

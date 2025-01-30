@@ -1,14 +1,17 @@
 {
-    "name": "Teste Simple",
+    "name": "Teste Multi-Folder",
     "check period in seconds": 10,
     "clean period in hours": 1,
-    "last clean": "2024-11-05 20:33:29",
+    "last clean": "2025-01-30 16:01:55",
     "overwrite data in trash": true,
     "log": {
         "level": "INFO",
         "screen output": true,
         "file output": true,
-        "file path": "./tests/sandbox/get/log.txt",
+        "file path": [
+            "./sandbox/get/log.txt",
+            "./sandbox/get_other/log.txt"
+        ],
         "format": [
             "%(asctime)s",
             "%(module)s: %(funcName)s:%(lineno)d",
@@ -27,46 +30,56 @@
         "overwrite log in trash": false
     },
     "folders": {
-        "post": "./tests/sandbox/post",
-        "temp": "./tests/sandbox/temp",
-        "trash": "./tests/sandbox/trash",
-        "store": "./tests/sandbox/store",
-        "get" : "./tests/sandbox/get/raw"
+        "post": [
+            "./sandbox/post",
+            "./sandbox/post_other"
+        ],
+        "temp": "./sandbox/temp",
+        "trash": "./sandbox/trash",
+        "store": "./sandbox/store",
+        "get": [
+            "./sandbox/get/raw",
+            "./sandbox/get_other/raw"
+        ]
     },
-    "files" : {
+    "files": {
         "metadata extension": ".xlsx",
         "data extension": ".txt",
-        "catalog names": "./tests/sandbox/get/monitorRNI.xlsx"
+        "catalog names": [
+            "./sandbox/get/monitorRNI.xlsx",
+            "./sandbox/get_other/monitorRNI.xlsx"
+        ]
     },
     "metadata": {
-        "in columns": [ "ID",
-                "UD",
-                "UF",
-                "Município",
-                "Tipo",
-                "Serviço",
-                "Entidade",
-                "Fistel",
-                "N° estacao",
-                "Endereco",
-                "Lat",
-                "Long",
-                "Áreas Críticas",
-                "Qtd. medidas",
-                "Qtd. medidas > 14.0 V/m",
-                "Distância mínima (km)",
-                "Emin (V/m)",
-                "Emean (V/m)",
-                "Emax (V/m)",
-                "Emax - Data da Medição",
-                "Emax - Latitude",
-                "Emax - Longitude",
-                "Fonte de dados",
-                "Justificativa",
-                "Observações"
+        "in columns": [
+            "ID",
+            "UD",
+            "UF",
+            "Munic\u00edpio",
+            "Tipo",
+            "Servi\u00e7o",
+            "Entidade",
+            "Fistel",
+            "N\u00b0 estacao",
+            "Endereco",
+            "Lat",
+            "Long",
+            "\u00c1reas Cr\u00edticas",
+            "Qtd. medidas",
+            "Qtd. medidas > 14.0 V/m",
+            "Dist\u00e2ncia m\u00ednima (km)",
+            "Emin (V/m)",
+            "Emean (V/m)",
+            "Emax (V/m)",
+            "Emax - Data da Medi\u00e7\u00e3o",
+            "Emax - Latitude",
+            "Emax - Longitude",
+            "Fonte de dados",
+            "Justificativa",
+            "Observa\u00e7\u00f5es"
         ],
-        "key": "N° estacao",
+        "key": "N\u00b0 estacao",
         "data filenames": "Fonte de dados",
-        "data published flag": "Fontes Disponíveis"
+        "data published flag": "Fontes Dispon\u00edveis"
     }
 }

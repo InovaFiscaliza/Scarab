@@ -1,5 +1,4 @@
 asctime | module: funcName:lineno | name[process] | levelname | message
-2025-01-30 16:01:42,620 | file_handler: trash_it:130 | Teste Multi-Folder[34196] | ERROR | Error moving ./sandbox/get_other/log.txt to trash folder: Destination path './sandbox/trash\log.txt' already exists
 2025-01-30 16:01:42,624 | file_handler: get_files_to_process:256 | Teste Multi-Folder[34196] | INFO | TEMP Folder is empty.
 2025-01-30 16:01:42,626 | file_handler: get_files_to_process:274 | Teste Multi-Folder[34196] | INFO | POST Folder ./sandbox/post has 2 files/folders to process.
 2025-01-30 16:01:42,630 | file_handler: move_to_temp:47 | Teste Multi-Folder[34196] | INFO | Moved to ./sandbox/temp the file monitorRNI_test_from_one.xlsx

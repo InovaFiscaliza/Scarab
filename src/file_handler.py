@@ -18,6 +18,8 @@ import os
 import shutil
 import glob
 import pandas as pd
+import hashlib
+
 from dataclasses import dataclass
 # --------------------------------------------------------------
 @dataclass
@@ -49,10 +51,45 @@ class FileHandler:
             return file
 
     # --------------------------------------------------------------
+    def calculate_md5(self, file_path: str) -> str:
+        """Calculate the MD5 hash of the file content.
+        
+        Args:
+            file_path (str): File to calculate the MD5 hash.
+            
+        Returns:
+            str: MD5 hash of the file content.
+            
+        Raises: None
+        """
+        
+        hash_md5 = hashlib.md5()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+
+    # --------------------------------------------------------------
+    def remove_file(self, file: str) -> None:
+        """Remove a file from the system.
+
+        Args:
+            file (str): File to remove.
+        """
+        
+        try:
+            os.remove(file)
+            self.log.info(f"Removed the file {file}")
+        except FileNotFoundError:
+            pass                
+        except Exception as e:
+            self.log.error(f"Error removing {file}: {e}")
+            
+    # --------------------------------------------------------------
     def trash_it(self, file: str, overwrite: bool) -> None:
         """Move file in argument to the trash folder.
         If overwrite is True and file with the same name already exist in the trash folder, it will be overwritten.
-        If overwrite is False, any existing file in the trash folder with the same name will be renamed with a timestamp.
+        If overwrite is False, any existing file in the trash folder with the same name will be renamed with a timestamp if it has a different content.
         
         Args:
             file (str): File to move to the trash folder.
@@ -67,23 +104,23 @@ class FileHandler:
         trashed_file = os.path.join(self.config.trash, filename)
         
         if overwrite:
-            try:
-                os.remove(trashed_file)
-            except FileNotFoundError:
-                pass                
-            except Exception as e:
-                self.log.error(f"Error removing {filename} from trash folder: {e}")
+            self.remove_file(trashed_file)
         else:
-            if os.path.exists(trashed_file):
-                trashed_filename, ext = os.path.splitext(filename)
-                timestamp = pd.to_datetime("now").strftime('%Y%m%d_%H%M%S')
-                trashed_filename = f"{trashed_filename}_{timestamp}{ext}"
-                new_trashed_file = os.path.join(self.config.trash, trashed_filename)
-                try:
-                    os.rename(trashed_file, new_trashed_file)
-                    self.log.info(f"Renamed {filename} to {trashed_filename} in trash.")
-                except Exception as e:
-                    self.log.error(f"Error renaming {filename} in trash folder: {e}")
+            if (os.path.exists(trashed_file) and os.path.exists(file)):
+                
+                if self.calculate_md5(trashed_file) == self.calculate_md5(file):
+                    self.log.info(f"The file {file} is already in the trash folder with the same content.")
+                    self.remove_file(trashed_file)
+                else:   
+                    trashed_filename, ext = os.path.splitext(filename)
+                    timestamp = pd.to_datetime("now").strftime('%Y%m%d_%H%M%S')
+                    trashed_filename = f"{trashed_filename}_{timestamp}{ext}"
+                    new_trashed_file = os.path.join(self.config.trash, trashed_filename)
+                    try:
+                        os.rename(trashed_file, new_trashed_file)
+                        self.log.info(f"Renamed {filename} to {trashed_filename} in trash.")
+                    except Exception as e:
+                        self.log.error(f"Error renaming {filename} in trash folder: {e}")
 
         try:
             shutil.move(file, self.config.trash)

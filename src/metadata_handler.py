@@ -94,7 +94,16 @@ class DataHandler:
             list: List of columns in the DataFrame.
         """
         
-        latest_file = max(self.config.catalog_files, key=os.path.getmtime)
+        try:
+            latest_file = max(self.config.catalog_files, key=os.path.getmtime)
+        except FileNotFoundError as e:
+            for file in self.config.catalog_files:
+                # test if file exist
+                if os.path.isfile(file):
+                    latest_file = file
+                    break
+                else:
+                    self.log.error(f"Reference data file not found: {e}")            
         
         self.log.info(f"Reading reference data from the most recently updated file: {latest_file}")
         

@@ -85,10 +85,14 @@ def main(config_path: str) -> None:
             
             time.sleep(config.check_period)
         
+        except (FileNotFoundError, OSError) as e:
+            log.critical(f"Error accessing folders or files: {e}")
+            keep_watching = False
+        
         except Exception as e:
             log.exception(f"Error in main loop: {e}")
 
-    log.info("Scarab is moving away from ({config.name})...")
+    log.info(f"Scarab is moving away from ({config.name})...")
     
 if __name__ == "__main__":
     if len(sys.argv) != 2:
