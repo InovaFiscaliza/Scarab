@@ -21,14 +21,17 @@ import metadata_handler as dm
 import signal
 import inspect
 import sys
+import logging
 
 import time
 
 """File config.json is expected in the same folder as the script."""
 
 # Global variables
-keep_watching = True
-log = None
+keep_watching: bool = True
+"""Flag to keep the main loop running."""
+log: logging.Logger = None
+"""Logger object."""
 
 # --------------------------------------------------------------
 def sigterm_handler(signal=None, frame=None) -> None:
@@ -38,7 +41,7 @@ def sigterm_handler(signal=None, frame=None) -> None:
     global log
 
     current_function = inspect.currentframe().f_back.f_code.co_name
-    log.critical(f"Kill signal received at: {current_function}()")
+    log.critical(f"Kill command received at: {current_function}()")
     keep_watching = False
 
 # --------------------------------------------------------------
@@ -64,6 +67,7 @@ def main(config_path: str) -> None:
     """Main function"""
     
     global keep_watching
+    global log
     
     config = cm.Config(config_path)
     log = lm.start_logging(config)
