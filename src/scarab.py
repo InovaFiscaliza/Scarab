@@ -22,6 +22,7 @@ import signal
 import inspect
 import sys
 import logging
+from types import FrameType
 
 import time
 
@@ -34,25 +35,18 @@ log: logging.Logger = None
 """Logger object."""
 
 # --------------------------------------------------------------
-def sigterm_handler(signal=None, frame=None) -> None:
-    """Signal handler for SIGTERM (Kill) to stop the process."""
+def sigint_handler( signal_code: signal.Signals = None,
+                    frame: FrameType = None) -> None:
+    """Signal handler to stop the process."""
 
     global keep_watching
     global log
-
-    current_function = inspect.currentframe().f_back.f_code.co_name
-    log.critical(f"Kill command received at: {current_function}()")
-    keep_watching = False
-
-# --------------------------------------------------------------
-def sigint_handler(signal=None, frame=None) -> None:
-    """Signal handler for SIGINT (Ctrl+C) to stop the process."""
-
-    global keep_watching
-    global log
-
-    current_function = inspect.currentframe().f_back.f_code.co_name
-    log.critical(f"Ctrl+C received at: {current_function}()")
+    
+    frame_info = inspect.getframeinfo(frame)
+    module_name = frame_info.filename
+    line_number = frame_info.lineno
+    
+    log.critical(f"{signal.Signals(signal_code).name} received at: {module_name}[{line_number}]")
     keep_watching = False
 
 # --------------------------------------------------------------
@@ -60,7 +54,8 @@ def sigint_handler(signal=None, frame=None) -> None:
 # --------------------------------------------------------------
 
 # Register the signal handler function, to handle system kill commands
-signal.signal(signal.SIGTERM, sigterm_handler)
+signal.signal(signal.SIGTERM, sigint_handler)
+signal.signal(signal.SIGBREAK, sigint_handler)
 signal.signal(signal.SIGINT, sigint_handler)
 
 def main(config_path: str) -> None:
@@ -93,7 +88,7 @@ def main(config_path: str) -> None:
         except Exception as e:
             log.exception(f"Error in main loop: {e}")
 
-    log.info("File catalog script stopped.")
+    log.info("Scarab is moving away from ({config.name})...")
     
 if __name__ == "__main__":
     if len(sys.argv) != 2:
