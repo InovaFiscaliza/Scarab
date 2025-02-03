@@ -156,14 +156,24 @@ class FileHandler:
                 
         filename = os.path.basename(file)
         
+        publish_succeded = True
+
+        for publish_folder in self.config.get[:-1]:
+            try:
+                shutil.copy(file, publish_folder)
+                self.log.info(f"Copied {filename} to {publish_folder}")
+            except Exception as e:
+                self.log.error(f"Error publishing {file} to {publish_folder}: {e}")
+                publish_succeded = False
+            
         try:
-            for publish_folder in self.config.get:
-                shutil.move(file, publish_folder)
-                self.log.info(f"Published to {publish_folder} the file {filename}")
-            return True
+            shutil.move(file, publish_folder[-1])
+            self.log.info(f"Moved {filename} to {publish_folder}")
         except Exception as e:
-            self.log.error(f"Error publishing {file} to {publish_folder}: {e}")
-            return False
+            self.log.error(f"Error moving {file} to {publish_folder}: {e}")
+            publish_succeded = False
+        
+        return publish_succeded
 
     # --------------------------------------------------------------
     def remove_unused_subfolder(self, subfolder: list[str]) -> None:
