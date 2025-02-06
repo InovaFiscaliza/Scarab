@@ -69,6 +69,9 @@ def main(config_path: str) -> None:
     file = fm.FileHandler(config, log)
     data = dm.DataHandler(config, log)
     
+    # initialize raw data folders to be synchronized
+    file.mirror_raw_data()
+    
     # keep thread running until a ctrl+C or kill command is received, even if an error occurs
     while keep_watching:
         

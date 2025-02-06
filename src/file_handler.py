@@ -19,6 +19,7 @@ import shutil
 import glob
 import pandas as pd
 import hashlib
+import itertools
 
 from dataclasses import dataclass
 # --------------------------------------------------------------
@@ -244,6 +245,8 @@ class FileHandler:
 
         Returns:
             tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolder to remove.
+            
+        Raises: None
         """
         
         # Initialize lists if they are None
@@ -288,9 +291,13 @@ class FileHandler:
     def get_files_to_process(self) -> tuple[list[str], list[str]]:
         """Move new files from the post folder to the temp folder and return the list of files to process.
 
+        Args: None
+        
         Returns:
             list[str]: List of xlsx files to process.
             list[str]: List of pdf files to process.
+            
+        Raises: None
         """
         
         # Get files from temp folder
@@ -323,7 +330,14 @@ class FileHandler:
 
     # --------------------------------------------------------------
     def clean_old_in_folder(self, folder: str) -> None:
-        """Move all files older than the clean period in hours from the post folder to the trash folder."""
+        """Move all files older than the clean period in hours from the post folder to the trash folder.
+        
+        Args: folder (str): Folder to clean.
+        
+        Returns: None
+        
+        Raises: None
+        """
         
         # Get content from folder
         folder_content = glob.glob("**", root_dir=folder, recursive=True)
@@ -360,7 +374,13 @@ class FileHandler:
 
     # --------------------------------------------------------------
     def clean_folders(self) -> None:
-        """Check if it's time to clean the post folder and update the last clean time in the config file."""
+        """Check if it's time to clean the post folder and update the last clean time in the config file.
+        
+        Args: None
+        
+        Returns: None
+        
+        Raises: None"""
 
         if pd.to_datetime("now") - self.config.last_clean > pd.Timedelta(hours=self.config.clean_period):
             for post_folder in self.config.post:
@@ -370,4 +390,48 @@ class FileHandler:
         
         # TODO: #3 Sync multiple catalog files by checking if they have same content and merge them
         self.config.set_last_clean()
+        
+        
+    # --------------------------------------------------------------
+    def mirror_raw_data(self) -> None:
+        """Mirror the raw data between multiple config.get folders.
+        Folder comparison is based on file names only. Differences in content will be ignored.
 
+        Args: None
+
+        Returns: None
+
+        Raises: None
+        """
+        
+        # Test if self.config.get has multiple folders
+        if len(self.config.get) > 1:
+            self.log.info(f"Mirroring raw data between {len(self.config.get)} folders.")
+
+            # get the content from all folders into a dictionary of lists
+            folders = {}
+            for folder in self.config.get:
+                folders[folder] = glob.glob("**", root_dir=folder, recursive=True)
+
+            # Use itertools.combinations to generate pairs of folders for comparison
+            for folder1, folder2 in itertools.combinations(folders.keys(), 2):
+                
+                # Compare pair of folders
+                missing_in_folder2 = [file for file in folders[folder1] if file not in folders[folder2]]
+                missing_in_folder1 = [file for file in folders[folder2] if file not in folders[folder1]]
+
+                # Copy missing files from folder1 to folder2
+                for file in missing_in_folder2:
+                    try:
+                        shutil.copy(os.path.join(folder1, file), folder2)
+                        self.log.info(f"Copied {file} from {folder1} to {folder2}")
+                    except Exception as e:
+                        self.log.error(f"Error copying {file} from {folder1} to {folder2}: {e}")
+
+                # Copy missing files from folder2 to folder1
+                for file in missing_in_folder1:
+                    try:
+                        shutil.copy(os.path.join(folder2, file), folder1)
+                        self.log.info(f"Copied {file} from {folder2} to {folder1}")
+                    except Exception as e:
+                        self.log.error(f"Error copying {file} from {folder2} to {folder1}")

@@ -50,6 +50,8 @@ This tests has the basic same data as the output from the first and second tests
 After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
 
 > * File `monitorRNI_test_temp_update.xlsx` will be processed and moved from the temp folder to store folder, simulating a missing file due to broken execution.
+> * Folder `get_other`, that was initially empty, should have the same content as the `get` folder, including pre-existing files in the raw subfolder.
+> 
 
 ## Creating new tests
 
