@@ -37,19 +37,30 @@ class FileHandler:
             file (str): File to move.
 
         Returns:
-            str: New path of the file in the temp folder.
+            str: New path of the file in the temp folder, or the original path if the file cannot be moved.
         """
         
         filename = os.path.basename(file)
+        target_file = os.path.join(self.config.temp, filename)
         
-        try:
-            shutil.move(file, self.config.temp)
-            os.utime(os.path.join(self.config.temp, filename))
-            self.log.info(f"Moved to {self.config.temp} the file {filename}")
-            return os.path.join(self.config.temp, filename)
-        except Exception as e:
-            self.log.error(f"Error moving {file} to temp folder: {e}")
-            return file
+        if os.path.exists(target_file):
+            # test if content match
+            if self.calculate_md5(target_file) == self.calculate_md5(file):
+                self.remove_file(file)
+                self.log.warning(f"File {file} posted in more than one folder.")
+                return target_file
+            else:
+                filename = self.add_timestamp_to_name(filename)
+                target_file = os.path.join(self.config.temp, filename)
+                
+                try:    
+                    shutil.move(file, target_file)
+                    os.utime(filename)
+                    self.log.info(f"Moved to {self.config.temp} the file {filename}")
+                    return target_file
+                except Exception as e:
+                    self.log.error(f"Error moving {file} to temp folder: {e}")
+                    return file
 
     # --------------------------------------------------------------
     def calculate_md5(self, file_path: str) -> str:
