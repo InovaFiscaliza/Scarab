@@ -60,8 +60,8 @@ This tests has the basic same data as the output from the first and second tests
 
 After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
 
-> * 
-
+> * Test the use of variant names for the log file (if the timestamp is the same) and the use of the `overwrite` flag in the config file.
+> * Same file posted in multiple folders are processed only once.
 
 ## Creating new tests
 

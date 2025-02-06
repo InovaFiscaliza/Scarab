@@ -28,9 +28,25 @@ class FileHandler:
     
     config: cm.Config
     log: logging.Logger
+    
+    MAXIMUM_VARIANT = 100
+    
+    # --------------------------------------------------------------
+    def move_file(self, source_file: str, target_file: str) -> str:
+        """Move a file from the source path to the target path, resetting the file timestamp for the current time and creating entry in self.log.
+
+        Args:
+            source_file (str): File to move.
+            target_file (str): Destination path of the file.
+            
+        Returns:
+            str: New path of the file, or the original path if the file cannot be moved.
+        """
+        
+
         
     # --------------------------------------------------------------
-    def move_to_temp(self, file: str) -> str:
+    def move_to_temp(self, source_file: str) -> str:
         """Move a file to the temp folder, return the new path, resetting the file timestamp for the current time and self.log.the event.
 
         Args:
@@ -40,27 +56,27 @@ class FileHandler:
             str: New path of the file in the temp folder, or the original path if the file cannot be moved.
         """
         
-        filename = os.path.basename(file)
+        filename = os.path.basename(source_file)
         target_file = os.path.join(self.config.temp, filename)
         
         if os.path.exists(target_file):
             # test if content match
-            if self.calculate_md5(target_file) == self.calculate_md5(file):
-                self.remove_file(file)
-                self.log.warning(f"File {file} posted in more than one folder.")
-                return target_file
+            if self.calculate_md5(target_file) == self.calculate_md5(source_file):
+                self.remove_file(source_file)
+                self.log.warning(f"File {filename} posted in more than one folder.")
+                return None
             else:
                 filename = self.add_timestamp_to_name(filename)
                 target_file = os.path.join(self.config.temp, filename)
-                
-                try:    
-                    shutil.move(file, target_file)
-                    os.utime(filename)
-                    self.log.info(f"Moved to {self.config.temp} the file {filename}")
-                    return target_file
-                except Exception as e:
-                    self.log.error(f"Error moving {file} to temp folder: {e}")
-                    return file
+        
+        try:
+            shutil.move(source_file, target_file)
+            os.utime(target_file)
+            self.log.info(f"Moved {source_file} to {target_file}")
+            return target_file
+        except Exception as e:
+            self.log.error(f"Error moving {source_file} to {target_file}: {e}")
+            return None
 
     # --------------------------------------------------------------
     def calculate_md5(self, file_path: str) -> str:
@@ -98,19 +114,23 @@ class FileHandler:
             self.log.error(f"Error removing {file}: {e}")
 
     # --------------------------------------------------------------
-    def add_timestamp_to_name(self, filename: str) -> str:
+    def add_timestamp_to_name(self, filename: str, variant: int) -> str:
         """Add a timestamp to the filename and return the new filename.
         
         Args:
             filename (str): File to rename.
+            variant (int): Number to add to the filename if it already exists in the trash folder.
             
         Returns:
-            str: New filename with a timestamp.
+            str: New filename with a timestamp and variant.
         """
 
         name, ext = os.path.splitext(filename)
         timestamp = pd.to_datetime("now").strftime('%Y%m%d_%H%M%S')
-        return f"{name}_{timestamp}{ext}"
+        if variant:
+            return f"{name}_{timestamp}-{variant}{ext}"
+        else:
+            return f"{name}_{timestamp}{ext}"
             
     # --------------------------------------------------------------
     def trash_it(self, file: str, overwrite: bool) -> None:
@@ -147,16 +167,26 @@ class FileHandler:
                 # marked to not overwrite and the content is different
                 else:
                     # add timestamp to the filename and rename it
-                    try:
-                        trashed_filename = self.add_timestamp_to_name(filename)
-                        new_trashed_file = os.path.join(self.config.trash, trashed_filename)
-                        os.rename(trashed_file, new_trashed_file)
-                        self.log.info(f"Renamed {filename} to {trashed_filename} in trash.")
-                    except Exception as e:
-                        self.log.error(f"Error renaming {filename} in trash folder: {e}")
-                        return
+                    rename_failed = True
+                    variant = 0
+                    while rename_failed:
+                        try:
+                            trashed_filename = self.add_timestamp_to_name(filename, variant)
+                            new_trashed_file = os.path.join(self.config.trash, trashed_filename)
+                            os.rename(trashed_file, new_trashed_file)
+                            rename_failed = False
+                                                        
+                        except Exception as e:
+                            self.log.warning(f"Duplicate name for {new_trashed_file}. Trying variant")
+                            variant = variant + 1
+                            if variant > self.MAXIMUM_VARIANT:
+                                self.log.error(f"Too many variants of {filename} in trash folder.")
+                                raise Exception(f"Too many variants of the same file in trash folder. Check folder properties. Error: {e}")
+
                         # TODO: #5 Assign new name to the incoming file in order to avoid overwriting the existing file when trashing
 
+                    self.log.info(f"Renamed {filename} to {trashed_filename} in trash.")
+                    
                 # once handled the trash file situation, move the incoming file to trash
                 shutil.move(file, self.config.trash)
                 
@@ -183,7 +213,7 @@ class FileHandler:
             shutil.move(file, self.config.store)
         except Exception as e: 
             if os.path.exists(stored_file):
-                self.trash_it(file=file, overwrite=self.config.store_data_overwrite)
+                self.trash_it(file=stored_file, overwrite=self.config.store_data_overwrite)
                 shutil.move(file, self.config.store)
             else:
                 self.log.error(f"Error moving {file} to store folder: {e}")
@@ -252,29 +282,23 @@ class FileHandler:
     def sort_and_clean(  self, 
                                 folder_content: list[str],
                                 move: bool = True,
-                                catalog_to_process: list[str] = None,
-                                raw_to_process: list[str] = None) -> tuple[list[str], list[str], list[str]]:
+                                catalog_to_process: list[str] = [],
+                                raw_to_process: list[str] = []) -> tuple[list[str], list[str], list[str]]:
         """ Move files listed according to extension to the temp folder and return the list of files to process
             Remove subfolder and files with unrecognized extensions.
             
 
         Args:
             files (list[str]): List of files to sort.
-            move (bool): True if required to move files to the temp folder.
-            catalog_to_process (list[str]): Existing list of xlsx files to process. Default is None.
-            raw_to_process (list[str]): Existing list of pdf files to process. Default is None.
+            move (bool): True if required to move files to the temp folder. Default is True.
+            catalog_to_process (list[str]): Existing list of xlsx files to process. Default is an empty list.
+            raw_to_process (list[str]): Existing list of pdf files to process. Default is an empty list.
 
         Returns:
             tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolder to remove.
             
         Raises: None
         """
-        
-        # Initialize lists if they are None
-        if catalog_to_process is None:
-            catalog_to_process = []
-        if raw_to_process is None:
-            raw_to_process = []
         
         subfolder = []
             
@@ -291,13 +315,16 @@ class FileHandler:
                         if move:                        
                             item = self.move_to_temp(item)
 
-                        catalog_to_process.append(item)
+                        # If the file was not moved to temp, due to duplication or failure to move, does not add it to the list of files to process
+                        if item is not None:
+                            catalog_to_process.append(item)
                         
                     case self.config.data_extension:
                         if move:
                             item = self.move_to_temp(item)
                         
-                        raw_to_process.append(item)
+                        if item is not None:
+                            raw_to_process.append(item)
                     
                     case _: 
                         self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
