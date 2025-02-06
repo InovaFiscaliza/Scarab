@@ -9,6 +9,7 @@ import file_handler as fm
 
 import logging
 import sys
+import os
 import coloredlogs
 
 import shutil
@@ -55,15 +56,16 @@ def start_logging(config: cm.Config) -> logging.Logger:
         ch = logging.StreamHandler(stream=sys.stdout)
         ch.setFormatter(screen_formatter)
         log.addHandler(ch)
-    
-    log.info(f"Scarab starts rolling ({config.name})...")
+        
+        log.info(f"Screen log started...")
 
     if config.log_to_file:
         
         # Clean existing log file
         file = fm.FileHandler(config,log)
         for log_file in config.log_file_path:
-            file.trash_it(file=log_file, overwrite=config.log_overwrite)
+            if os.path.exists(log_file):
+                file.trash_it(file=log_file, overwrite=config.log_overwrite)
         
             # Create new log file with header line
             with open(log_file, 'w') as log_file_handle:
@@ -73,5 +75,7 @@ def start_logging(config: cm.Config) -> logging.Logger:
             file_formatter = logging.Formatter(fmt=config.log_file_format)
             fh.setFormatter(file_formatter)
             log.addHandler(fh)
+            
+    log.info(f"Scarab starts rolling ({config.name})...")
 
     return log

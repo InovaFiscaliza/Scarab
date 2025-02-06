@@ -46,7 +46,7 @@ def sigint_handler( signal_code: signal.Signals = None,
     module_name = frame_info.filename
     line_number = frame_info.lineno
     
-    log.critical(f"{signal.Signals(signal_code).name} received at: {module_name}[{line_number}]")
+    log.critical(f"{signal.Signals(signal_code).name} received when rolling at [{line_number}] in {module_name}")
     keep_watching = False
 
 # --------------------------------------------------------------

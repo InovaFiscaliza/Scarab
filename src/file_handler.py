@@ -84,6 +84,21 @@ class FileHandler:
             pass                
         except Exception as e:
             self.log.error(f"Error removing {file}: {e}")
+
+    # --------------------------------------------------------------
+    def add_timestamp_to_name(self, filename: str) -> str:
+        """Add a timestamp to the filename and return the new filename.
+        
+        Args:
+            filename (str): File to rename.
+            
+        Returns:
+            str: New filename with a timestamp.
+        """
+
+        name, ext = os.path.splitext(filename)
+        timestamp = pd.to_datetime("now").strftime('%Y%m%d_%H%M%S')
+        return f"{name}_{timestamp}{ext}"
             
     # --------------------------------------------------------------
     def trash_it(self, file: str, overwrite: bool) -> None:
@@ -105,28 +120,38 @@ class FileHandler:
         
         try:
             shutil.move(file, self.config.trash)
-        except FileExistsError:
-            if overwrite:
-                self.remove_file(trashed_file)
-                self.log.info(f"Removed the file {trashed_file} in the trash folder.")
-            elif self.calculate_md5(trashed_file) == self.calculate_md5(file):
-                self.remove_file(trashed_file)
-                self.log.info(f"The file {file} is already in the trash folder with the same content.")
-            else:   
-                trashed_filename, ext = os.path.splitext(filename)
-                timestamp = pd.to_datetime("now").strftime('%Y%m%d_%H%M%S')
-                trashed_filename = f"{trashed_filename}_{timestamp}{ext}"
-                new_trashed_file = os.path.join(self.config.trash, trashed_filename)
-                try:
-                    os.rename(trashed_file, new_trashed_file)
-                    self.log.info(f"Renamed {filename} to {trashed_filename} in trash.")
-                except Exception as e:
-                    self.log.error(f"Error renaming {filename} in trash folder: {e}")
-                    raise e
-                    # TODO: #5 Assign new name to the incoming file in order to avoid overwriting the existing file when trashing
         except Exception as e:
-            self.log.error(f"Error moving {file} to trash folder: {e}")
-            return
+            # FileExistsError not functioning as expected for windows in current version of shutil. Need to handle it with additional test
+            if os.path.exists(trashed_file):
+                if overwrite:
+                    self.remove_file(trashed_file)
+                    self.log.info(f"Removed the file {trashed_file} in the trash folder.")
+                    
+                # marked to not overwrite but the content is the same
+                elif self.calculate_md5(trashed_file) == self.calculate_md5(file): 
+                    self.remove_file(trashed_file)
+                    self.log.info(f"The file {file} is already in the trash folder with the same content.")
+                    
+                # marked to not overwrite and the content is different
+                else:
+                    # add timestamp to the filename and rename it
+                    try:
+                        trashed_filename = self.add_timestamp_to_name(filename)
+                        new_trashed_file = os.path.join(self.config.trash, trashed_filename)
+                        os.rename(trashed_file, new_trashed_file)
+                        self.log.info(f"Renamed {filename} to {trashed_filename} in trash.")
+                    except Exception as e:
+                        self.log.error(f"Error renaming {filename} in trash folder: {e}")
+                        return
+                        # TODO: #5 Assign new name to the incoming file in order to avoid overwriting the existing file when trashing
+
+                # once handled the trash file situation, move the incoming file to trash
+                shutil.move(file, self.config.trash)
+                
+            # error is not due to existing file in trash folder
+            else:
+                self.log.error(f"Error moving {file} to trash folder: {e}")
+                return
         finally:
             os.utime(trashed_file)
             self.log.info(f"Moved to {self.config.trash} the file {filename}")            
@@ -140,17 +165,19 @@ class FileHandler:
         """
                 
         filename = os.path.basename(file)
+        stored_file = os.path.join(self.config.store, filename)
         
         try:
             shutil.move(file, self.config.store)
-        except FileExistsError:
-            self.trash_it(file=file, overwrite=self.config.data_overwrite)
-            shutil.move(file, self.config.store)
-        except Exception as e:
-            self.log.error(f"Error moving {file} to store folder: {e}")
-            return
+        except Exception as e: 
+            if os.path.exists(stored_file):
+                self.trash_it(file=file, overwrite=self.config.data_overwrite)
+                shutil.move(file, self.config.store)
+            else:
+                self.log.error(f"Error moving {file} to store folder: {e}")
+                return
         finally:
-            os.utime(os.path.join(self.config.store, filename)) # force the file timestamp to the current time to avoid being cleaned by the clean process before the clean period is over
+            os.utime(stored_file) # force the file timestamp to the current time to avoid being cleaned by the clean process before the clean period is over
             self.log.info(f"Moved to {self.config.store} the file {filename}")
 
     # --------------------------------------------------------------
