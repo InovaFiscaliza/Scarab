@@ -95,8 +95,12 @@ class Config:
             """ Period to clean temp folders in hours"""
             self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
             """ Timestamp of the last clean operation"""
-            self.data_overwrite: bool = self.raw["overwrite data in trash"]
-            """ Flag to indicate if data should be overwritten in trash"""
+            self.store_data_overwrite: bool = self.raw["overwrite data in store"]
+            """ Flag to indicate if data should be overwritten in store folder"""
+            self.get_data_overwrite: bool = self.raw["overwrite data in get"]
+            """ Flag to indicate if data should be overwritten in get folders"""
+            self.trash_data_overwrite: bool = self.raw["overwrite data in trash"]
+            """ Flag to indicate if data should be overwritten in trash folder"""                     
             self.log_level: str = self.raw["log"]["level"]
             """ Logging level"""
             self.log_to_screen: bool = self.raw["log"]["screen output"]

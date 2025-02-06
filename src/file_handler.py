@@ -172,7 +172,7 @@ class FileHandler:
             shutil.move(file, self.config.store)
         except Exception as e: 
             if os.path.exists(stored_file):
-                self.trash_it(file=file, overwrite=self.config.data_overwrite)
+                self.trash_it(file=file, overwrite=self.config.store_data_overwrite)
                 shutil.move(file, self.config.store)
             else:
                 self.log.error(f"Error moving {file} to store folder: {e}")
@@ -193,19 +193,29 @@ class FileHandler:
         
         publish_succeded = True
 
-        for publish_folder in self.config.get[:-1]:
+        # copy file to all publish folders
+        for publish_folder in self.config.get:
             try:
+                target_file = os.path.join(publish_folder, filename)
+                if os.path.exists(target_file):
+                    if self.config.get_data_overwrite:
+                        self.trash_it(file=target_file, overwrite=self.config.trash_data_overwrite)
+                    else:
+                        self.move_to_store(target_file)
+                    
                 shutil.copy(file, publish_folder)
                 self.log.info(f"Copied {filename} to {publish_folder}")
             except Exception as e:
                 self.log.error(f"Error publishing {file} to {publish_folder}: {e}")
                 publish_succeded = False
-            
+        
+        # remove source file if all copies were successful
         try:
-            shutil.move(file, publish_folder[-1])
-            self.log.info(f"Moved {filename} to {publish_folder}")
+            if publish_succeded:
+                self.remove_file(file)
+                self.log.info(f"Removed the file {file}")
         except Exception as e:
-            self.log.error(f"Error moving {file} to {publish_folder}: {e}")
+            self.log.error(f"Error deleting {file}: {e}")
             publish_succeded = False
         
         return publish_succeded
@@ -279,7 +289,7 @@ class FileHandler:
                         raw_to_process.append(item)
                     
                     case _: 
-                        self.trash_it(file=item, overwrite=self.config.data_overwrite)
+                        self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
             else:
                 subfolder.append(item)
                 
@@ -356,7 +366,7 @@ class FileHandler:
                     
                     # Check if the file is older than the clean period
                     if pd.to_datetime(os.path.getctime(item_name), unit='s') < pd.to_datetime("now") - pd.Timedelta(hours=self.config.clean_period):
-                        self.trash_it(file=item_name, overwrite=self.config.data_overwrite)
+                        self.trash_it(file=item_name, overwrite=self.config.trash_data_overwrite)
                 else:
                     folder_to_remove.append(item)
 

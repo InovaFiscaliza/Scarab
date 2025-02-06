@@ -130,7 +130,7 @@ class DataHandler:
                                                 index_column=self.config.columns_key)
 
             if not self.valid_data(new_data_df):
-                self.file.trash_it(file=file, overwrite=self.config.data_overwrite)
+                self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
                 continue
             
             # update the reference data with the new data where index matches
@@ -159,7 +159,10 @@ class DataHandler:
         for item in files_to_process:
             filename = os.path.basename(item)
 
+            # Change the dataframe column data type to numeric, since excel_read was used forcing type to string to avoid corrupting data from columns that do appear to have a different data type.
             reference_df[self.config.columns_data_published] = pd.to_numeric(reference_df[self.config.columns_data_published], errors='coerce')
+            
+            # Set to value 1 the column data_published for the row where the filename is found
             reference_df.loc[reference_df[self.config.columns_data_filenames].str.contains(filename, na=False), self.config.columns_data_published] = 1
             
             if self.file.publish_data_file(item):
