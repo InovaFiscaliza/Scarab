@@ -3,6 +3,7 @@
     <ol>
         <li><a href="#About-Scarab">About Scarab</a></li>
         <li><a href="#Scripts_and_Files">Scripts and Files</a></li>
+        <li><a href="#Tests">Tests</a></li>
         <li><a href="#setup">Setup</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
         <li><a href="#contributing">Contributing</a></li>
@@ -20,7 +21,7 @@ Application is written in Python and uses the UV package for environment managem
 
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
-## Scripts and Files
+# Scripts and Files
 
 | Script module | Description |
 | --- | --- |
@@ -51,6 +52,12 @@ To stop, the script monitor the occurrence of kill signal from the system or ctr
 
 <p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
+# Tests
+
+Testes are proposed for different scenarios to validate the scripts and modules.
+
+Please check the [tests folder](./tests/README.md) for more details.
+
 # Setup
 
 Scripts were intended to be used in a Windows machine with UV package and environment management.
@@ -58,6 +65,8 @@ Scripts were intended to be used in a Windows machine with UV package and enviro
 For more details, see the [UV documentation](https://docs.astral.sh/uv/)
 
 Tests are described in the [tests folder](./tests/README.md)
+
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
 # Roadmap
 
