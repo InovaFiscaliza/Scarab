@@ -45,7 +45,7 @@ The pid is number displayed in the log file and screen, between square brackets 
 
 Use `test_3.bat` to set the sandbox folder structure for the test
 
-This tests has the basic same data as the output from the first and second tests, adding a new metadata files to be processed from multiple sources and output to multiple folders.
+This tests has the basic same data as the output from the previous tests, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
 After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
 
@@ -56,12 +56,32 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 Use `test_4.bat` to set the sandbox folder structure for the test
 
-This tests has the basic same data as the output from the first and second tests, adding a new metadata files to be processed from multiple sources and output to multiple folders.
+This tests has the basic same data as the output from the previous, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
 After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
 
 > * Test the use of variant names for the log file (if the timestamp is the same) and the use of the `overwrite` flag in the config file.
 > * Same file posted in multiple folders are processed only once.
+
+## Change columns and multiple keys
+
+Use `test_5.bat` to set the sandbox folder structure for the test
+
+This tests has the basic same data as the output from the second test, adding but the update is done changing columns that are not mapped in the config file. 
+
+* Columns "entidade" and "Endereco" are removed
+* Columns "NEW1" and "NEW2" are added
+* Column NEW1 is added to the config file
+* Key is now defined as a list of columns: ["Fistel","N° estacao","Emax - Data da Medição","Emax - Latitude","Emax - Longitude"]
+
+After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+
+> * File `monitorRNI_test_temp_update.xlsx` will be processed and moved from the post folder to store folder.
+> * Lines will be updated in the metadata file `monitorRNI.xlsx` in the get folder. Modifications can be noted in columns `NEW1` and `NEW2`, that should be present only in the updated and new rows.
+> New rows should be added whenever one of the columns associated with the keys are changed.
+
+
+
 
 ## Creating new tests
 

@@ -35,12 +35,12 @@ class DataHandler:
         
 
     # --------------------------------------------------------------
-    def read_excel(self, file: str, index_column: str) -> tuple[pd.DataFrame, list]:
+    def read_excel(self, file: str, index_column: list) -> tuple[pd.DataFrame, list]:
         """Read an Excel file and return a DataFrame indexed according to the defined keys
 
         Args:
             file (str): Excel file to read.
-            index_column (str): Column to use as index in the DataFrame.
+            index_column (list): Columns to be used as index in the DataFrame.
 
         Returns:
             pd.DataFrame: DataFrame with the data from the Excel file.
@@ -57,7 +57,8 @@ class DataHandler:
         columns = df_from_file.columns.tolist()
         
         try:
-            df_from_file.set_index(index_column, inplace=True)
+            # create a column to be used as index, merging the columns in index_column list
+            df_from_file.set_index(df_from_file[index_column].astype(str).agg('-'.join, axis=1), inplace=True)
         except Exception as e:
             self.log.error(f"Error setting index in reference data: {e}")
             pass
