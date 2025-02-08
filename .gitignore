@@ -11,3 +11,4 @@ wheels/
 
 # Test areas
 test/sandbox/
+test/sandbox/*
