@@ -1,0 +1,12 @@
+asctime | module: funcName:lineno | name[process] | levelname | message
+2025-02-07 16:41:32,703 | log_handler: start_logging:79 | Teste Simple[20476] | INFO | Scarab starts rolling (Teste Simple)...
+2025-02-07 16:41:32,704 | file_handler: get_files_to_process:355 | Teste Simple[20476] | INFO | TEMP Folder is empty.
+2025-02-07 16:41:32,705 | file_handler: get_files_to_process:373 | Teste Simple[20476] | INFO | POST Folder ./sandbox/post has 1 files/folders to process.
+2025-02-07 16:41:32,709 | file_handler: move_to_temp:75 | Teste Simple[20476] | INFO | Moved ./sandbox/post\monitorRNI_test_temp_update.xlsx to ./sandbox/temp\monitorRNI_test_temp_update.xlsx
+2025-02-07 16:41:32,709 | metadata_handler: read_reference_df:106 | Teste Simple[20476] | INFO | Reading reference data from the most recently updated file: ./sandbox/get/monitorRNI.xlsx
+2025-02-07 16:41:33,355 | metadata_handler: persist_reference:197 | Teste Simple[20476] | INFO | Reference data file updated: ./sandbox/get/monitorRNI.xlsx
+2025-02-07 16:41:33,361 | file_handler: move_to_store:223 | Teste Simple[20476] | INFO | Moved to ./sandbox/store the file monitorRNI_test_temp_update.xlsx
+2025-02-07 16:41:33,363 | file_handler: clean_old_in_folder:394 | Teste Simple[20476] | INFO | Nothing to clean in ./sandbox/post.
+2025-02-07 16:41:33,365 | file_handler: clean_old_in_folder:394 | Teste Simple[20476] | INFO | Nothing to clean in ./sandbox/temp.
+2025-02-07 16:41:38,036 | scarab: sigint_handler:49 | Teste Simple[20476] | CRITICAL | SIGINT received when rolling at [89] in C:\ProgramData\Anatel\scarab\src\scarab.py
+2025-02-07 16:41:43,370 | scarab: main:98 | Teste Simple[20476] | INFO | Scarab is moving away from (Teste Simple)...

@@ -51,7 +51,7 @@ class DataHandler:
             df_from_file = pd.read_excel(file, dtype="string")
         except Exception as e:
             self.log.error(f"Error reading Excel file {file}: {e}")
-            return pd.DataFrame()
+            return pd.DataFrame(), []
         
         # get the columns from df_from_file
         columns = df_from_file.columns.tolist()
@@ -61,7 +61,7 @@ class DataHandler:
             df_from_file.set_index(df_from_file[index_column].astype(str).agg('-'.join, axis=1), inplace=True)
         except Exception as e:
             self.log.error(f"Error setting index in reference data: {e}")
-            pass
+            return pd.DataFrame(), []
 
         return df_from_file, columns
 
@@ -78,9 +78,6 @@ class DataHandler:
         
         df_columns = df.columns.tolist()
         
-        # add the index column to the list of columns, such that it can be compared to the config file definition of required columns
-        df_columns.append(df.index.name)
-
         return self.config.columns_in.issubset(set(df_columns))
 
 
@@ -123,15 +120,20 @@ class DataHandler:
         Returns:
             pd.DataFrame: Updated reference DataFrame.
         """
-        
-        reference_df,columns_out = self.read_reference_df()
+
+        reference_df, columns_out = self.read_reference_df()
         
         for file in metadata_files:
-            new_data_df, _ = self.read_excel(   file=file,
+            new_data_df, column_in = self.read_excel(   file=file,
                                                 index_column=self.config.columns_key)
-
+            
+            # Add the new columns to the end of the reference dataframe columns list
+            columns_not_in = list(set(column_in) - set(columns_out))
+            columns_out.extend(columns_not_in)
+            
             if not self.valid_data(new_data_df):
-                self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
+                if self.config.discard_invalid_data_files:
+                    self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
                 continue
             
             # update the reference data with the new data where index matches

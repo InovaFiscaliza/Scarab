@@ -100,7 +100,9 @@ class Config:
             self.get_data_overwrite: bool = self.raw["overwrite data in get"]
             """ Flag to indicate if data should be overwritten in get folders"""
             self.trash_data_overwrite: bool = self.raw["overwrite data in trash"]
-            """ Flag to indicate if data should be overwritten in trash folder"""                     
+            """ Flag to indicate if data should be overwritten in trash folder"""
+            self.discard_invalid_data_files: bool = self.raw["discard invalid data files"]
+            """ Flag to indicate if invalid data files should be discarded"""
             self.log_level: str = self.raw["log"]["level"]
             """ Logging level"""
             self.log_to_screen: bool = self.raw["log"]["screen output"]
