@@ -18,7 +18,6 @@ import os
 import pandas as pd
 
 # --------------------------------------------------------------
-
 class DataHandler:
 
     def __init__(self, config: cm.Config, log: logging.Logger) -> None:
@@ -26,13 +25,22 @@ class DataHandler:
 
         Args:
             config (cm.Config): Configuration object.
-            self.log.(lm.Logger): self.log.er object.
+            log.(lm.Logger): self.log.er object.
         """
-        self.config = config
-        self.log = log
+        self.config : cm.Config = config
+        """Configuration object."""
+        self.log : logging.Logger = log
+        """Application log object."""
         
-        self.file = fm.FileHandler(config, log)
+        self.file : fm.FileHandler = fm.FileHandler(config=config, log=log)
+        """FileHandler object."""
         
+        df, col = self.read_reference_df()
+        
+        self.ref_df : pd.DataFrame = df
+        """Reference DataFrame with the data from the most recently updated catalog file."""
+        self.ref_cols : list = col
+        """List of columns in the reference DataFrame."""
 
     # --------------------------------------------------------------
     def read_excel(self, file: str, index_column: list) -> tuple[pd.DataFrame, list]:
@@ -107,7 +115,76 @@ class DataHandler:
         
         return self.read_excel(file=latest_file, index_column=self.config.columns_key)
 
+    # --------------------------------------------------------------
+    def merge_lists(self, new_list: list, legacy_list: list) -> list:
+        """Merge two lists into a single list, preserving the order of the elements in new_list with minimum distance to the element order in legacy_list.
         
+        Args:
+            new_list (list): List that will be the basis for the merged result.
+            legacy_list (list): List that will be included.            
+            
+        Returns:
+            list: Merged list.
+        """
+
+        new_set = set(new_list)
+        legacy_set = set(legacy_list)
+        items_not_in_new = legacy_set - new_set
+        
+        merged_list = new_list
+        
+        if items_not_in_new:
+            if items_not_in_new:
+                self.log.info(f"Items present in the existing list that are not in the new list: {items_not_in_new}")
+                
+                legacy_order = {item: i for i, item in enumerate(legacy_list)}
+                new_order = {item: i for i, item in enumerate(new_list)}
+                
+                for item in items_not_in_new:
+                    
+                    keep_neighbor_search = True
+                    
+                    distance_to_neighbor = 1
+                    direction = 1 # 1 to previous, -1 to next
+                    position = legacy_order[item] - 1
+                    
+                    # If the first element in the legacy list is missing in the new list, the previous neighbor is None
+                    if position < 0:
+                        direction = -1
+                        position = legacy_order[item] + 1
+                        reached_beginning = True
+                    
+                    while keep_neighbor_search:
+                        
+                        try:
+                            # if neighbor is found in the new list, insert the item in the new list at the same relative position
+                            if legacy_list[position] in new_set:
+                                position = new_order[legacy_list[position]]+direction
+                                merged_list.insert(position, item)
+                                keep_neighbor_search = False
+                            else:
+                                # if moving forward, increase distance to the neighbor and try the other direction
+                                if direction == -1:
+                                    distance_to_neighbor += 1
+                                    direction = 1
+                                # if moving backwards, keep the distance and try the other direction
+                                else:
+                                    direction = -1
+                                    
+                                position = legacy_order[item] - (distance_to_neighbor*direction)
+                        except IndexError:
+                            if position < 0:
+                                reached_beginning = True
+                            else:
+                                reached_end = True
+                            
+                            # if a neighbor is not found in the new list, insert the item at end
+                            if reached_beginning and reached_end:
+                                merged_list.append(item)
+                                keep_neighbor_search = False
+        
+        return merged_list
+
     # --------------------------------------------------------------
     def process_metadata_files(self,  metadata_files: list[str]) -> pd.DataFrame:
         """Process the list of xlsx files and update the reference data file.
@@ -120,29 +197,26 @@ class DataHandler:
         Returns:
             pd.DataFrame: Updated reference DataFrame.
         """
-
-        reference_df, columns_out = self.read_reference_df()
+        
         
         for file in metadata_files:
             new_data_df, column_in = self.read_excel(   file=file,
                                                 index_column=self.config.columns_key)
             
-            # Add the new columns to the end of the reference dataframe columns list
-            columns_not_in = list(set(column_in) - set(columns_out))
-            columns_out.extend(columns_not_in)
-            
             if not self.valid_data(new_data_df):
                 if self.config.discard_invalid_data_files:
                     self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
                 continue
+
+            self.ref_cols = self.merge_lists(new_list=column_in, legacy_list=self.ref_cols)
             
             # update the reference data with the new data where index matches
-            reference_df.update(new_data_df)
+            self.ref_df.update(new_data_df)
             
             # add new_data_df rows where index does not match
-            reference_df = reference_df.combine_first(new_data_df)
+            self.ref_df = self.ref_df.combine_first(new_data_df)
             
-            self.persist_reference(reference_df, columns_out)
+            self.persist_reference()
             
             self.file.move_to_store(file)
 
@@ -157,43 +231,42 @@ class DataHandler:
             log (logging.Logger): Logger object.
         """
             
-        reference_df, columns_out = self.read_reference_df()
-        
         for item in files_to_process:
             filename = os.path.basename(item)
 
             # Change the dataframe column data type to numeric, since excel_read was used forcing type to string to avoid corrupting data from columns that do appear to have a different data type.
-            reference_df[self.config.columns_data_published] = pd.to_numeric(reference_df[self.config.columns_data_published], errors='coerce')
+            self.ref_df[self.config.columns_data_published] = pd.to_numeric(self.ref_df[self.config.columns_data_published], errors='coerce')
             
             # Set to value 1 the column data_published for the row where the filename is found
-            reference_df.loc[reference_df[self.config.columns_data_filenames].str.contains(filename, na=False), self.config.columns_data_published] = 1
+            self.ref_df.loc[self.ref_df[self.config.columns_data_filenames].str.contains(filename, na=False), self.config.columns_data_published] = 1
             
             if self.file.publish_data_file(item):
-                self.persist_reference(reference_df=reference_df, columns_out=columns_out)
+                self.persist_reference()
             else:
                 # if file is not present in the reference_df, just do nothing and wait for it to appear later.
                 self.log.info(f"{filename} not found in the metadata catalog.")
                     
     # --------------------------------------------------------------
-    def persist_reference(self, reference_df: pd.DataFrame, columns_out: list) -> None:
+    def persist_reference(self) -> None:
         """Persist the reference DataFrame to the catalog file.
 
-        Args:
-            reference_df (pd.DataFrame): The reference DataFrame to be saved.
+        Args: None
+        
+        Returns: None
         """
 
         # Make a copy of the DataFrame to avoid modifying the original
-        reference_df = reference_df.copy()
+        # self.ref_df = self.self.ref_df.copy()
         
         # change index column to a regular column so it is exported to the Excel file
-        reference_df.reset_index(inplace=True)
+        self.ref_df.reset_index(inplace=True)
         
         # reorder columns to match order defined the config file as columns_out_order
-        reference_df = reference_df[columns_out]
+        self.ref_df = self.ref_df[self.ref_cols]
         
         for catalog_file in self.config.catalog_files:
             try:
-                reference_df.to_excel(catalog_file, index=False)
+                self.ref_df.to_excel(catalog_file, index=False)
                 self.log.info(f"Reference data file updated: {catalog_file}")
             except Exception as e:
                 self.log.error(f"Error saving reference data: {e}")
