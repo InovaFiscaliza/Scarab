@@ -12,7 +12,7 @@ For VSCode, the debugger configuration is already set in the .vscode folder to r
 
 ## Initial test
 
-Use `test_1.bat` to set the sandbox folder structure for the test.
+Use `1test.bat` to set the sandbox folder structure for the test.
 
 After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests folder in the repository path, the following results are expected:
 
@@ -26,7 +26,7 @@ To finish the test use `ctrl+c`. It may take up to 10 seconds to stop the script
 
 ## Metadata update test
 
-Use `test_2.bat` to set the sandbox folder structure for the test
+Use `2test.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the first test, adding a new metadata file to be processed.
 
@@ -43,7 +43,7 @@ The pid is number displayed in the log file and screen, between square brackets 
 
 ## Multiple input and output folders test
 
-Use `test_3.bat` to set the sandbox folder structure for the test
+Use `3test.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the previous tests, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
@@ -54,7 +54,7 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 ## Disable overwrite and with same files coming from different sources
 
-Use `test_4.bat` to set the sandbox folder structure for the test
+Use `4test.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the previous, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
@@ -65,7 +65,7 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 ## Change columns and multiple keys
 
-Use `test_5.bat` to set the sandbox folder structure for the test
+Use `5test.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the second test, adding but the update is done changing columns that are not mapped in the config file. 
 

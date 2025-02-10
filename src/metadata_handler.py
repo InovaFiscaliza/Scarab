@@ -16,6 +16,7 @@ import file_handler as fm
 import logging
 import os
 import pandas as pd
+import uuid
 
 # --------------------------------------------------------------
 class DataHandler:
@@ -34,6 +35,9 @@ class DataHandler:
         
         self.file : fm.FileHandler = fm.FileHandler(config=config, log=log)
         """FileHandler object."""
+
+        self.unique_id : str = uuid.uuid4().int
+        """Unique identifier for the in class column naming."""
         
         df, col = self.read_reference_df()
         
@@ -41,7 +45,7 @@ class DataHandler:
         """Reference DataFrame with the data from the most recently updated catalog file."""
         self.ref_cols : list = col
         """List of columns in the reference DataFrame."""
-
+        
     # --------------------------------------------------------------
     def read_excel(self, file: str, index_column: list) -> tuple[pd.DataFrame, list]:
         """Read an Excel file and return a DataFrame indexed according to the defined keys
@@ -66,7 +70,12 @@ class DataHandler:
         
         try:
             # create a column to be used as index, merging the columns in index_column list
-            df_from_file.set_index(df_from_file[index_column].astype(str).agg('-'.join, axis=1), inplace=True)
+            df_from_file[self.unique_id] = df_from_file[index_column].astype(str).agg('-'.join, axis=1)
+        
+            # set the new column as index
+            df_from_file.set_index(self.unique_id, inplace=True)
+            #df_from_file.set_index(df_from_file[index_column].astype(str).agg('-'.join, axis=1), inplace=True)
+            #df_from_file.index = pd.MultiIndex.from_arrays([df_from_file[col].astype(str) for col in index_column], names=index_column)
         except Exception as e:
             self.log.error(f"Error setting index in reference data: {e}")
             return pd.DataFrame(), []
@@ -234,11 +243,15 @@ class DataHandler:
         for item in files_to_process:
             filename = os.path.basename(item)
 
-            # Change the dataframe column data type to numeric, since excel_read was used forcing type to string to avoid corrupting data from columns that do appear to have a different data type.
-            self.ref_df[self.config.columns_data_published] = pd.to_numeric(self.ref_df[self.config.columns_data_published], errors='coerce')
             
-            # Set to value 1 the column data_published for the row where the filename is found
-            self.ref_df.loc[self.ref_df[self.config.columns_data_filenames].str.contains(filename, na=False), self.config.columns_data_published] = 1
+            # change column [self.config.columns_data_filenames] to string type
+            self.ref_df[self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].astype(str)
+            
+            for data_filename in self.config.columns_data_filenames:
+                self.ref_df.loc[self.ref_df[data_filename].str.contains(filename, na=False), self.config.columns_data_published] = "True"
+
+            # Set column [self.config.columns_data_published] to "False" for any remaining NA values
+            self.ref_df.loc[:, self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].fillna("False")
             
             if self.file.publish_data_file(item):
                 self.persist_reference()

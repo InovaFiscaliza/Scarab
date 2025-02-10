@@ -141,7 +141,7 @@ class Config:
             """ Columns required in the input metadata file"""
             self.columns_key: List[str] = self.__ensure_list(self.raw["metadata"]["key"])
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.columns_data_filenames: str = self.raw["metadata"]["data filenames"]
+            self.columns_data_filenames: List[str] = self.__ensure_list(self.raw["metadata"]["data filenames"])
             """ Columns that contain the names of data files associated with each row metadata"""
             self.columns_data_published: str = self.raw["metadata"]["data published flag"]
             """ Columns that contain the publication status of each row"""

@@ -353,12 +353,14 @@ class FileHandler:
         
         if not folder_content:
             self.log.info("TEMP Folder is empty.")
+            catalog_to_process = []
+            raw_to_process = []
         else:
             # add path to filenames
             folder_content = list(map(lambda x: os.path.join(self.config.temp, x), folder_content))
             self.log.info(f"TEMP Folder has {len(folder_content)} files/folders to process.")
 
-        catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, move=False)
+            catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, move=False)
         
         # Get files from post folder
         for post_folder in self.config.post:
@@ -366,13 +368,13 @@ class FileHandler:
             folder_content = glob.glob("**", root_dir=post_folder, recursive=True)
             
             if not folder_content:
-                self.log.info("POST Folder {post_folder} is empty.")
+                self.log.info(f"POST Folder {post_folder} is empty.")
             else:
                 # add path to filenames
                 folder_content = list(map(lambda x: os.path.join(post_folder, x), folder_content))
                 self.log.info(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
                 
-            catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process)
+                catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process)
                         
         return catalog_to_process, raw_to_process
 
