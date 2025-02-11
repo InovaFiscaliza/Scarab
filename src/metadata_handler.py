@@ -94,12 +94,21 @@ class DataHandler:
             # create a column to be used as index, merging the columns in index_column list
             df_from_file[self.unique_id] = df_from_file[index_column].astype(str).agg('-'.join, axis=1)
         
-            # test if all rows in column self.unique_id have different values and merge them if not
-            non_uniqe_id_values_present = df_from_file.shape[0] - df_from_file[self.unique_id].unique().size
-            if non_uniqe_id_values_present:
-                self.log.warning(f"Data in key column(s) has {non_uniqe_id_values_present} rows with duplicated values in {file}. Rows will be merged")
-                # merge rows with the same key and set index
-                df_from_file = df_from_file.groupby(self.unique_id).agg(self._custom_agg)
+            # Identify rows with duplicate self.unique_id values
+            duplicate_ids = df_from_file[self.unique_id].duplicated(keep=False)
+            duplicate_rows = df_from_file[duplicate_ids]
+            
+            if not duplicate_rows.empty:
+                self.log.warning(f"Data in key column(s) has duplicated values in {file}. Rows will be merged")
+                # Apply the custom aggregation function to the duplicate rows
+                aggregated_rows = duplicate_rows.groupby(self.unique_id).agg(self._custom_agg)
+                
+                # get the rows that are not duplicated
+                unique_rows = df_from_file[~duplicate_ids]
+                
+                # Combine the unique rows with the aggregated rows
+                df_from_file = pd.concat([unique_rows, aggregated_rows])
+                
             else:
                 # just set the new column as index
                 df_from_file = df_from_file.set_index(self.unique_id)
