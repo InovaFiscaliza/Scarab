@@ -1,15 +1,21 @@
 {
     "name": "Regulatron",
-    "check period in seconds": 30,
-    "clean period in hours": 24,
-    "last clean": "2024-11-05 20:33:29",
+    "check period in seconds": 10,
+    "clean period in hours": 1,
+    "last clean": "2025-02-11 09:05:01",
+    "overwrite data in store": true,
+    "overwrite data in get": true,
     "overwrite data in trash": true,
+    "discard invalid data files": true,
     "log": {
         "level": "INFO",
         "screen output": true,
         "file output": true,
         "file name": "log.txt",
-        "file path": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Logs",
+        "file path": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Log.txt",
+            "Z:/sp/GET/Regulatron/Log.txt"
+        ],
         "format": [
             "%(asctime)s",
             "%(module)s: %(funcName)s:%(lineno)d",
@@ -28,21 +34,28 @@
         "overwrite log in trash": false
     },
     "folders": {
-        "root": "C:/Users/sfi.office365.pd/ANATEL",
-        "post": "InovaFiscaliza - DataHub - TEMP/Regulatron",
-        "temp": "InovaFiscaliza - DataHub - TEMP/Regulatron",
-        "trash": "InovaFiscaliza - DataHub - TRASH/Regulatron",
-        "store": "InovaFiscaliza - DataHub - STORE/Regulatron",
-        "get" : "InovaFiscaliza - DataHub - GET/Regulatron",
-        "raw": "InovaFiscaliza - DataHub - GET/Regulatron/Screenshots"
+        "post": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/Regulatron",
+            "Z:/sp/POST/Regulatron"
+        ],
+        "temp": "C:/ProgramData/Anatel/temp/Regulatron",
+        "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/Regulatron",
+        "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/Regulatron",
+        "get": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Screenshots",
+            "Z:/sp/GET/Regulatron/Screenshots"
+        ]
     },
-    "files" : {
-        "catalogExtension": ".xlsx",
-        "catalogName": "Anuncios",
-        "rawExtension": ".pdf"
-    },    
-    "columns": {
-        "in": [
+    "files": {
+        "metadata extension": ".xlsx",
+        "data extension": ".txt",
+        "catalog names": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Anuncios.xlsx",
+            "Z:/sp/GET/Regulatron/Anuncios.xlsx"
+        ]
+    },
+    "metadata": {
+        "in columns": [
             "nome",
             "pre\u00e7o",
             "avalia\u00e7\u00f5es",
@@ -71,12 +84,10 @@
             "fabricante_sch",
             "modelo_sch",
             "tipo_sch",
-            "nome_score",
-            "modelo_score",
-            "pass\u00edvel?",
-            "probabilidade",
             "marketplace"
         ],
-        "key": "screenshot"
+        "key": "screenshot",
+        "data filenames": "screenshot",
+        "data published flag": "status_screenshot"
     }
 }
