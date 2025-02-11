@@ -80,8 +80,11 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 > * Lines will be updated in the metadata file `monitorRNI.xlsx` in the get folder. Modifications can be noted in columns `NEW1` and `NEW2`, that should be present only in the updated and new rows.
 > New rows should be added whenever one of the columns associated with the keys are changed.
 
+## Heavy Load Test
 
+Use `6test.bat` to set the sandbox folder structure for the test
 
+This tests has larger catalog file to process and is usefull for performance testing. Based on Regulatron test data.
 
 ## Creating new tests
 

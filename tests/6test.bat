@@ -15,7 +15,7 @@ if %errorlevel% neq 0 (
 
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo.
-echo Change columns and multiple keys
+echo Heavy Load Test
 echo.
 echo Run the script using: uv run ..\src\scarab.py .\sandbox\config.json
 echo.
