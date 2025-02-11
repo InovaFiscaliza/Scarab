@@ -6,13 +6,49 @@
     "configurations": [
         
         {
-            "name": "Test scarab with sandbox",
+            "name": "Sandbox test",
             "type": "debugpy",
             "request": "launch",
             "cwd": "${workspaceFolder}/tests",
             "program": "../src/scarab.py",
             "console": "integratedTerminal",
             "args": ["./sandbox/config.json"]
+        },
+        {
+            "name": "Regulatron test",
+            "type": "debugpy",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "./src/scarab.py",
+            "console": "integratedTerminal",
+            "args": ["./data/examples/regulatron.json"]
+        },
+        {
+            "name": "MonitorRNI test",
+            "type": "debugpy",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "./src/scarab.py",
+            "console": "integratedTerminal",
+            "args": ["./data/examples/monitorRNI.json"]
+        },
+        {
+            "name": "spFiles test",
+            "type": "debugpy",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "./src/scarab.py",
+            "console": "integratedTerminal",
+            "args": ["./data/examples/spFiles.json"]
+        },
+        {
+            "name": "SCH test",
+            "type": "debugpy",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "./src/scarab.py",
+            "console": "integratedTerminal",
+            "args": ["./data/examples/SCH.json"]
         }
     ]
 }
