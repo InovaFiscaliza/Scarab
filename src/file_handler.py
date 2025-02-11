@@ -66,7 +66,7 @@ class FileHandler:
                 self.log.warning(f"File {filename} posted in more than one folder.")
                 return None
             else:
-                filename = self.add_timestamp_to_name(filename)
+                filename = self.add_timestamp_to_name(filename=filename)
                 target_file = os.path.join(self.config.temp, filename)
         
         try:
@@ -114,12 +114,12 @@ class FileHandler:
             self.log.error(f"Error removing {file}: {e}")
 
     # --------------------------------------------------------------
-    def add_timestamp_to_name(self, filename: str, variant: int) -> str:
+    def add_timestamp_to_name(self, filename: str, variant: int = 0) -> str:
         """Add a timestamp to the filename and return the new filename.
         
         Args:
             filename (str): File to rename.
-            variant (int): Number to add to the filename if it already exists in the trash folder.
+            variant (int): Number to add to the filename if it already exists in the trash folder. Default is 0.
             
         Returns:
             str: New filename with a timestamp and variant.
