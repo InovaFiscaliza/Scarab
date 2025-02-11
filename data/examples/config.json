@@ -1,0 +1,74 @@
+{
+    "name": "Sandbox Complete Text Example",
+    "check period in seconds": 10,
+    "clean period in hours": 1,
+    "last clean": "2024-11-05 20:33:29",
+    "overwrite data in store": true,
+    "overwrite data in get": true,
+    "overwrite data in trash": true,
+    "discard invalid data files": true,
+    "log": {
+        "level": "INFO",
+        "screen output": true,
+        "file output": true,
+        "file path": "./sandbox/get/log.txt",
+        "format": [
+            "%(asctime)s",
+            "%(module)s: %(funcName)s:%(lineno)d",
+            "%(name)s[%(process)d]",
+            "%(levelname)s",
+            "%(message)s"
+        ],
+        "colour sequence": [
+            "32m",
+            "35m",
+            "34m",
+            "30m",
+            "0m"
+        ],
+        "separator": " | ",
+        "overwrite log in trash": false
+    },
+    "folders": {
+        "post": ["./sandbox/post","./sandbox/post_other"],
+        "temp": "./sandbox/temp",
+        "trash": "./sandbox/trash",
+        "store": "./sandbox/store",
+        "get" : ["./sandbox/get/raw","./sandbox/get_other/raw"]
+    },
+    "files" : {
+        "metadata extension": ".xlsx",
+        "data extension": ".txt",
+        "catalog names": ["./sandbox/get/monitorRNI.xlsx","./sandbox/get_other/monitorRNI.xlsx"]
+    },
+    "metadata": {
+        "in columns": [ "ID",
+                "UD",
+                "UF",
+                "Município",
+                "Tipo",
+                "Serviço",
+                "NEW1",
+                "Fistel",
+                "N° estacao",
+                "Lat",
+                "Long",
+                "Áreas Críticas",
+                "Qtd. medidas",
+                "Qtd. medidas > 14.0 V/m",
+                "Distância mínima (km)",
+                "Emin (V/m)",
+                "Emean (V/m)",
+                "Emax (V/m)",
+                "Emax - Data da Medição",
+                "Emax - Latitude",
+                "Emax - Longitude",
+                "Fonte de dados",
+                "Justificativa",
+                "Observações"
+        ],
+        "key": ["Fistel","N° estacao","Emax - Data da Medição","Emax - Latitude","Emax - Longitude"],
+        "data filenames": ["Fonte de dados","Justificativa"],
+        "data published flag": "Fontes Disponíveis"
+    }
+}
