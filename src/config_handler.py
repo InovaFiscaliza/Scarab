@@ -38,12 +38,17 @@ class Config:
                 "check period in seconds": 10,
                 "clean period in hours": 1,
                 "last clean": "2024-11-05 20:33:29",
+                
+                "overwrite data in store": true,
+                "overwrite data in get": true,
                 "overwrite data in trash": true,
+                "discard invalid data files": true,
+                
                 "log": {
                     "level": "INFO",
                     "screen output": true,
                     "file output": true,
-                    "file path": "./tests/sandbox/get/log.txt",
+                    "file path": ["./sandbox/get/log.txt","./sandbox/get_other/log.txt"],
                     "format": [
                         "%(asctime)s",
                         "%(module)s: %(funcName)s:%(lineno)d",
@@ -61,21 +66,23 @@ class Config:
                     "separator": " | ",
                     "overwrite log in trash": false
                 },
+                
                 "folders": {
-                    "post": "./tests/sandbox/post",
+                    "post": ["./sandbox/post","./sandbox/post_other"],
                     "temp": "./tests/sandbox/temp",
                     "trash": "./tests/sandbox/trash",
                     "store": "./tests/sandbox/store",
-                    "get" : "./tests/sandbox/get/raw"
+                    "get" : ["./sandbox/get/raw","./sandbox/get_other/raw"]
                 },
                 "files" : {
                     "metadata extension": ".xlsx",
                     "data extension": ".txt",
-                    "catalog names": "./tests/sandbox/get/monitorRNI.xlsx"
+                    "catalog names": ["./sandbox/get/monitorRNI.xlsx","./sandbox/get_other/monitorRNI.xlsx"]
                 },
+                
                 "metadata": {
                     "in columns": [ "ID", "UD", "UF", "Município", "Tipo", "Serviço", "Entidade", "Fistel", "N° estacao", "Endereco", "Lat", "Long", "Áreas Críticas", "Qtd. medidas", "Qtd. medidas > 14.0 V/m", "Distância mínima (km)", "Emin (V/m)", "Emean (V/m)", "Emax (V/m)", "Emax - Data da Medição", "Emax - Latitude", "Emax - Longitude", "Fonte de dados", "Justificativa", "Observações"],
-                    "key": "N° estacao",
+                    "key": ["Fistel","N° estacao","Emax - Data da Medição","Emax - Latitude","Emax - Longitude"],
                     "data filenames": "Fonte de dados",
                     "data published flag": "Fontes Disponíveis"
                 }

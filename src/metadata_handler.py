@@ -17,6 +17,7 @@ import logging
 import os
 import pandas as pd
 import uuid
+import base58
 
 # --------------------------------------------------------------
 class DataHandler:
@@ -36,7 +37,7 @@ class DataHandler:
         self.file : fm.FileHandler = fm.FileHandler(config=config, log=log)
         """FileHandler object."""
 
-        self.unique_id : str = uuid.uuid4().int
+        self.unique_id : str = base58.b58encode(uuid.uuid4().bytes).decode('utf-8')
         """Unique identifier for the in class column naming."""
         
         df, col = self.read_reference_df()
@@ -46,6 +47,27 @@ class DataHandler:
         self.ref_cols : list = col
         """List of columns in the reference DataFrame."""
         
+    # --------------------------------------------------------------
+    def _custom_agg(self, series: pd.Series) -> str:
+        """Custom aggregation function to be used in the groupby method. Null is kept as Null, single value is kept as is, and multiple values are concatenated with a comma separator.
+        
+        Args:
+            series (pd.Series): Series to be aggregated.
+            
+        Returns:
+            str: Aggregated value.
+        """
+        
+        non_null_values = series.dropna().unique()
+        
+        match len(non_null_values):
+            case 0:
+                return None
+            case 1:
+                return non_null_values[0]
+            case _:
+                return ', '.join(non_null_values)            
+
     # --------------------------------------------------------------
     def read_excel(self, file: str, index_column: list) -> tuple[pd.DataFrame, list]:
         """Read an Excel file and return a DataFrame indexed according to the defined keys
@@ -72,12 +94,18 @@ class DataHandler:
             # create a column to be used as index, merging the columns in index_column list
             df_from_file[self.unique_id] = df_from_file[index_column].astype(str).agg('-'.join, axis=1)
         
-            # set the new column as index
-            df_from_file.set_index(self.unique_id, inplace=True)
-            #df_from_file.set_index(df_from_file[index_column].astype(str).agg('-'.join, axis=1), inplace=True)
-            #df_from_file.index = pd.MultiIndex.from_arrays([df_from_file[col].astype(str) for col in index_column], names=index_column)
+            # test if all rows in column self.unique_id have different values and merge them if not
+            non_uniqe_id_values_present = df_from_file.shape[0] - df_from_file[self.unique_id].unique().size
+            if non_uniqe_id_values_present:
+                self.log.warning(f"Data in key column(s) has {non_uniqe_id_values_present} rows with duplicated values in {file}. Rows will be merged")
+                # merge rows with the same key and set index
+                df_from_file = df_from_file.groupby(self.unique_id).agg(self._custom_agg)
+            else:
+                # just set the new column as index
+                df_from_file = df_from_file.set_index(self.unique_id)
+                
         except Exception as e:
-            self.log.error(f"Error setting index in reference data: {e}")
+            self.log.error(f"Error creating index: {e}")
             return pd.DataFrame(), []
 
         return df_from_file, columns
@@ -126,7 +154,7 @@ class DataHandler:
 
     # --------------------------------------------------------------
     def merge_lists(self, new_list: list, legacy_list: list) -> list:
-        """Merge two lists into a single list, preserving the order of the elements in new_list with minimum distance to the element order in legacy_list.
+        """Merge two lists into a single list, preserving the order of the elements in new_list with minimum distance to the element order in the legacy_list.
         
         Args:
             new_list (list): List that will be the basis for the merged result.
@@ -143,55 +171,72 @@ class DataHandler:
         merged_list = new_list
         
         if items_not_in_new:
-            if items_not_in_new:
-                self.log.info(f"Items present in the existing list that are not in the new list: {items_not_in_new}")
+            self.log.info(f"Items present in the existing list that are not in the new list: {items_not_in_new}")
+            
+            legacy_order = {item: i for i, item in enumerate(legacy_list)}
+            new_order = {item: i for i, item in enumerate(new_list)}
+            
+            for item in items_not_in_new:
                 
-                legacy_order = {item: i for i, item in enumerate(legacy_list)}
-                new_order = {item: i for i, item in enumerate(new_list)}
+                keep_neighbor_search = True
+                reached_beginning = False
+                reached_end = False
                 
-                for item in items_not_in_new:
+                distance_to_neighbor = 1
+                direction = 1 # 1 to previous, -1 to next
+                position = legacy_order[item] - 1
+                
+                
+                # If the first element in the legacy list is missing in the new list, the previous neighbor is None
+                if position < 0:
+                    direction = -1
+                    position = legacy_order[item] + 1
+                    reached_beginning = True
+                
+                while keep_neighbor_search:
                     
-                    keep_neighbor_search = True
-                    
-                    distance_to_neighbor = 1
-                    direction = 1 # 1 to previous, -1 to next
-                    position = legacy_order[item] - 1
-                    
-                    # If the first element in the legacy list is missing in the new list, the previous neighbor is None
-                    if position < 0:
-                        direction = -1
-                        position = legacy_order[item] + 1
-                        reached_beginning = True
-                    
-                    while keep_neighbor_search:
-                        
-                        try:
-                            # if neighbor is found in the new list, insert the item in the new list at the same relative position
-                            if legacy_list[position] in new_set:
-                                position = new_order[legacy_list[position]]+direction
-                                merged_list.insert(position, item)
-                                keep_neighbor_search = False
-                            else:
-                                # if moving forward, increase distance to the neighbor and try the other direction
-                                if direction == -1:
-                                    distance_to_neighbor += 1
+                    try:
+                        # if neighbor is found in the new list, insert the item in the new list at the same relative position, update the new_set and new_order and stop the search
+                        if legacy_list[position] in new_set:
+                            position = new_order[legacy_list[position]]+direction
+                            merged_list.insert(position, item)
+                            new_set.add(item)
+                            new_order = {item: i for i, item in enumerate(new_list)}
+                            keep_neighbor_search = False
+                        else:
+                            # if moving to the end of the list, increase distance to the neighbor and if not reached the beginning, try the other direction
+                            if direction == -1:
+                                distance_to_neighbor += 1
+                                if not reached_beginning:
                                     direction = 1
-                                # if moving backwards, keep the distance and try the other direction
-                                else:
-                                    direction = -1
-                                    
-                                position = legacy_order[item] - (distance_to_neighbor*direction)
-                        except IndexError:
-                            if position < 0:
-                                reached_beginning = True
+                            # if moving to the beginning of the list, keep the distance and try the other direction except if reached the end, then keep the direction and increase distance
                             else:
-                                reached_end = True
-                            
-                            # if a neighbor is not found in the new list, insert the item at end
-                            if reached_beginning and reached_end:
-                                merged_list.append(item)
-                                keep_neighbor_search = False
-        
+                                if reached_end:
+                                    distance_to_neighbor += 1
+                                else: 
+                                    direction = -1
+                                
+                            position = legacy_order[item] - (distance_to_neighbor*direction)
+                    except IndexError:
+                        # if hit one of the ends, change direction and try again, marking the end reached
+                        if position < 0:
+                            reached_beginning = True
+                            direction = -1
+                        else:
+                            reached_end = True
+                            distance_to_neighbor += 1
+                            direction = 1
+                        
+                        # if no neighbor is not found in the new list (maybe possible with empty initial list), insert the item at end and stop the search
+                        if reached_beginning and reached_end:
+                            merged_list.append(item)
+                            keep_neighbor_search = False
+                            reached_beginning = False
+                            reached_end = False
+                        
+                        # update the current search position considering the direction taken
+                        position = legacy_order[item] - (distance_to_neighbor*direction)
+                        
         return merged_list
 
     # --------------------------------------------------------------
