@@ -2,7 +2,7 @@
     "name": "Regulatron",
     "check period in seconds": 10,
     "clean period in hours": 1,
-    "last clean": "2025-02-11 09:05:01",
+    "last clean": "2025-02-11 12:09:15",
     "overwrite data in store": true,
     "overwrite data in get": true,
     "overwrite data in trash": true,
