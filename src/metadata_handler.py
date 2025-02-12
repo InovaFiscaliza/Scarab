@@ -46,7 +46,26 @@ class DataHandler:
         """Reference DataFrame with the data from the most recently updated catalog file."""
         self.ref_cols : list = col
         """List of columns in the reference DataFrame."""
+
+    # --------------------------------------------------------------
+    def drop_na(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Drop rows from the DataFrame where the self.unique_id column has a null value in any variant form, including NA, NaN, strings such as '<NA>', 'NA', 'N/A', 'None', 'null' and empty strings.
+
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+
+        Returns:
+            pd.DataFrame: DataFrame with the rows where the self.unique_id column is not null.
+        """
         
+        na_strings = ['<NA>', 'NA', 'N/A', 'None', 'null', '']
+        
+        df = df[~df[self.unique_id].isin(na_strings)]
+        
+        df = df.dropna(subset=[self.unique_id])
+        
+        return df
+    
     # --------------------------------------------------------------
     def _custom_agg(self, series: pd.Series) -> str:
         """Custom aggregation function to be used in the groupby method. Null is kept as Null, single value is kept as is, and multiple values are concatenated with a comma separator.
@@ -93,6 +112,9 @@ class DataHandler:
         try:
             # create a column to be used as index, merging the columns in index_column list
             df_from_file[self.unique_id] = df_from_file[index_column].astype(str).agg('-'.join, axis=1)
+            
+            # drop rows in which the self.unique_id column has value null
+            df_from_file = self.drop_na(df=df_from_file)
         
             # Identify rows with duplicate self.unique_id values
             duplicate_ids = df_from_file[self.unique_id].duplicated(keep=False)
@@ -107,32 +129,47 @@ class DataHandler:
                 unique_rows = df_from_file[~duplicate_ids]
                 
                 # Combine the unique rows with the aggregated rows
-                df_from_file = pd.concat([unique_rows, aggregated_rows])
-                
-            else:
-                # just set the new column as index
-                df_from_file = df_from_file.set_index(self.unique_id)
+                df_from_file = pd.concat([unique_rows, aggregated_rows])                
                 
         except Exception as e:
             self.log.error(f"Error creating index: {e}")
             return pd.DataFrame(), []
 
+        df_from_file = df_from_file.set_index(self.unique_id)
+        
         return df_from_file, columns
 
     # --------------------------------------------------------------
-    def valid_data(self, df: pd.DataFrame) -> bool:
-        """Check if the input table columns are a superset of the minimum required columns.
+    def valid_data(self, df: pd.DataFrame, file: str) -> bool:
+        """Check if the input dataframme is valid with the following tests:
+            - If columns are a superset of the minimum required columns.
+            - If columns contain the key columns.
+            - If key columns contain any non null values.
 
         Args:
             df (pd.DataFrame): DataFrame to validate.
+            file (str): File name to be used in the log message.
 
         Returns:
             bool: True if the data is valid.
         """
+        data_is_valid = True
         
         df_columns = df.columns.tolist()
-        
-        return self.config.columns_in.issubset(set(df_columns))
+    
+        if not self.config.columns_in.issubset(set(df_columns)):
+            self.log.error(f"File '{file}' does not contain all required columns: {self.config.columns_in}")
+            data_is_valid = False
+            
+        if not set(self.config.columns_key).issubset(set(df_columns)):
+            self.log.error(f"File '{file}' does not contain all key columns: {self.config.columns_key}")
+            data_is_valid = False
+            
+        if df[self.config.columns_key].isnull().all().iloc[0]:
+            self.log.error(f"File '{file}' has empty key columns: {self.config.columns_key}")
+            data_is_valid = False
+            
+        return data_is_valid
 
 
     # --------------------------------------------------------------
@@ -249,7 +286,7 @@ class DataHandler:
         return merged_list
 
     # --------------------------------------------------------------
-    def process_metadata_files(self,  metadata_files: list[str]) -> pd.DataFrame:
+    def process_metadata_files(self,  metadata_files: list[str]) -> None:
         """Process the list of xlsx files and update the reference data file.
 
         Args:
@@ -257,8 +294,7 @@ class DataHandler:
             config (Config): Configuration object.
             log (logging.Logger): Logger object.
             
-        Returns:
-            pd.DataFrame: Updated reference DataFrame.
+        Returns: None            
         """
         
         
@@ -266,23 +302,25 @@ class DataHandler:
             new_data_df, column_in = self.read_excel(   file=file,
                                                 index_column=self.config.columns_key)
             
-            if not self.valid_data(new_data_df):
+            # test the content of the file
+            if not self.valid_data(df=new_data_df, file=file):
                 if self.config.discard_invalid_data_files:
                     self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
                 continue
-
+            
+            # Compute the new column order for the reference DataFrame
             self.ref_cols = self.merge_lists(new_list=column_in, legacy_list=self.ref_cols)
             
+            # Compute the new dataframe            
             # update the reference data with the new data where index matches
             self.ref_df.update(new_data_df)
             
             # add new_data_df rows where index does not match
             self.ref_df = self.ref_df.combine_first(new_data_df)
-            
-            self.persist_reference()
-            
-            self.file.move_to_store(file)
 
+        self.persist_reference()
+        
+        self.file.move_to_store(metadata_files)
 
     # --------------------------------------------------------------
     def process_data_files(self, files_to_process: list[str]) -> None:
@@ -292,6 +330,8 @@ class DataHandler:
             files_to_process (list[str]): List of pdf files to process.
             reference_df (pd.DataFrame): Reference data DataFrame.
             log (logging.Logger): Logger object.
+            
+        Returns: None
         """
             
         for item in files_to_process:
@@ -322,12 +362,6 @@ class DataHandler:
         Returns: None
         """
 
-        # Make a copy of the DataFrame to avoid modifying the original
-        # self.ref_df = self.self.ref_df.copy()
-        
-        # change index column to a regular column so it is exported to the Excel file
-        self.ref_df.reset_index(inplace=True)
-        
         # reorder columns to match order defined the config file as columns_out_order
         self.ref_df = self.ref_df[self.ref_cols]
         
