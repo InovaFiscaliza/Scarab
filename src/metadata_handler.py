@@ -48,21 +48,29 @@ class DataHandler:
         """List of columns in the reference DataFrame."""
 
     # --------------------------------------------------------------
-    def drop_na(self, df: pd.DataFrame) -> pd.DataFrame:
+    def drop_na(self, df: pd.DataFrame, file: str) -> pd.DataFrame:
         """Drop rows from the DataFrame where the self.unique_id column has a null value in any variant form, including NA, NaN, strings such as '<NA>', 'NA', 'N/A', 'None', 'null' and empty strings.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
+            file (str): File name to be used in the log message.
 
         Returns:
             pd.DataFrame: DataFrame with the rows where the self.unique_id column is not null.
         """
+        
+        # store the number of rows in the dataframe
+        rows_before = df.shape[0]
         
         na_strings = ['<NA>', 'NA', 'N/A', 'None', 'null', '']
         
         df = df[~df[self.unique_id].isin(na_strings)]
         
         df = df.dropna(subset=[self.unique_id])
+        
+        removed_rows = rows_before - df.shape[0]
+        if removed_rows:
+            self.log.info(f"Removed {removed_rows} rows with null values in key column(s) in file '{file}'")
         
         return df
     
@@ -101,43 +109,44 @@ class DataHandler:
         """
         
         try:
-            df_from_file = pd.read_excel(file, dtype="string")
+            new_data_df = pd.read_excel(file, dtype="string")
         except Exception as e:
             self.log.error(f"Error reading Excel file {file}: {e}")
             return pd.DataFrame(), []
         
-        # get the columns from df_from_file
-        columns = df_from_file.columns.tolist()
+        # get the columns from new_data_df
+        columns = new_data_df.columns.tolist()
         
         try:
             # create a column to be used as index, merging the columns in index_column list
-            df_from_file[self.unique_id] = df_from_file[index_column].astype(str).agg('-'.join, axis=1)
+            new_data_df[self.unique_id] = new_data_df[index_column].astype(str).agg('-'.join, axis=1)
             
             # drop rows in which the self.unique_id column has value null
-            df_from_file = self.drop_na(df=df_from_file)
+            new_data_df = self.drop_na(df=new_data_df, file=file)
         
             # Identify rows with duplicate self.unique_id values
-            duplicate_ids = df_from_file[self.unique_id].duplicated(keep=False)
-            duplicate_rows = df_from_file[duplicate_ids]
+            duplicate_ids = new_data_df[self.unique_id].duplicated(keep=False)
+            duplicate_rows = new_data_df[duplicate_ids]
             
             if not duplicate_rows.empty:
-                self.log.warning(f"Data in key column(s) has duplicated values in {file}. Rows will be merged")
+                self.log.warning(f"Duplicated keys in {len(duplicate_rows)} rows in {file}. Rows will be merged")
                 # Apply the custom aggregation function to the duplicate rows
                 aggregated_rows = duplicate_rows.groupby(self.unique_id).agg(self._custom_agg)
                 
                 # get the rows that are not duplicated
-                unique_rows = df_from_file[~duplicate_ids]
+                unique_rows = new_data_df[~duplicate_ids]
+                unique_rows = unique_rows.set_index(self.unique_id)
                 
                 # Combine the unique rows with the aggregated rows
-                df_from_file = pd.concat([unique_rows, aggregated_rows])                
+                new_data_df = pd.concat([unique_rows, aggregated_rows])
+            else:
+                new_data_df = new_data_df.set_index(self.unique_id)
                 
         except Exception as e:
             self.log.error(f"Error creating index: {e}")
             return pd.DataFrame(), []
-
-        df_from_file = df_from_file.set_index(self.unique_id)
         
-        return df_from_file, columns
+        return new_data_df, columns
 
     # --------------------------------------------------------------
     def valid_data(self, df: pd.DataFrame, file: str) -> bool:
@@ -153,23 +162,26 @@ class DataHandler:
         Returns:
             bool: True if the data is valid.
         """
-        data_is_valid = True
+        
+        # since self.excel_read will remove rows with null values in the key columns, the resulting DataFrame may be empty
+        if df.empty:
+            self.log.error(f"File '{file}' is empty or has nor data in columns defined as keys.")
+            return False
         
         df_columns = df.columns.tolist()
     
         if not self.config.columns_in.issubset(set(df_columns)):
-            self.log.error(f"File '{file}' does not contain all required columns: {self.config.columns_in}")
-            data_is_valid = False
+            # find which elements from self.config.columns_in are missing in df_columns
+            missing_columns = self.config.columns_in - set(df_columns)
+            self.log.error(f"File '{file}' does not contain the required metadata columns: {missing_columns}")
+            return False
             
         if not set(self.config.columns_key).issubset(set(df_columns)):
-            self.log.error(f"File '{file}' does not contain all key columns: {self.config.columns_key}")
-            data_is_valid = False
+            missing_columns = set(self.config.columns_key) - set(df_columns)
+            self.log.error(f"File '{file}' does not contain the required key columns: {missing_columns}")
+            return False        
             
-        if df[self.config.columns_key].isnull().all().iloc[0]:
-            self.log.error(f"File '{file}' has empty key columns: {self.config.columns_key}")
-            data_is_valid = False
-            
-        return data_is_valid
+        return True
 
 
     # --------------------------------------------------------------
@@ -317,6 +329,8 @@ class DataHandler:
             
             # add new_data_df rows where index does not match
             self.ref_df = self.ref_df.combine_first(new_data_df)
+            
+            self.log.info(f"Reference data updated with file: {file}")
 
         self.persist_reference()
         
