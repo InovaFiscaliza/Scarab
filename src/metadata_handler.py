@@ -195,20 +195,21 @@ class DataHandler:
             list: List of columns in the DataFrame.
         """
         
-        try:
-            latest_file = max(self.config.catalog_files, key=os.path.getmtime)
-        except FileNotFoundError as e:
-            for file in self.config.catalog_files:
-                # test if file exist
-                if os.path.isfile(file):
+        # find the newest file in the list of catalog files
+        latest_time = 0.0
+        for file in self.config.catalog_files:
+            if os.path.isfile(file):
+                if os.path.getmtime(file) > latest_time:
+                    latest_time = os.path.getmtime(file)
                     latest_file = file
-                    break
-                else:
-                    self.log.error(f"Reference data file not found: {e}")            
         
-        self.log.info(f"Reading reference data from the most recently updated file: {latest_file}")
+        if latest_time > 0.0:
+            self.log.info(f"Reference data loaded from file: {latest_file}")
+            return self.read_excel(file=latest_file, index_column=self.config.columns_key)
+        else:
+            self.log.warning("No reference data found")
+            return pd.DataFrame(), []
         
-        return self.read_excel(file=latest_file, index_column=self.config.columns_key)
 
     # --------------------------------------------------------------
     def merge_lists(self, new_list: list, legacy_list: list) -> list:
@@ -332,9 +333,8 @@ class DataHandler:
             
             self.log.info(f"Reference data updated with file: {file}")
 
-        self.persist_reference()
-        
-        self.file.move_to_store(metadata_files)
+        if self.persist_reference():
+            self.file.move_to_store(metadata_files)
 
     # --------------------------------------------------------------
     def process_data_files(self, files_to_process: list[str]) -> None:
@@ -351,29 +351,32 @@ class DataHandler:
         for item in files_to_process:
             filename = os.path.basename(item)
 
-            
-            # change column [self.config.columns_data_filenames] to string type
-            self.ref_df[self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].astype(str)
+            # if column self.config.columns_data_published is not present in the reference_df, create it with false string values
+            if self.config.columns_data_published not in self.ref_df.columns:
+                self.ref_df[self.config.columns_data_published] = "False"
+                self.ref_cols.append(self.config.columns_data_published)
+            else:
+                # Force column [self.config.columns_data_filenames] to string type
+                self.ref_df[self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].astype(str)
             
             for data_filename in self.config.columns_data_filenames:
                 self.ref_df.loc[self.ref_df[data_filename].str.contains(filename, na=False), self.config.columns_data_published] = "True"
 
             # Set column [self.config.columns_data_published] to "False" for any remaining NA values
             self.ref_df.loc[:, self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].fillna("False")
-            
-            if self.file.publish_data_file(item):
-                self.persist_reference()
-            else:
-                # if file is not present in the reference_df, just do nothing and wait for it to appear later.
-                self.log.info(f"{filename} not found in the metadata catalog.")
+        
+        if self.persist_reference():
+            if self.file.publish_data_file(files_to_process):
+                self.file.remove_file_list(files_to_process)
                     
     # --------------------------------------------------------------
-    def persist_reference(self) -> None:
+    def persist_reference(self) -> bool:
         """Persist the reference DataFrame to the catalog file.
 
         Args: None
         
-        Returns: None
+        Returns:
+            bool: True if the reference data is saved successfully
         """
 
         # reorder columns to match order defined the config file as columns_out_order
@@ -383,5 +386,9 @@ class DataHandler:
             try:
                 self.ref_df.to_excel(catalog_file, index=False)
                 self.log.info(f"Reference data file updated: {catalog_file}")
+                return True
             except Exception as e:
                 self.log.error(f"Error saving reference data: {e}")
+                return False
+
+# --------------------------------------------------------------

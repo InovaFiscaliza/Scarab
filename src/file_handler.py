@@ -114,6 +114,17 @@ class FileHandler:
             pass                
         except Exception as e:
             self.log.error(f"Error removing {file}: {e}")
+            
+    # --------------------------------------------------------------
+    def remove_file_list(self, files: List[str]) -> None:
+        """Remove a list of files from the system.
+
+        Args:
+            files (List[str]): List of files to remove.
+        """
+        
+        for file in files:
+            self.remove_file(file)
 
     # --------------------------------------------------------------
     def add_timestamp_to_name(self, filename: str, variant: int = 0) -> str:
@@ -226,41 +237,34 @@ class FileHandler:
                 self.log.info(f"Moved to {self.config.store} the file {filename}")
 
     # --------------------------------------------------------------
-    def publish_data_file(self, file: str) -> bool:
+    def publish_data_file(self, files_to_publish: list[str]) -> bool:
         """Publish a file to the raw folder.
 
         Args:
             file (str): File to publish to the raw folder.
         """
-                
-        filename = os.path.basename(file)
-        
+                        
         publish_succeded = True
 
-        # copy file to all publish folders
-        for publish_folder in self.config.get:
-            try:
-                target_file = os.path.join(publish_folder, filename)
-                if os.path.exists(target_file):
-                    if self.config.get_data_overwrite:
-                        self.trash_it(file=target_file, overwrite=self.config.trash_data_overwrite)
-                    else:
-                        self.move_to_store(files=[target_file])
-                    
-                shutil.copy(file, publish_folder)
-                self.log.info(f"Copied {filename} to {publish_folder}")
-            except Exception as e:
-                self.log.error(f"Error publishing {file} to {publish_folder}: {e}")
-                publish_succeded = False
-        
-        # remove source file if all copies were successful
-        try:
-            if publish_succeded:
-                self.remove_file(file)
-                self.log.info(f"Removed the file {file}")
-        except Exception as e:
-            self.log.error(f"Error deleting {file}: {e}")
-            publish_succeded = False
+        for file in files_to_publish:
+            
+            filename = os.path.basename(file)
+
+            # copy file to all publish folders
+            for publish_folder in self.config.get:
+                try:
+                    target_file = os.path.join(publish_folder, filename)
+                    if os.path.exists(target_file):
+                        if self.config.get_data_overwrite:
+                            self.trash_it(file=target_file, overwrite=self.config.trash_data_overwrite)
+                        else:
+                            self.move_to_store(files=[target_file])
+                        
+                    shutil.copy(file, publish_folder)
+                    self.log.info(f"Copied {filename} to {publish_folder}")
+                except Exception as e:
+                    self.log.error(f"Error publishing {file} to {publish_folder}: {e}")
+                    publish_succeded = False
         
         return publish_succeded
 
