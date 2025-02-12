@@ -22,6 +22,8 @@ import hashlib
 import itertools
 
 from dataclasses import dataclass
+from typing import Union, List
+
 # --------------------------------------------------------------
 @dataclass
 class FileHandler:
@@ -199,28 +201,29 @@ class FileHandler:
             self.log.info(f"Moved to {self.config.trash} the file {filename}")            
             
     # --------------------------------------------------------------
-    def move_to_store(self, file: str) -> None:
-        """Move a file to the store folder, resetting the file timestamp for the current time and self.log.the event.
+    def move_to_store(self, files: List[str]) -> None:
+        """Move a file of list of files to the store folder, resetting the file timestamp for the current time and self.log.the event.
 
         Args:
-            file (str): File to move to the store folder.
+            files (List[str]): File(s) to move to the store folder.
         """
-                
-        filename = os.path.basename(file)
-        stored_file = os.path.join(self.config.store, filename)
         
-        try:
-            shutil.move(file, self.config.store)
-        except Exception as e: 
-            if os.path.exists(stored_file):
-                self.trash_it(file=stored_file, overwrite=self.config.store_data_overwrite)
+        for file in files:
+            filename = os.path.basename(file)
+            stored_file = os.path.join(self.config.store, filename)
+            
+            try:
                 shutil.move(file, self.config.store)
-            else:
-                self.log.error(f"Error moving {file} to store folder: {e}")
-                return
-        finally:
-            os.utime(stored_file) # force the file timestamp to the current time to avoid being cleaned by the clean process before the clean period is over
-            self.log.info(f"Moved to {self.config.store} the file {filename}")
+            except Exception as e: 
+                if os.path.exists(stored_file):
+                    self.trash_it(file=stored_file, overwrite=self.config.store_data_overwrite)
+                    shutil.move(file, self.config.store)
+                else:
+                    self.log.error(f"Error moving {file} to store folder: {e}")
+                    return
+            finally:
+                os.utime(stored_file) # force the file timestamp to the current time to avoid being cleaned by the clean process before the clean period is over
+                self.log.info(f"Moved to {self.config.store} the file {filename}")
 
     # --------------------------------------------------------------
     def publish_data_file(self, file: str) -> bool:
@@ -242,7 +245,7 @@ class FileHandler:
                     if self.config.get_data_overwrite:
                         self.trash_it(file=target_file, overwrite=self.config.trash_data_overwrite)
                     else:
-                        self.move_to_store(target_file)
+                        self.move_to_store(files=[target_file])
                     
                 shutil.copy(file, publish_folder)
                 self.log.info(f"Copied {filename} to {publish_folder}")
