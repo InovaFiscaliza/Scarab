@@ -1,8 +1,8 @@
 [project]
 name = "scarab"
-version = "0.1.0"
+version = "1.0.0"
 description = "Move your shit around"
-readme = "README.md"
+readme = "https://github.com/InovaFiscaliza/Scarab/blob/main/README.md"
 requires-python = ">=3.13"
 dependencies = [
     "base58>=2.1.1",
