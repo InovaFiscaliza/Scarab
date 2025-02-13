@@ -41,7 +41,7 @@ class DataHandler:
         """Unique identifier for the in class column naming."""
         
         df, col = self.read_reference_df()
-        
+                
         self.ref_df : pd.DataFrame = df
         """Reference DataFrame with the data from the most recently updated catalog file."""
         self.ref_cols : list = col
@@ -49,24 +49,24 @@ class DataHandler:
 
     # --------------------------------------------------------------
     def drop_na(self, df: pd.DataFrame, file: str) -> pd.DataFrame:
-        """Drop rows from the DataFrame where the self.unique_id column has a null value in any variant form, including NA, NaN, strings such as '<NA>', 'NA', 'N/A', 'None', 'null' and empty strings.
+        """Drop rows from the DataFrame where the ID column has a null value in any variant form, including NA, NaN, strings such as '<NA>', 'NA', 'N/A', 'None', 'null' and empty strings.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
             file (str): File name to be used in the log message.
 
         Returns:
-            pd.DataFrame: DataFrame with the rows where the self.unique_id column is not null.
+            pd.DataFrame: DataFrame with the rows where the ID column is not null.
         """
         
-        # store the number of rows in the dataframe
+        unique_name = f"index-{self.unique_id}"
         rows_before = df.shape[0]
         
         na_strings = ['<NA>', 'NA', 'N/A', 'None', 'null', '']
         
-        df = df[~df[self.unique_id].isin(na_strings)]
+        df = df[~df[unique_name].isin(na_strings)]
         
-        df = df.dropna(subset=[self.unique_id])
+        df = df.dropna(subset=[unique_name])
         
         removed_rows = rows_before - df.shape[0]
         if removed_rows:
@@ -117,30 +117,32 @@ class DataHandler:
         # get the columns from new_data_df
         columns = new_data_df.columns.tolist()
         
+        unique_name = f"index-{self.unique_id}"
+        
         try:
             # create a column to be used as index, merging the columns in index_column list
-            new_data_df[self.unique_id] = new_data_df[index_column].astype(str).agg('-'.join, axis=1)
+            new_data_df[unique_name] = new_data_df[index_column].astype(str).agg('-'.join, axis=1)
             
-            # drop rows in which the self.unique_id column has value null
+            # drop rows in which the unique_name column has value null
             new_data_df = self.drop_na(df=new_data_df, file=file)
         
-            # Identify rows with duplicate self.unique_id values
-            duplicate_ids = new_data_df[self.unique_id].duplicated(keep=False)
+            # Identify rows with duplicate unique_name values
+            duplicate_ids = new_data_df[unique_name].duplicated(keep=False)
             duplicate_rows = new_data_df[duplicate_ids]
             
             if not duplicate_rows.empty:
                 self.log.warning(f"Duplicated keys in {len(duplicate_rows)} rows in {file}. Rows will be merged")
                 # Apply the custom aggregation function to the duplicate rows
-                aggregated_rows = duplicate_rows.groupby(self.unique_id).agg(self._custom_agg)
+                aggregated_rows = duplicate_rows.groupby(unique_name).agg(self._custom_agg)
                 
                 # get the rows that are not duplicated
                 unique_rows = new_data_df[~duplicate_ids]
-                unique_rows = unique_rows.set_index(self.unique_id)
+                unique_rows = unique_rows.set_index(unique_name)
                 
                 # Combine the unique rows with the aggregated rows
                 new_data_df = pd.concat([unique_rows, aggregated_rows])
             else:
-                new_data_df = new_data_df.set_index(self.unique_id)
+                new_data_df = new_data_df.set_index(unique_name)
                 
         except Exception as e:
             self.log.error(f"Error creating index: {e}")
@@ -205,11 +207,17 @@ class DataHandler:
         
         if latest_time > 0.0:
             self.log.info(f"Reference data loaded from file: {latest_file}")
-            return self.read_excel(file=latest_file, index_column=self.config.columns_key)
+            ref_df, ref_cols = self.read_excel(file=latest_file, index_column=self.config.columns_key)
         else:
             self.log.warning("No reference data found")
-            return pd.DataFrame(), []
+            ref_df, ref_cols = pd.DataFrame(), []
         
+        # if column self.config.columns_data_published is not present in the reference_df, create it with false string values
+        if self.config.columns_data_published not in ref_df.columns:
+            ref_df[self.config.columns_data_published] = pd.Series(dtype='string')
+            ref_cols.append(self.config.columns_data_published)
+
+        return ref_df, ref_cols
 
     # --------------------------------------------------------------
     def merge_lists(self, new_list: list, legacy_list: list) -> list:
@@ -310,6 +318,7 @@ class DataHandler:
         Returns: None            
         """
         
+        files_to_move = metadata_files.copy()
         
         for file in metadata_files:
             new_data_df, column_in = self.read_excel(   file=file,
@@ -319,6 +328,7 @@ class DataHandler:
             if not self.valid_data(df=new_data_df, file=file):
                 if self.config.discard_invalid_data_files:
                     self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
+                    files_to_move.remove(file)
                 continue
             
             # Compute the new column order for the reference DataFrame
@@ -334,7 +344,7 @@ class DataHandler:
             self.log.info(f"Reference data updated with file: {file}")
 
         if self.persist_reference():
-            self.file.move_to_store(metadata_files)
+            self.file.move_to_store(files_to_move)
 
     # --------------------------------------------------------------
     def process_data_files(self, files_to_process: list[str]) -> None:
@@ -347,27 +357,39 @@ class DataHandler:
             
         Returns: None
         """
-            
-        for item in files_to_process:
-            filename = os.path.basename(item)
 
-            # if column self.config.columns_data_published is not present in the reference_df, create it with false string values
-            if self.config.columns_data_published not in self.ref_df.columns:
-                self.ref_df[self.config.columns_data_published] = "False"
-                self.ref_cols.append(self.config.columns_data_published)
-            else:
-                # Force column [self.config.columns_data_filenames] to string type
-                self.ref_df[self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].astype(str)
-            
-            for data_filename in self.config.columns_data_filenames:
-                self.ref_df.loc[self.ref_df[data_filename].str.contains(filename, na=False), self.config.columns_data_published] = "True"
-
-            # Set column [self.config.columns_data_published] to "False" for any remaining NA values
-            self.ref_df.loc[:, self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].fillna("False")
+        unique_name = f"files-{self.unique_id}"
         
+        self.log.info(f"Processing {len(files_to_process)} data files")
+        
+        # Force column [self.config.columns_data_filenames] to string type
+        self.ref_df[self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].astype(str)
+        
+        # Set column [self.config.columns_data_published] to "False" for any remaining NA values
+        self.ref_df.loc[:, self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].fillna("False")
+
+        # create a copy of the reference dataframe, using the same index but with only one data column, containing the merged string from all columns indicated in self.config.columns_data_filenames
+        self.ref_df[unique_name] = self.ref_df[self.config.columns_data_filenames].agg(' '.join, axis=1)
+
+        files_found_in_ref = []
+
+        for item in files_to_process:
+            
+            # Find the row in the reference DataFrame that matches the filename
+            match = self.ref_df[self.ref_df[unique_name].str.contains(os.path.basename(item))]
+            
+            # Set column [self.config.columns_data_published] to "Gotcha!" for any matching rows
+            if not match.empty:
+                self.ref_df.loc[match.index, self.config.columns_data_published] = "True"
+                files_found_in_ref.append(item)
+                        
+        files_not_counted = len(files_to_process) - len(files_found_in_ref)
+        if files_not_counted:
+            self.log.warning(f"Not all data files were considered. Leaving {files_not_counted} in TEMP folder.")
+                    
         if self.persist_reference():
-            if self.file.publish_data_file(files_to_process):
-                self.file.remove_file_list(files_to_process)
+            if self.file.publish_data_file(files_found_in_ref):
+                self.file.remove_file_list(files_found_in_ref)
                     
     # --------------------------------------------------------------
     def persist_reference(self) -> bool:
