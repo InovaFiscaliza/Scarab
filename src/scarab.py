@@ -66,25 +66,29 @@ def main(config_path: str) -> None:
     
     config = cm.Config(config_path)
     log = lm.start_logging(config)
-    file = fm.FileHandler(config, log)
-    data = dm.DataHandler(config, log)
+    fh = fm.FileHandler(config, log)
+    dh = dm.DataHandler(config, log)
     
     # initialize raw data folders to be synchronized
-    file.mirror_raw_data()
+    fh.mirror_raw_data()
     
     # keep thread running until a ctrl+C or kill command is received, even if an error occurs
     while keep_watching:
         
         try:
-            metadata_to_process, raw_to_process = file.get_files_to_process()
+            metadata_to_process, data_files_to_process = fh.get_files_to_process()
             
             if metadata_to_process:
-                data.process_metadata_files(metadata_to_process)
+                dh.process_metadata_files(metadata_to_process)
+
+            if dh.metadata_not_changed:
+                # remove files to ignore from the list of files to process, since nothing has changed in the metadata
+                data_files_to_process = set(data_files_to_process) - set(dh.data_files_to_ignore)
                     
-            if raw_to_process:
-                data.process_data_files(raw_to_process)
+            if data_files_to_process:
+                dh.process_data_files(data_files_to_process)
             
-            file.clean_folders()
+            fh.clean_folders()
             
             time.sleep(config.check_period)
         

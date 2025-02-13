@@ -33,15 +33,20 @@ class DataHandler:
         """Configuration object."""
         self.log : logging.Logger = log
         """Application log object."""
-        
         self.file : fm.FileHandler = fm.FileHandler(config=config, log=log)
         """FileHandler object."""
 
         self.unique_id : str = base58.b58encode(uuid.uuid4().bytes).decode('utf-8')
         """Unique identifier for the in class column naming."""
+        self.pending_metadata_processing : bool = True
+        """Flag to indicate that there is metadata needs to be processed."""
+        self.metadata_not_changed : bool = True
+        """Flag to indicate that metadata was changed. Assumed to be True at start."""
+        self.data_files_to_ignore : set[str] = set()
+        """List of data files that were processed but not found in the reference data. To be processed only if the reference data is updated."""
         
         df, col = self.read_reference_df()
-                
+        
         self.ref_df : pd.DataFrame = df
         """Reference DataFrame with the data from the most recently updated catalog file."""
         self.ref_cols : list = col
@@ -345,6 +350,7 @@ class DataHandler:
 
         if self.persist_reference():
             self.file.move_to_store(files_to_move)
+            self.metadata_not_changed = True
 
     # --------------------------------------------------------------
     def process_data_files(self, files_to_process: list[str]) -> None:
@@ -383,14 +389,19 @@ class DataHandler:
                 self.ref_df.loc[match.index, self.config.columns_data_published] = "True"
                 files_found_in_ref.append(item)
                         
-        files_not_counted = len(files_to_process) - len(files_found_in_ref)
-        if files_not_counted:
-            self.log.warning(f"Not all data files were considered. Leaving {files_not_counted} in TEMP folder.")
-                    
-        if self.persist_reference():
-            if self.file.publish_data_file(files_found_in_ref):
-                self.file.remove_file_list(files_found_in_ref)
-                    
+        
+        if files_found_in_ref:
+            files_not_counted = set(files_to_process) - set(files_found_in_ref)
+            if files_not_counted:
+                self.data_files_to_ignore += files_not_counted
+                self.log.warning(f"Not all data files were considered. Leaving {files_not_counted} in TEMP folder.")
+                        
+            if self.persist_reference():
+                if self.file.publish_data_file(files_found_in_ref):
+                    self.file.remove_file_list(files_found_in_ref)
+                
+                self.metadata_not_changed = False
+
     # --------------------------------------------------------------
     def persist_reference(self) -> bool:
         """Persist the reference DataFrame to the catalog file.
