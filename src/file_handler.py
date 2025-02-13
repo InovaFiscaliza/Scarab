@@ -213,7 +213,7 @@ class FileHandler:
             
     # --------------------------------------------------------------
     def move_to_store(self, files: List[str]) -> None:
-        """Move a file of list of files to the store folder, resetting the file timestamp for the current time and self.log.the event.
+        """Move a list of files to the store folder, resetting the file timestamp for the current time and self.log.the event.
 
         Args:
             files (List[str]): File(s) to move to the store folder.
@@ -256,9 +256,9 @@ class FileHandler:
                     target_file = os.path.join(publish_folder, filename)
                     if os.path.exists(target_file):
                         if self.config.get_data_overwrite:
-                            self.trash_it(file=target_file, overwrite=self.config.trash_data_overwrite)
+                            self.remove_file(target_file)
                         else:
-                            self.move_to_store(files=[target_file])
+                            self.trash_it(file=target_file, overwrite=self.config.trash_data_overwrite)
                         
                     shutil.copy(file, publish_folder)
                     self.log.info(f"Copied {filename} to {publish_folder}")
@@ -290,7 +290,7 @@ class FileHandler:
                                 folder_content: list[str],
                                 move: bool = True,
                                 catalog_to_process: list[str] = [],
-                                raw_to_process: list[str] = []) -> tuple[list[str], list[str], list[str]]:
+                                data_files_to_process: list[str] = []) -> tuple[list[str], list[str], list[str]]:
         """ Move files listed according to extension to the temp folder and return the list of files to process
             Remove subfolder and files with unrecognized extensions.
             
@@ -299,7 +299,7 @@ class FileHandler:
             files (list[str]): List of files to sort.
             move (bool): True if required to move files to the temp folder. Default is True.
             catalog_to_process (list[str]): Existing list of xlsx files to process. Default is an empty list.
-            raw_to_process (list[str]): Existing list of pdf files to process. Default is an empty list.
+            data_files_to_process (list[str]): Existing list of pdf files to process. Default is an empty list.
 
         Returns:
             tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolder to remove.
@@ -331,7 +331,7 @@ class FileHandler:
                             item = self.move_to_temp(item)
                         
                         if item is not None:
-                            raw_to_process.append(item)
+                            data_files_to_process.append(item)
                     
                     case _: 
                         self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
@@ -340,7 +340,7 @@ class FileHandler:
                 
         self.remove_unused_subfolder(subfolder)
         
-        return catalog_to_process, raw_to_process
+        return catalog_to_process, data_files_to_process
 
     # --------------------------------------------------------------
     def get_files_to_process(self) -> tuple[list[str], list[str]]:
@@ -361,13 +361,13 @@ class FileHandler:
         if not folder_content:
             self.log.info("TEMP Folder is empty.")
             catalog_to_process = []
-            raw_to_process = []
+            data_files_to_process = []
         else:
             # add path to filenames
             folder_content = list(map(lambda x: os.path.join(self.config.temp, x), folder_content))
             self.log.info(f"TEMP Folder has {len(folder_content)} files/folders to process.")
 
-            catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, move=False)
+            catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content, move=False)
         
         # Get files from post folder
         for post_folder in self.config.post:
@@ -381,9 +381,9 @@ class FileHandler:
                 folder_content = list(map(lambda x: os.path.join(post_folder, x), folder_content))
                 self.log.info(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
                 
-                catalog_to_process, raw_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, raw_to_process=raw_to_process)
+                catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, data_files_to_process=data_files_to_process)
                         
-        return catalog_to_process, raw_to_process
+        return catalog_to_process, data_files_to_process
 
     # --------------------------------------------------------------
     def clean_old_in_folder(self, folder: str) -> None:
