@@ -333,8 +333,9 @@ class FileHandler:
                         if item is not None:
                             data_files_to_process.append(item)
                     
-                    case _: 
-                        self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
+                    case _:
+                        if self.config.discard_invalid_data_files:
+                            self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
             else:
                 subfolder.append(item)
                 
