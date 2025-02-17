@@ -1,4 +1,29 @@
-# Tests
+
+<div id="navigation-template" style="display: none;">
+    <br><br>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+<details>
+    <summary>Table of Contents</summary>
+    <ol>
+        <li><a href="#About_Scarab_Tests">About Scarab Tests</a></li>
+        <li><a href="#Scripts_and_Files">Scripts and Files</a></li>
+        <li><a href="#Tests">Tests</a></li>
+        <li><a href="#setup">Setup</a></li>
+        <li><a href="#roadmap">Roadmap</a></li>
+        <li><a href="#contributing">Contributing</a></li>
+        <li><a href="#license">License</a></li>
+    </ol>
+</details>
+
+# About Scarab Tests
 
 This folder includes several tests to validate the scripts and modules.
 
@@ -10,9 +35,11 @@ If running in debbuging mode, using VSCode or other IDE, the interruption may no
 
 For VSCode, the debugger configuration is already set in the .vscode folder to run the script with the config.json file within the sandbox folder.
 
+<script>insertNavigation();</script>
+
 ## Initial test
 
-Use `1test.bat` to set the sandbox folder structure for the test.
+Use `1test_simple_XLSX.bat` to set the sandbox folder structure for the test.
 
 After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests folder in the repository path, the following results are expected:
 
@@ -24,9 +51,10 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests
 
 To finish the test use `ctrl+c`. It may take up to 10 seconds to stop the script after the interruption is received and registered in the log.
 
+
 ## Metadata update test
 
-Use `2test.bat` to set the sandbox folder structure for the test
+Use `2test_update_XLSX.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the first test, adding a new metadata file to be processed.
 
@@ -43,7 +71,7 @@ The pid is number displayed in the log file and screen, between square brackets 
 
 ## Multiple input and output folders test
 
-Use `3test.bat` to set the sandbox folder structure for the test
+Use `3test_multiple_in_out.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the previous tests, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
@@ -54,7 +82,7 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 ## Disable overwrite and with same files coming from different sources
 
-Use `4test.bat` to set the sandbox folder structure for the test
+Use `4test_overwrite_and_conflict.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the previous, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
@@ -65,7 +93,7 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 ## Change columns and multiple keys
 
-Use `5test.bat` to set the sandbox folder structure for the test
+Use `5test_multiple_keys_variable_columns.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the second test, adding but the update is done changing columns that are not mapped in the config file. 
 
@@ -82,7 +110,7 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 ## Heavy Load Test
 
-Use `6test.bat` to set the sandbox folder structure for the test
+Use `6test_heavy_load_missing_data.bat` to set the sandbox folder structure for the test
 
 This tests has larger catalog file to process and is usefull for performance testing. Based on Regulatron test data.
 
@@ -99,3 +127,10 @@ tar -czvf TEST_NAME.tgz sandbox
 Where `TEST_NAME` is the name of the test to be used in the batch file.
 
 Create the new test modifying the `TEST_NAME.bat` file, using the TEST_NAME where required.
+
+<script>
+    function insertNavigation() {
+        var template = document.getElementById('navigation-template').innerHTML;
+        document.write(template);
+    }
+</script>

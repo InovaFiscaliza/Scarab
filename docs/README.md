@@ -18,7 +18,7 @@ Scarab is configured through a json file using the following format
 | `log` | `file output` | Boolean. If `True`, log messages will be written to a file | false |
 | `log` | `file path` | List of Strings. Path to the log file | ["./sandbox/get/log.txt", "./sandbox/get_other/log.txt"] |
 | `log` | `format` | List of Strings. Format of the log message as defined in [logging](https://docs.python.org/3/howto/logging.html#formatters)  | ["%(asctime)s", "%(module)s: %(funcName)s:%(lineno)d", "%(name)s[%(process)d]", "%(levelname)s", "%(message)s"] |
-| `log` | `colour sequence` | List of Strings. Colour sequence to be used in the log message | ["32m", "35m", "34m", "30m", "0m"] |
+| `log` | `colour sequence` | List of Strings. Colour sequence to be used in the log message [advanced logging](https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output) | ["32m", "35m", "34m", "30m", "0m"] |
 
 
 
