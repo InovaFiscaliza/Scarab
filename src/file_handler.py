@@ -360,7 +360,7 @@ class FileHandler:
         folder_content = glob.glob("**", root_dir=self.config.temp, recursive=True)
         
         if not folder_content:
-            self.log.info("TEMP Folder is empty.")
+            self.log.debug("TEMP Folder is empty.")
             catalog_to_process = []
             data_files_to_process = []
         else:
@@ -376,7 +376,7 @@ class FileHandler:
             folder_content = glob.glob("**", root_dir=post_folder, recursive=True)
             
             if not folder_content:
-                self.log.info(f"POST Folder {post_folder} is empty.")
+                self.log.debug(f"POST Folder {post_folder} is empty.")
             else:
                 # add path to filenames
                 folder_content = list(map(lambda x: os.path.join(post_folder, x), folder_content))
@@ -403,6 +403,8 @@ class FileHandler:
         if not folder_content:
             self.log.info(f"Nothing to clean in {folder}.")
             return
+        
+        self.log.info(f"Checking {len(folder_content)} files/folders in {folder} for cleaning")
         
         folder_to_remove = []
         
@@ -444,7 +446,7 @@ class FileHandler:
             for post_folder in self.config.post:
                 self.clean_old_in_folder(post_folder)
                 
-        self.clean_old_in_folder(self.config.temp)
+            self.clean_old_in_folder(self.config.temp)
         
         # TODO: #3 Sync multiple catalog files by checking if they have same content and merge them
         self.config.set_last_clean()
