@@ -1,25 +1,15 @@
 
-<div id="navigation-template" style="display: none;">
-    <br><br>
-    <a href="../README.md">
-        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
-    </a>
-    <a href="#indexerd-md-top">
-        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
 <details>
     <summary>Table of Contents</summary>
     <ol>
         <li><a href="#About_Scarab_Tests">About Scarab Tests</a></li>
-        <li><a href="#Scripts_and_Files">Scripts and Files</a></li>
-        <li><a href="#Tests">Tests</a></li>
-        <li><a href="#setup">Setup</a></li>
-        <li><a href="#roadmap">Roadmap</a></li>
-        <li><a href="#contributing">Contributing</a></li>
-        <li><a href="#license">License</a></li>
+        <li><a href="#Initial_test">Initial test</a></li>
+        <li><a href="#Metadata_update_test">Metadata update test</a></li>
+        <li><a href="#Multiple_input_and_output_folders_test">Multiple input and output folders test</a></li>
+        <li><a href="#Disable_overwrite_and_with_same_files_coming_from_different_sources">Disable overwrite and with same files coming from different sources</a></li>
+        <li><a href="#Change_columns_and_multiple_keys">Change columns and multiple keys</a></li>
+        <li><a href="#Heavy_Load_Test">Heavy Load Test</a></li>
+        <li><a href="#Creating_new_tests">Creating new tests</a></li>
     </ol>
 </details>
 
@@ -35,7 +25,15 @@ If running in debbuging mode, using VSCode or other IDE, the interruption may no
 
 For VSCode, the debugger configuration is already set in the .vscode folder to run the script with the config.json file within the sandbox folder.
 
-<script>insertNavigation();</script>
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 ## Initial test
 
@@ -51,6 +49,15 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests
 
 To finish the test use `ctrl+c`. It may take up to 10 seconds to stop the script after the interruption is received and registered in the log.
 
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 ## Metadata update test
 
@@ -69,6 +76,16 @@ To finish the test you may use the command `kill -9 <pid>` from another terminal
 
 The pid is number displayed in the log file and screen, between square brackets after the script name.
 
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
 ## Multiple input and output folders test
 
 Use `3test_multiple_in_out.bat` to set the sandbox folder structure for the test
@@ -80,6 +97,16 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 > * File `monitorRNI_test_temp_update.xlsx` will be processed and moved from the temp folder to store folder, simulating a missing file due to broken execution.
 > * Folder `get_other`, that was initially empty, should have the same content as the `get` folder, including pre-existing files in the raw subfolder.
 
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
 ## Disable overwrite and with same files coming from different sources
 
 Use `4test_overwrite_and_conflict.bat` to set the sandbox folder structure for the test
@@ -90,6 +117,16 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 > * Test the use of variant names for the log file (if the timestamp is the same) and the use of the `overwrite` flag in the config file.
 > * Same file posted in multiple folders are processed only once.
+
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 ## Change columns and multiple keys
 
@@ -108,11 +145,57 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 > * Lines will be updated in the metadata file `monitorRNI.xlsx` in the get folder. Modifications can be noted in columns `NEW1` and `NEW2`, that should be present only in the updated and new rows.
 > New rows should be added whenever one of the columns associated with the keys are changed.
 
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
 ## Heavy Load Test
 
 Use `6test_heavy_load_missing_data.bat` to set the sandbox folder structure for the test
 
 This tests has larger catalog file to process and is usefull for performance testing. Based on Regulatron test data.
+
+After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+
+Results are expected to be similar to the previous tests, but with a larger file to process and errors such as missing key data, key conflicts and variable columns.
+
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+
+## Heavy Load Test
+
+Use `7test_sch_null_data.bat` to set the sandbox folder structure for the test
+
+This tests also has larger number of files to process and is usefull for performance testing. Based on SCH test data.
+
+After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+
+Different from the previous test, at this time there is no data, but only tables to process. There are conflicts in file naming and missing data to be handled.
+
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
 
 ## Creating new tests
 
@@ -126,11 +209,14 @@ tar -czvf TEST_NAME.tgz sandbox
 
 Where `TEST_NAME` is the name of the test to be used in the batch file.
 
-Create the new test modifying the `TEST_NAME.bat` file, using the TEST_NAME where required.
+Create the new test modifying the `xtest_TEST_NAME.bat` file, using the TEST_NAME where required and using the number of the test as prefix for convienience.
 
-<script>
-    function insertNavigation() {
-        var template = document.getElementById('navigation-template').innerHTML;
-        document.write(template);
-    }
-</script>
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>

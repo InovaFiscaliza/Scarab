@@ -1,8 +1,24 @@
-# Documentation
 
-Scarab is configured through a json file using the following format
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="./images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <br><br>
+</div>
+<details>
+    <summary>Table of Contents</summary>
+    <ol>
+        <li><a href="#About_Scarab_Documentation">About Scarab Documentation</a></li>
+    </ol>
+</details>
 
-| json key - root - | json key - level 1 - | Description | Example |
+# About Scarab Documentation
+
+Scarab is configured through a json file
+
+You may get examples in the test setups. Check the [tests folder](./tests/README.md) for more details.
+
+| json key [root] | json key [branch] | Description | Example |
 | --- | --- | --- | --- |
 | `name` | | String. Configuration name to be used in log messages | "Sandbox Complete Text Example" |
 | `check period in seconds` | | Integer. Time in seconds between checks of post and temp folders | 10 |
@@ -100,22 +116,12 @@ Scarab is configured through a json file using the following format
 
 ```
 
-## Installation
-
-To install the application, follow these steps:
-
-1. Download the latest release from the [releases page](
-
-## Creating new tests
-
-Edit the content of the sandbox folder to create the desired structure, making modifications in the config.json file if necessary.
-
-Run the following command to create the corresponding TGZ file:
-
-```cmd
-tar -czvf TEST_NAME.tgz sandbox
-```
-
-Where `TEST_NAME` is the name of the test to be used in the batch file.
-
-Create the new test modifying the `TEST_NAME.bat` file, using the TEST_NAME where required.
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="./images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
