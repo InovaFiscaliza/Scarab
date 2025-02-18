@@ -98,7 +98,7 @@ class Config:
             """ Name of the configuration, used for logging"""
             self.check_period: int = self.raw["check period in seconds"]
             """ Period to check input folders in seconds """
-            self.clean_period: int = self.raw["clean period in hours"]
+            self.clean_period: pd.Timedelta = pd.Timedelta(hours=self.raw["clean period in hours"])
             """ Period to clean temp folders in hours"""
             self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
             """ Timestamp of the last clean operation"""
@@ -140,18 +140,37 @@ class Config:
             """ Full path to the catalog file, where metadata is stored"""
             self.metadata_extension: str = self.raw["files"]["metadata extension"]
             """ Extension used to identify the metadata files"""
-            self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
-            """ Folder path where data files are to be stored"""
-            self.data_extension: str = self.raw["files"]["data extension"]
-            """ Data file extension, used to identify the raw data files"""
+            self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
+            """ Extension used to identify the catalog files"""
+            try:
+                self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
+                """ Folder path where data files are to be stored"""
+            except KeyError:
+                self.get: List[str] = []
+
+            try:                
+                self.data_extension: str = self.raw["files"]["data extension"]
+                """ Data file extension, used to identify the raw data files"""
+            except KeyError:
+                self.data_extension: str = ""
+                
             self.columns_in: Set[str] = set(self.raw["metadata"]["in columns"])
             """ Columns required in the input metadata file"""
             self.columns_key: List[str] = self.__ensure_list(self.raw["metadata"]["key"])
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.columns_data_filenames: List[str] = self.__ensure_list(self.raw["metadata"]["data filenames"])
-            """ Columns that contain the names of data files associated with each row metadata"""
-            self.columns_data_published: str = self.raw["metadata"]["data published flag"]
-            """ Columns that contain the publication status of each row"""
+            
+            try:
+                self.columns_data_filenames: List[str] = self.__ensure_list(self.raw["metadata"]["data filenames"])
+                """ Columns that contain the names of data files associated with each row metadata"""
+            except KeyError:
+                self.columns_data_filenames: List[str] = []
+                
+            try:
+                self.columns_data_published: str = self.raw["metadata"]["data published flag"]
+                """ Columns that contain the publication status of each row"""
+            except KeyError:
+                self.columns_data_published: str = ""
+                
             # TODO: #2 Parse file metadata separated from the data metadata since data may be aggregated from multiple files
 
         except Exception as e:
@@ -275,21 +294,25 @@ class Config:
     def set_last_clean(self) -> None:
         """Write current datetime to JSON file.
         
-        Args: None
+        Args:
+            None
             
-        Returns: None
+        Returns:
+            None
 
         Raises:
             Exception: Config file write error.
         """
         
-        self.raw["last clean"] = pd.to_datetime("now").strftime("%Y-%m-%d %H:%M:%S")
+        self.last_clean = pd.to_datetime("now")
+        
+        self.raw["last clean"] = self.last_clean.strftime("%Y-%m-%d %H:%M:%S")
         
         try:
             with open(self.config_file, 'w', encoding='utf-8') as json_file:
                 json.dump(self.raw, json_file, indent=4)
         except Exception as e:
-            print(f"Error writing to config file: {e}")
+            raise Exception(f"File write error: {e}")
             
     # --------------------------------------------------------------
     def __test_folder(self, folder: str, folder_type: str, message: str) -> tuple[bool, str]:
