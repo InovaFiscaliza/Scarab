@@ -10,5 +10,4 @@ wheels/
 .venv
 
 # Test areas
-tests/sandbox/*
-tests/sandbox/
+tests/sandbox
