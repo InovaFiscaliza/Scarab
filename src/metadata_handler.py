@@ -40,8 +40,6 @@ class DataHandler:
         """Unique identifier for the in class column naming."""
         self.pending_metadata_processing : bool = True
         """Flag to indicate that there is metadata needs to be processed."""
-        self.metadata_not_changed : bool = True
-        """Flag to indicate that metadata was changed. Assumed to be True at start."""
         self.data_files_to_ignore : set[str] = set()
         """List of data files that were processed but not found in the reference data. To be processed only if the reference data is updated."""
         
@@ -101,8 +99,8 @@ class DataHandler:
                 return ', '.join(non_null_values)            
 
     # --------------------------------------------------------------
-    def read_excel(self, file: str, index_column: list) -> tuple[pd.DataFrame, list]:
-        """Read an Excel file and return a DataFrame indexed according to the defined keys
+    def read_metadata(self, file: str, filetype: str, index_column: list) -> tuple[pd.DataFrame, list]:
+        """Read an metadata file and return a DataFrame indexed according to the defined keys
 
         Args:
             file (str): Excel file to read.
@@ -114,9 +112,17 @@ class DataHandler:
         """
         
         try:
-            new_data_df = pd.read_excel(file, dtype="string")
+            match filetype:
+                case '.xlsx':
+                    new_data_df = pd.read_excel(file, dtype="string")
+                case '.csv':
+                    new_data_df = pd.read_csv(file, dtype="string")
+                case '.json':
+                    new_data_df = pd.read_json(file, dtype="string")
+                case _:
+                    self.log.error(f"Unsupported metadata file type: {filetype}")
         except Exception as e:
-            self.log.error(f"Error reading Excel file {file}: {e}")
+            self.log.error(f"Error reading metadata file {file}: {e}")
             return pd.DataFrame(), []
         
         # get the columns from new_data_df
@@ -212,7 +218,9 @@ class DataHandler:
         
         if latest_time > 0.0:
             self.log.info(f"Reference data loaded from file: {latest_file}")
-            ref_df, ref_cols = self.read_excel(file=latest_file, index_column=self.config.columns_key)
+            ref_df, ref_cols = self.read_metadata(  file=latest_file,
+                                                    filetype=self.config.catalog_extension,
+                                                    index_column=self.config.columns_key)
         else:
             self.log.warning("No reference data found")
             ref_df, ref_cols = pd.DataFrame(), []
@@ -243,7 +251,7 @@ class DataHandler:
         merged_list = new_list
         
         if items_not_in_new:
-            self.log.info(f"Items present in the existing list that are not in the new list: {items_not_in_new}")
+            self.log.debug(f"Items present in the existing list that are not in the new list: {items_not_in_new}")
             
             legacy_order = {item: i for i, item in enumerate(legacy_list)}
             new_order = {item: i for i, item in enumerate(new_list)}
@@ -312,11 +320,11 @@ class DataHandler:
         return merged_list
 
     # --------------------------------------------------------------
-    def process_metadata_files(self,  metadata_files: list[str]) -> None:
-        """Process the list of xlsx files and update the reference data file.
+    def process_metadata_files(self,  metadata_files: set[str]) -> None:
+        """Process a set of xlsx files and update the reference data file.
 
         Args:
-             metadata_files (list[str]): List of xlsx files to process.
+             metadata_files (set[str]): List of xlsx files to process.
             config (Config): Configuration object.
             log (logging.Logger): Logger object.
             
@@ -326,8 +334,9 @@ class DataHandler:
         files_to_move = metadata_files.copy()
         
         for file in metadata_files:
-            new_data_df, column_in = self.read_excel(   file=file,
-                                                index_column=self.config.columns_key)
+            new_data_df, column_in = self.read_metadata(file=file,
+                                                        filetype=self.config.metadata_extension,
+                                                        index_column=self.config.columns_key)
             
             # test the content of the file
             if not self.valid_data(df=new_data_df, file=file):
@@ -350,14 +359,14 @@ class DataHandler:
 
         if self.persist_reference():
             self.file.move_to_store(files_to_move)
-            self.metadata_not_changed = True
+            self.data_files_to_ignore = set()
 
     # --------------------------------------------------------------
-    def process_data_files(self, files_to_process: list[str]) -> None:
-        """Process the list of pdf files and update the reference data file.
+    def process_data_files(self, files_to_process: set[str]) -> None:
+        """Process the set of data files and update the reference metadata file, if necessary.
 
         Args:
-            files_to_process (list[str]): List of pdf files to process.
+            files_to_process (set[str]): List of pdf files to process.
             reference_df (pd.DataFrame): Reference data DataFrame.
             log (logging.Logger): Logger object.
             
@@ -377,7 +386,7 @@ class DataHandler:
         # create a copy of the reference dataframe, using the same index but with only one data column, containing the merged string from all columns indicated in self.config.columns_data_filenames
         self.ref_df[unique_name] = self.ref_df[self.config.columns_data_filenames].agg(' '.join, axis=1)
 
-        files_found_in_ref = []
+        files_found_in_ref = set()
 
         for item in files_to_process:
             
@@ -387,13 +396,13 @@ class DataHandler:
             # Set column [self.config.columns_data_published] to "Gotcha!" for any matching rows
             if not match.empty:
                 self.ref_df.loc[match.index, self.config.columns_data_published] = "True"
-                files_found_in_ref.append(item)
+                files_found_in_ref.add(item)
                         
         
         if files_found_in_ref:
-            files_not_counted = set(files_to_process) - set(files_found_in_ref)
+            files_not_counted = files_to_process - files_found_in_ref
             if files_not_counted:
-                self.data_files_to_ignore += files_not_counted
+                self.data_files_to_ignore = files_not_counted
                 self.log.warning(f"Not all data files were considered. Leaving {files_not_counted} in TEMP folder.")
                         
             if self.persist_reference():

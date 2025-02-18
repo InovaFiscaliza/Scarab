@@ -55,17 +55,20 @@ class FileHandler:
             file (str): File to move.
 
         Returns:
-            str: New path of the file in the temp folder, or the original path if the file cannot be moved.
+            str: New path of the file in the temp folder, or the original path if the file cannot be moved or is already in the temp folder.
         """
         
         filename = os.path.basename(source_file)
         target_file = os.path.join(self.config.temp, filename)
         
+        if source_file == target_file:
+            return source_file
+        
         if os.path.exists(target_file):
             # test if content match
             if self.calculate_md5(target_file) == self.calculate_md5(source_file):
                 self.remove_file(source_file)
-                self.log.warning(f"File {filename} posted in more than one folder.")
+                self.log.warning(f"File {filename} posted in more than one folder or duplicated in TEMP.")
                 return None
             else:
                 filename = self.add_timestamp_to_name(filename=filename)
@@ -116,11 +119,11 @@ class FileHandler:
             self.log.error(f"Error removing {file}: {e}")
             
     # --------------------------------------------------------------
-    def remove_file_list(self, files: List[str]) -> None:
-        """Remove a list of files from the system.
+    def remove_file_list(self, files: set[str]) -> None:
+        """Remove a set of files from the system.
 
         Args:
-            files (List[str]): List of files to remove.
+            files (set[str]): Set of files to remove.
         """
         
         for file in files:
@@ -207,9 +210,9 @@ class FileHandler:
             else:
                 self.log.error(f"Error moving {file} to trash folder: {e}")
                 return
-        finally:
-            os.utime(trashed_file)
-            self.log.info(f"Moved to {self.config.trash} the file {filename}")            
+
+        os.utime(trashed_file)
+        self.log.info(f"Moved to {self.config.trash} the file {filename}")            
             
     # --------------------------------------------------------------
     def move_to_store(self, files: List[str]) -> None:
@@ -237,11 +240,14 @@ class FileHandler:
                 self.log.info(f"Moved to {self.config.store} the file {filename}")
 
     # --------------------------------------------------------------
-    def publish_data_file(self, files_to_publish: list[str]) -> bool:
-        """Publish a file to the raw folder.
+    def publish_data_file(self, files_to_publish: set[str]) -> bool:
+        """Publish a file to the get folder.
 
         Args:
-            file (str): File to publish to the raw folder.
+            files_to_publish (set[str]): Set of files to publish.
+            
+        Returns:
+            bool: True if all files were published successfully, False otherwise.
         """
                         
         publish_succeded = True
@@ -269,7 +275,7 @@ class FileHandler:
         return publish_succeded
 
     # --------------------------------------------------------------
-    def remove_unused_subfolder(self, subfolder: list[str]) -> None:
+    def remove_unused_subfolder(self, subfolder: set[str]) -> None:
         """Remove empty subfolder from the post folder.
 
         Args:
@@ -287,27 +293,27 @@ class FileHandler:
 
     # --------------------------------------------------------------
     def sort_and_clean(  self, 
-                                folder_content: list[str],
+                                folder_content: set[str],
                                 move: bool = True,
-                                catalog_to_process: list[str] = [],
-                                data_files_to_process: list[str] = []) -> tuple[list[str], list[str], list[str]]:
+                                catalog_to_process: set[str] = set(),
+                                data_files_to_process: set[str] = set()) -> tuple[set[str], set[str]]:
         """ Move files listed according to extension to the temp folder and return the list of files to process
-            Remove subfolder and files with unrecognized extensions.
+            Remove files with unrecognized extensions if discard_invalid_data_files is set to True
+            Remove any empty subfolder after moving files.
             
-
         Args:
-            files (list[str]): List of files to sort.
+            files (set[str]): Set of files to sort.
             move (bool): True if required to move files to the temp folder. Default is True.
-            catalog_to_process (list[str]): Existing list of xlsx files to process. Default is an empty list.
-            data_files_to_process (list[str]): Existing list of pdf files to process. Default is an empty list.
+            catalog_to_process (Set[str]): Existing set of metadata files to process. Default is an empty set.
+            data_files_to_process (Set[str]): Existing list of data files to process. Default is an empty set.
 
         Returns:
-            tuple[list[str], list[str], list[str]]: List of xlsx files to process, list of pdf files to process, list of subfolder to remove.
+            tuple[set[str], set[str]]: Set of metadata files to process, Set of data files to process
             
         Raises: None
         """
         
-        subfolder = []
+        subfolder = set()
             
         for item in folder_content:
             
@@ -319,53 +325,48 @@ class FileHandler:
                 match ext:
                     
                     case self.config.metadata_extension:
-                        if move:                        
-                            item = self.move_to_temp(item)
-
-                        # If the file was not moved to temp, due to duplication or failure to move, does not add it to the list of files to process
-                        if item is not None:
-                            catalog_to_process.append(item)
-                        
-                    case self.config.data_extension:
-                        if move:
-                            item = self.move_to_temp(item)
-                        
-                        if item is not None:
-                            data_files_to_process.append(item)
+                        file_in_temp = self.move_to_temp(item)
+                        if file_in_temp:
+                            catalog_to_process.add(file_in_temp)
                     
+                    case self.config.data_extension:
+                        file_in_temp = self.move_to_temp(item)
+                        if file_in_temp:
+                            data_files_to_process.add(file_in_temp)
+                            
                     case _:
                         if self.config.discard_invalid_data_files:
                             self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
             else:
-                subfolder.append(item)
+                subfolder.add(item)
                 
         self.remove_unused_subfolder(subfolder)
         
         return catalog_to_process, data_files_to_process
 
     # --------------------------------------------------------------
-    def get_files_to_process(self) -> tuple[list[str], list[str]]:
+    def get_files_to_process(self) -> tuple[set[str], set[str]]:
         """Move new files from the post folder to the temp folder and return the list of files to process.
 
         Args: None
         
         Returns:
-            list[str]: List of xlsx files to process.
-            list[str]: List of pdf files to process.
+            set[str]: Set of metadata files to process.
+            set[str]: Set of data files to process.
             
         Raises: None
         """
+        catalog_to_process = set()
+        data_files_to_process = set()
         
         # Get files from temp folder
         folder_content = glob.glob("**", root_dir=self.config.temp, recursive=True)
         
         if not folder_content:
             self.log.debug("TEMP Folder is empty.")
-            catalog_to_process = []
-            data_files_to_process = []
         else:
             # add path to filenames
-            folder_content = list(map(lambda x: os.path.join(self.config.temp, x), folder_content))
+            folder_content = set(map(lambda x: os.path.join(self.config.temp, x), folder_content))
             self.log.info(f"TEMP Folder has {len(folder_content)} files/folders to process.")
 
             catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content, move=False)
@@ -379,7 +380,7 @@ class FileHandler:
                 self.log.debug(f"POST Folder {post_folder} is empty.")
             else:
                 # add path to filenames
-                folder_content = list(map(lambda x: os.path.join(post_folder, x), folder_content))
+                folder_content = set(map(lambda x: os.path.join(post_folder, x), folder_content))
                 self.log.info(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
                 
                 catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, data_files_to_process=data_files_to_process)
@@ -442,14 +443,17 @@ class FileHandler:
         
         Raises: None"""
 
-        if pd.to_datetime("now") - self.config.last_clean > pd.Timedelta(hours=self.config.clean_period):
+        if pd.to_datetime("now") - self.config.last_clean > self.config.clean_period:
             for post_folder in self.config.post:
                 self.clean_old_in_folder(post_folder)
                 
             self.clean_old_in_folder(self.config.temp)
         
         # TODO: #3 Sync multiple catalog files by checking if they have same content and merge them
-        self.config.set_last_clean()
+        try:
+            self.config.set_last_clean()
+        except Exception as e:
+            self.log.error(f"Error setting last clean time: {e}")
         
         
     # --------------------------------------------------------------
