@@ -416,7 +416,8 @@ class FileHandler:
                 if os.path.isfile(item_name):
                     
                     # Check if the file is older than the clean period
-                    if pd.to_datetime(os.path.getctime(item_name), unit='s') < pd.to_datetime("now") - pd.Timedelta(hours=self.config.clean_period):
+                    file_creation_time = pd.to_datetime(os.path.getctime(item_name), unit='s')
+                    if file_creation_time < pd.to_datetime("now") - self.config.clean_period:
                         self.trash_it(file=item_name, overwrite=self.config.trash_data_overwrite)
                 else:
                     folder_to_remove.append(item)
@@ -449,11 +450,11 @@ class FileHandler:
                 
             self.clean_old_in_folder(self.config.temp)
         
-        # TODO: #3 Sync multiple catalog files by checking if they have same content and merge them
-        try:
-            self.config.set_last_clean()
-        except Exception as e:
-            self.log.error(f"Error setting last clean time: {e}")
+            # TODO: #3 Sync multiple catalog files by checking if they have same content and merge them
+            try:
+                self.config.set_last_clean()
+            except Exception as e:
+                self.log.error(f"Error setting last clean time: {e}")
         
         
     # --------------------------------------------------------------

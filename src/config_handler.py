@@ -100,8 +100,13 @@ class Config:
             """ Period to check input folders in seconds """
             self.clean_period: pd.Timedelta = pd.Timedelta(hours=self.raw["clean period in hours"])
             """ Period to clean temp folders in hours"""
-            self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
-            """ Timestamp of the last clean operation"""
+            
+            try:
+                self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
+                """ Timestamp of the last clean operation"""
+            except (KeyError, ValueError):
+                self.last_clean: pd.Timestamp = pd.to_datetime("now") - self.clean_period
+                
             self.store_data_overwrite: bool = self.raw["overwrite data in store"]
             """ Flag to indicate if data should be overwritten in store folder"""
             self.get_data_overwrite: bool = self.raw["overwrite data in get"]
@@ -292,7 +297,7 @@ class Config:
         return output_format[:-len(self.raw['log']['separator'])]
     # --------------------------------------------------------------
     def set_last_clean(self) -> None:
-        """Write current datetime to JSON file.
+        """Update object attribute and store state to JSON file
         
         Args:
             None
