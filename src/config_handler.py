@@ -33,10 +33,14 @@ class Config:
             FileNotFoundError: If the configuration file is not found.
             Exception: If the configuration file is missing parameters.
         """
+        self.raw: Dict[str, Any] = {}
+        """Raw configuration values."""
         
-        self.raw = self.__load_config(filename)
+        source_path = os.path.dirname(os.path.abspath(__file__))
+        default_config = os.path.join(source_path, "default_config.json")
+        self.__load_into_config(default_config)
         
-        self.__apply_default_config()
+        self.__load_into_config(filename)
         
         try:
             self.name: str = self.raw["name"]
@@ -109,15 +113,10 @@ class Config:
             self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
                 
-            # TODO: #6 Create method to load default configuration values if missing instead of handling than individually
-                
             # TODO: #2 Parse file metadata separated from the data metadata since data may be aggregated from multiple files
 
         except Exception as e:
             print(f"Configuration files missing arguments: {e}")
-            exit(1)
-                
-        if not self.is_config_ok():
             exit(1)
 
     # --------------------------------------------------------------
@@ -137,47 +136,53 @@ class Config:
             return [item]
         else:
             return item
+
+    # --------------------------------------------------------------
+    def __update_dict_recursive(self, d: Dict[Any, Any], u: Dict[Any, Any]) -> Dict[Any, Any]:
+        """Recursively update dictionary d with values from dictionary u.
+        
+        Args:
+            d (Dict[Any, Any]): The original dictionary to be updated.
+            u (Dict[Any, Any]): The dictionary with update values.
+            
+        Returns:
+            Dict[Any, Any]: The updated dictionary.
+        """
+        for k, v in u.items():
+            if isinstance(v, dict):
+                d[k] = self.__update_dict_recursive(d.get(k, {}), v)
+            else:
+                d[k] = v
+        return d
             
     # --------------------------------------------------------------
-    def __load_config(self, filename: str) -> Dict[str, Any]:
-        """Load the configuration values from a JSON file encoded with UTF-8.
+    def __load_into_config(self, filename: str) -> None:
+        """Load;update the configuration values from a JSON file encoded with UTF-8.
         
         Args:
             filename (str): Configuration file name.
-        
-        Returns:
-            Dict[str, Any]: Configuration values.
-        
-        Raises:
-            FileNotFoundError: If the configuration file is not found.
-        """
-        
-        try:
-            with open(self.config_file, 'r', encoding='utf-8') as json_file:
-                return json.load(json_file)
-        except FileNotFoundError:
-            print(f"Config file not found in path: {self.config_file}")
-            exit(1)
-        except Exception as e:
-            print(f"Error reading config file: {e}")
-            exit(1)
-
-    # --------------------------------------------------------------
-    def __apply_default_config(self) -> None:
-        """Load the default configuration values from ./src/default_config.json.
-        
-        Args: None
         
         Returns: None
         
         Raises: None
         """
         
-        default = self.__load_config("./src/default_config.json")
+        try:
+            with open(filename, 'r', encoding='utf-8') as json_file:
+                raw_config = json.load(json_file)
         
-        self.raw.update({key: default[key] for key in default if key not in self.raw})
-    
-    
+            if not self.raw:
+                self.raw = raw_config
+            else:
+                self.raw = self.__update_dict_recursive(self.raw, raw_config)
+            
+        except FileNotFoundError:
+            print(f"Config file not found in path: {filename}")
+            exit(1)
+        except Exception as e:
+            print(f"Error reading config file: {e}")
+            exit(1)
+
     # --------------------------------------------------------------
     def __log_format_colour(self) -> str:
         """Return the log format string.
