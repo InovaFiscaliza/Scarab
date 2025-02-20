@@ -1,0 +1,47 @@
+{
+    "name": "unnamed",
+    "check period in seconds": 10,
+    "clean period in hours": 1,
+    "last clean": "2000-00-00 00:00:00",
+    "maximum errors before exit" : 5,
+    "character_scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><\"-_ ]+",
+    "overwrite data in store": false,
+    "overwrite data in get": true,
+    "overwrite data in trash": false,
+    "discard invalid data files": false,
+    "log": {
+        "level": "debug",
+        "screen output": true,
+        "file output": false,
+        "file path": "",
+        "format": [
+            "%(asctime)s",
+            "%(module)s: %(funcName)s:%(lineno)d",
+            "%(name)s[%(process)d]",
+            "%(levelname)s",
+            "%(message)s"
+        ],
+        "colour sequence": [
+            "32m",
+            "35m",
+            "34m",
+            "30m",
+            "0m"
+        ],
+        "separator": " | ",
+        "overwrite log in trash": false
+    },
+    "folders": {
+        "post": [],
+        "get" : []
+    },
+    "files" : {
+        "data extension": ""
+    },
+    "metadata": {
+        "in columns": [],
+        "key": [],
+        "data filenames": [],
+        "data published flag": ""
+    }
+}

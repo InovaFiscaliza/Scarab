@@ -32,67 +32,11 @@ class Config:
         Raises:
             FileNotFoundError: If the configuration file is not found.
             Exception: If the configuration file is missing parameters.
-            
-        Example of a configuration file
-            {
-                "name": "Teste Simple",
-                "check period in seconds": 10,
-                "clean period in hours": 1,
-                "last clean": "2024-11-05 20:33:29",
-                
-                "overwrite data in store": true,
-                "overwrite data in get": true,
-                "overwrite data in trash": true,
-                "discard invalid data files": true,
-                
-                "log": {
-                    "level": "INFO",
-                    "screen output": true,
-                    "file output": true,
-                    "file path": ["./sandbox/get/log.txt","./sandbox/get_other/log.txt"],
-                    "format": [
-                        "%(asctime)s",
-                        "%(module)s: %(funcName)s:%(lineno)d",
-                        "%(name)s[%(process)d]",
-                        "%(levelname)s",
-                        "%(message)s"
-                    ],
-                    "colour sequence": [
-                        "32m",
-                        "35m",
-                        "34m",
-                        "30m",
-                        "0m"
-                    ],
-                    "separator": " | ",
-                    "overwrite log in trash": false
-                },
-                
-                "folders": {
-                    "post": ["./sandbox/post","./sandbox/post_other"],
-                    "temp": "./tests/sandbox/temp",
-                    "trash": "./tests/sandbox/trash",
-                    "store": "./tests/sandbox/store",
-                    "get" : ["./sandbox/get/raw","./sandbox/get_other/raw"]
-                },
-                "files" : {
-                    "metadata extension": ".xlsx",
-                    "data extension": ".txt",
-                    "catalog names": ["./sandbox/get/monitorRNI.xlsx","./sandbox/get_other/monitorRNI.xlsx"]
-                },
-                
-                "metadata": {
-                    "in columns": [ "ID", "UD", "UF", "Município", "Tipo", "Serviço", "Entidade", "Fistel", "N° estacao", "Endereco", "Lat", "Long", "Áreas Críticas", "Qtd. medidas", "Qtd. medidas > 14.0 V/m", "Distância mínima (km)", "Emin (V/m)", "Emean (V/m)", "Emax (V/m)", "Emax - Data da Medição", "Emax - Latitude", "Emax - Longitude", "Fonte de dados", "Justificativa", "Observações"],
-                    "key": ["Fistel","N° estacao","Emax - Data da Medição","Emax - Latitude","Emax - Longitude"],
-                    "data filenames": "Fonte de dados",
-                    "data published flag": "Fontes Disponíveis"
-                }
-            }
         """
-        self.config_file = filename
-        self.raw: Dict[str, Any] = {}
         
-        self.__load_config()      
+        self.raw = self.__load_config(filename)
+        
+        self.__apply_default_config()
         
         try:
             self.name: str = self.raw["name"]
@@ -101,23 +45,12 @@ class Config:
             """ Period to check input folders in seconds """
             self.clean_period: pd.Timedelta = pd.Timedelta(hours=self.raw["clean period in hours"])
             """ Period to clean temp folders in hours"""
-            
-            try:
-                self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
-                """ Timestamp of the last clean operation"""
-            except (KeyError, ValueError):
-                self.last_clean: pd.Timestamp = pd.to_datetime("now") - self.clean_period
-                
-            try:
-                self.maximum_errors_before_exit: int = self.raw["maximum errors before exit"]
-                """ Maximum number of errors before exiting"""
-            except KeyError:
-                self.maximum_errors_before_exit = 5
-            try:
-                self.character_scope: str = self.raw["character scope"]
-                """ characters that will be retained from the column names. Characters not in the scope will be removed"""
-            except KeyError:
-                self.character_scope = '[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><"-_ ]+'
+            self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
+            """ Timestamp of the last clean operation"""
+            self.maximum_errors_before_exit: int = self.raw["maximum errors before exit"]
+            """ Maximum number of errors before exiting"""
+            self.character_scope: str = self.raw["character scope"]
+            """ characters that will be retained from the column names. Characters not in the scope will be removed"""
 
             self.store_data_overwrite: bool = self.raw["overwrite data in store"]
             """ Flag to indicate if data should be overwritten in store folder"""
@@ -146,6 +79,7 @@ class Config:
             """ Log header line based on the log format"""
             self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]
             """ Flag to overwrite log in trash"""
+            
             self.post: List[str] = self.__ensure_list(self.raw["folders"]["post"])
             """ Folder path where users post files"""
             self.temp: str = self.raw["folders"]["temp"]
@@ -160,35 +94,20 @@ class Config:
             """ Extension used to identify the metadata files"""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
-            try:
-                self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
-                """ Folder path where data files are to be stored"""
-            except KeyError:
-                self.get = []
 
-            try:                
-                self.data_extension: str = self.raw["files"]["data extension"]
-                """ Data file extension, used to identify the raw data files"""
-            except KeyError:
-                self.data_extension = ""
-                
+            self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
+            """ Folder path where data files are to be stored"""
+            self.data_extension: str = self.raw["files"]["data extension"]
+            """ Data file extension, used to identify the raw data files"""
+
             self.columns_in: Set[str] = set(self.limit_character_scope(self.raw["metadata"]["in columns"]))
             """ Columns required in the input metadata file"""
             self.columns_key: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
             """ Columns that define the uniqueness of each row in the metadata file"""
-            
-            try:
-                self.columns_data_filenames: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
-                """ Columns that contain the names of data files associated with each row metadata"""
-            except KeyError:
-                self.columns_data_filenames = []
-                
-            try:
-                self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
-                """ Columns that contain the publication status of each row"""
-            except KeyError:
-                self.columns_data_published = ""
-                
+            self.columns_data_filenames: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
+            """ Columns that contain the names of data files associated with each row metadata"""
+            self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
+            """ Columns that contain the publication status of each row"""
                 
             # TODO: #6 Create method to load default configuration values if missing instead of handling than individually
                 
@@ -220,12 +139,14 @@ class Config:
             return item
             
     # --------------------------------------------------------------
-    def __load_config(self) -> None:
+    def __load_config(self, filename: str) -> Dict[str, Any]:
         """Load the configuration values from a JSON file encoded with UTF-8.
         
-        Args: None
+        Args:
+            filename (str): Configuration file name.
         
-        Returns: None
+        Returns:
+            Dict[str, Any]: Configuration values.
         
         Raises:
             FileNotFoundError: If the configuration file is not found.
@@ -233,13 +154,29 @@ class Config:
         
         try:
             with open(self.config_file, 'r', encoding='utf-8') as json_file:
-                self.raw = json.load(json_file)
+                return json.load(json_file)
         except FileNotFoundError:
             print(f"Config file not found in path: {self.config_file}")
             exit(1)
         except Exception as e:
             print(f"Error reading config file: {e}")
             exit(1)
+
+    # --------------------------------------------------------------
+    def __apply_default_config(self) -> None:
+        """Load the default configuration values from ./src/default_config.json.
+        
+        Args: None
+        
+        Returns: None
+        
+        Raises: None
+        """
+        
+        default = self.__load_config("./src/default_config.json")
+        
+        self.raw.update({key: default[key] for key in default if key not in self.raw})
+    
     
     # --------------------------------------------------------------
     def __log_format_colour(self) -> str:
