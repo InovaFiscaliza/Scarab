@@ -3,13 +3,16 @@
     <summary>Table of Contents</summary>
     <ol>
         <li><a href="#About_Scarab_Tests">About Scarab Tests</a></li>
+        <li><a href="#Creating_new_tests">Creating new tests</a></li>
         <li><a href="#Initial_test">Initial test</a></li>
         <li><a href="#Metadata_update_test">Metadata update test</a></li>
         <li><a href="#Multiple_input_and_output_folders_test">Multiple input and output folders test</a></li>
         <li><a href="#Disable_overwrite_and_with_same_files_coming_from_different_sources">Disable overwrite and with same files coming from different sources</a></li>
         <li><a href="#Change_columns_and_multiple_keys">Change columns and multiple keys</a></li>
         <li><a href="#Heavy_Load_Test">Heavy Load Test</a></li>
-        <li><a href="#Creating_new_tests">Creating new tests</a></li>
+        <li><a href="#SCH_Null_Data_Test">SCH Null Data Test</a></li>
+        <li><a href="#Special_characters_test">Special characters test</a></li>
+        <li><a href="#Mixed_metadata_formats">Mixed metadata formats</a></li>
     </ol>
 </details>
 
@@ -21,9 +24,23 @@ Tests are proposed as a set of cmd scripts to run in windows environment that wi
 
 Test are described to be run directly from the command line in order to test features such as interruption handling from `ctrl+c` and  `kill -9 <pid>` commands.
 
-If running in debbuging mode, using VSCode or other IDE, the interruption may not work and stop debbuging command may be required.
+If running in debugging mode, using VSCode or other IDE, the interruption may not work and stop debugging command may be required.
 
 For VSCode, the debugger configuration is already set in the .vscode folder to run the script with the config.json file within the sandbox folder.
+
+## Creating new tests
+
+Edit the content of the sandbox folder to create the desired structure, making modifications in the config.json file if necessary.
+
+Run the following command to create the corresponding TGZ file:
+
+```cmd
+tar -czvf TEST_NAME.tgz sandbox
+```
+
+Where `TEST_NAME` is the name of the test to be used in the batch file.
+
+Create the new test modifying the `xtest_TEST_NAME.bat` file, using the TEST_NAME where required and using the number of the test as prefix for convienience.
 
 <div>
     <a href="../README.md">
@@ -34,6 +51,10 @@ For VSCode, the debugger configuration is already set in the .vscode folder to r
     </a>
     <br><br>
 </div>
+
+# Tests
+
+<br> 
 
 ## Initial test
 
@@ -92,7 +113,7 @@ Use `3test_multiple_in_out.bat` to set the sandbox folder structure for the test
 
 This tests has the basic same data as the output from the previous tests, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
-After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following results are expected:
 
 > * File `monitorRNI_test_temp_update.xlsx` will be processed and moved from the temp folder to store folder, simulating a missing file due to broken execution.
 > * Folder `get_other`, that was initially empty, should have the same content as the `get` folder, including pre-existing files in the raw subfolder.
@@ -113,7 +134,7 @@ Use `4test_overwrite_and_conflict.bat` to set the sandbox folder structure for t
 
 This tests has the basic same data as the output from the previous, adding a new metadata files to be processed from multiple sources and output to multiple folders.
 
-After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following results are expected:
 
 > * Test the use of variant names for the log file (if the timestamp is the same) and the use of the `overwrite` flag in the config file.
 > * Same file posted in multiple folders are processed only once.
@@ -139,7 +160,7 @@ This tests has the basic same data as the output from the second test, adding bu
 * Column NEW1 is added to the config file
 * Key is now defined as a list of columns: ["Fistel","N° estacao","Emax - Data da Medição","Emax - Latitude","Emax - Longitude"]
 
-After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following results are expected:
 
 > * File `monitorRNI_test_temp_update.xlsx` will be processed and moved from the post folder to store folder.
 > * Lines will be updated in the metadata file `monitorRNI.xlsx` in the get folder. Modifications can be noted in columns `NEW1` and `NEW2`, that should be present only in the updated and new rows.
@@ -159,9 +180,9 @@ After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the 
 
 Use `6test_heavy_load_missing_data.bat` to set the sandbox folder structure for the test
 
-This tests has larger catalog file to process and is usefull for performance testing. Based on Regulatron test data.
+This tests has larger catalog file to process and is useful for performance testing. Based on Regulatron test data.
 
-After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following results are expected:
 
 Results are expected to be similar to the previous tests, but with a larger file to process and errors such as missing key data, key conflicts and variable columns.
 
@@ -176,13 +197,13 @@ Results are expected to be similar to the previous tests, but with a larger file
 </div>
 
 
-## Heavy Load Test
+## SCH Null Data Test
 
 Use `7test_sch_null_data.bat` to set the sandbox folder structure for the test
 
-This tests also has larger number of files to process and is usefull for performance testing. Based on SCH test data.
+This tests also has larger number of files to process and is useful for performance testing. Based on SCH test data.
 
-After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path, the following results are expected:
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following results are expected:
 
 Different from the previous test, at this time there is no data, but only tables to process. There are conflicts in file naming and missing data to be handled.
 
@@ -202,11 +223,11 @@ Use `8test_special_chars.bat` to set the sandbox folder structure for the test
 
 This tests will try to insert data with special characters in the column names.
 
-The `config.json` file includes a requeired column with all characters allowed, but and the metadata file has a column with a special character that is not allowed.
+The `config.json` file includes a required column with all characters allowed, but and the metadata file has a column with a special character that is not allowed.
 
-After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path.
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 
-Its expected that all metadata files to be moved to trash. Messages should point that the column with all charateres allowed is not present in the metadata file. Check if the name is correct.
+Its expected that all metadata files to be moved to trash. Messages should point that the column with all characters allowed is not present in the metadata file. Check if the name is correct.
 
 If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters should be renamed, removing this characters.
 
@@ -220,19 +241,15 @@ If the `config.json` file is changed to remove the column with all characters, t
     <br><br>
 </div>
 
-## Creating new tests
+## Mixed metadata formats
 
-Edit the content of the sandbox folder to create the desired structure, making modifications in the config.json file if necessary.
+Use `9test_mixed_metadata.bat` to set the sandbox folder structure for the test
 
-Run the following command to create the corresponding TGZ file:
+This test uses two configuration files, simultaneously processing metadata files with different formats from the same source. POST folder is ommited in the config files and also many configurations are left as default. Json input files uses two distinct dictionaries to represent complementary  metadata of the same data files.
 
-```cmd
-tar -czvf TEST_NAME.tgz sandbox
-```
+The test need to be run twice using two different configuration files, either using independent terminal instances or sequentially do: `uv run ..\src\scarab.py .\sandbox\config-xlsx.json` and `uv run ..\src\scarab.py .\sandbox\config-json.json`.
 
-Where `TEST_NAME` is the name of the test to be used in the batch file.
-
-Create the new test modifying the `xtest_TEST_NAME.bat` file, using the TEST_NAME where required and using the number of the test as prefix for convienience.
+Two metadata files will be produced, one consolidating the xlsx files that summarize the raw data and other the two different types of json files, that provide metadata fot the raw files.
 
 <div>
     <a href="../README.md">
@@ -243,3 +260,4 @@ Create the new test modifying the `xtest_TEST_NAME.bat` file, using the TEST_NAM
     </a>
     <br><br>
 </div>
+
