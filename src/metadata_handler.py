@@ -18,6 +18,7 @@ import os
 import pandas as pd
 import uuid
 import base58
+import json
 
 # --------------------------------------------------------------
 class DataHandler:
@@ -118,7 +119,12 @@ class DataHandler:
                 case '.csv':
                     new_data_df = pd.read_csv(file, dtype="string")
                 case '.json':
-                    new_data_df = pd.read_json(file, dtype="string")
+                    with open(file, 'r', encoding='utf-8') as json_file:
+                        data = json.load(json_file)
+                    if isinstance(data, list):
+                        new_data_df = pd.DataFrame(data, dtype="string")
+                    else:
+                        new_data_df = pd.DataFrame([data], dtype="string")
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
         except Exception as e:
