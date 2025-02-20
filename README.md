@@ -37,6 +37,7 @@ Application is written in Python and uses the UV package for environment managem
 | --- | --- |
 | [scarab.py](./src/scarab.py) | main script to run the service |
 | [config_handler.py](./src/config_handler.py) | module responsible for handling the configuration file parsing, validation and processing into the used configuration object |
+| [default_config.json](./src/default_config.json) | default configuration file, used by the script to fill optional values in user configuration files. May be edited to change the default values. |
 | [log_handler.py](./src/log_handler.py) | module responsible for handling configuration of the standard python logging module from the configured parameters, such as enabling the selected output channels and message formatting |
 | [file_handler.py](./src/file_handler.py) | module responsible for handling the file operations such as copy, move and delete |
 | [metadata_handler.py](./src/metadata_handler.py) | module responsible for handling the metadata operations, including reading, merging and storing |
