@@ -18,10 +18,10 @@
             "name": "Sandbox test config_alt.json",
             "type": "debugpy",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "program": "./src/scarab.py",
+            "cwd": "${workspaceFolder}/tests",
+            "program": "../src/scarab.py",
             "console": "integratedTerminal",
-            "args": ["./data/examples/config_alt.json"]
+            "args": ["./sandbox/config_alt.json"]
         }
     ]
 }
