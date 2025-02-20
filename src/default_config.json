@@ -13,7 +13,7 @@
         "level": "debug",
         "screen output": true,
         "file output": false,
-        "file path": "",
+        "file path": [],
         "format": [
             "%(asctime)s",
             "%(module)s: %(funcName)s:%(lineno)d",
@@ -36,7 +36,9 @@
         "get" : []
     },
     "files" : {
-        "data extension": ""
+        "metadata extension": "",
+        "data extension": "",
+        "catalog names":[]
     },
     "metadata": {
         "in columns": [],
