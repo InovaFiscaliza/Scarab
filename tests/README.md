@@ -247,7 +247,7 @@ Use `9test_mixed_metadata.bat` to set the sandbox folder structure for the test
 
 This test uses two configuration files, simultaneously processing metadata files with different formats from the same source. POST folder is ommited in the config files and also many configurations are left as default. Json input files uses two distinct dictionaries to represent complementary  metadata of the same data files.
 
-The test need to be run twice using two different configuration files, either using independent terminal instances or sequentially do: `uv run ..\src\scarab.py .\sandbox\config-xlsx.json` and `uv run ..\src\scarab.py .\sandbox\config-json.json`.
+The test need to be run twice using two different configuration files, either using independent terminal instances or sequentially do: `uv run ..\src\scarab.py .\sandbox\config.json` and `uv run ..\src\scarab.py .\sandbox\config_alt.json`.
 
 Two metadata files will be produced, one consolidating the xlsx files that summarize the raw data and other the two different types of json files, that provide metadata fot the raw files.
 

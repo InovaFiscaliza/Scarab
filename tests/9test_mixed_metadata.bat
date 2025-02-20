@@ -17,7 +17,9 @@ echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo.
 echo Test mixed metadata formats.
 echo.
-echo Run the script using: uv run ..\src\scarab.py .\sandbox\config.json
+echo Run the script using two terminals or sequentially using:
+echo     uv run ..\src\scarab.py .\sandbox\config.json
+echo     uv run ..\src\scarab.py .\sandbox\config_alt.json
 echo.
 echo Check if the output is as described in README.md.
 echo.
