@@ -33,9 +33,13 @@ class Config:
             FileNotFoundError: If the configuration file is not found.
             Exception: If the configuration file is missing parameters.
         """
+        
+        self.config_file = filename
+        """Configuration file name."""
         self.raw: Dict[str, Any] = {}
         """Raw configuration values."""
         
+        # Get config file path from the script path
         source_path = os.path.dirname(os.path.abspath(__file__))
         default_config = os.path.join(source_path, "default_config.json")
         self.__load_into_config(default_config)
