@@ -125,6 +125,10 @@ class DataHandler:
             self.log.error(f"Error reading metadata file {file}: {e}")
             return pd.DataFrame(), []
         
+        
+        # Remove escaped characters from column names
+        new_data_df.columns = self.config.limit_character_scope(new_data_df.columns.tolist())
+        
         # get the columns from new_data_df
         columns = new_data_df.columns.tolist()
         
@@ -181,16 +185,16 @@ class DataHandler:
             self.log.error(f"File '{file}' is empty or has nor data in columns defined as keys.")
             return False
         
-        df_columns = df.columns.tolist()
+        df_columns = set(df.columns.tolist())
     
-        if not self.config.columns_in.issubset(set(df_columns)):
+        if not self.config.columns_in.issubset(df_columns):
             # find which elements from self.config.columns_in are missing in df_columns
-            missing_columns = self.config.columns_in - set(df_columns)
+            missing_columns = self.config.columns_in - df_columns
             self.log.error(f"File '{file}' does not contain the required metadata columns: {missing_columns}")
             return False
             
-        if not set(self.config.columns_key).issubset(set(df_columns)):
-            missing_columns = set(self.config.columns_key) - set(df_columns)
+        if not set(self.config.columns_key).issubset(df_columns):
+            missing_columns = set(self.config.columns_key) - df_columns
             self.log.error(f"File '{file}' does not contain the required key columns: {missing_columns}")
             return False        
             

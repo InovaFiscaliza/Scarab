@@ -294,18 +294,17 @@ class FileHandler:
     # --------------------------------------------------------------
     def sort_and_clean(  self, 
                                 folder_content: set[str],
-                                move: bool = True,
-                                catalog_to_process: set[str] = set(),
-                                data_files_to_process: set[str] = set()) -> tuple[set[str], set[str]]:
+                                catalog_to_process: set[str] = None,
+                                data_files_to_process: set[str] = None) -> tuple[set[str], set[str]]:
         """ Move files listed according to extension to the temp folder and return the list of files to process
+            If files are already in the temp folder, they are not moved.
             Remove files with unrecognized extensions if discard_invalid_data_files is set to True
             Remove any empty subfolder after moving files.
             
         Args:
             files (set[str]): Set of files to sort.
-            move (bool): True if required to move files to the temp folder. Default is True.
-            catalog_to_process (Set[str]): Existing set of metadata files to process. Default is an empty set.
-            data_files_to_process (Set[str]): Existing list of data files to process. Default is an empty set.
+            catalog_to_process (Set[str]): Existing set of metadata files to process. Default is None, which will create a new set.
+            data_files_to_process (Set[str]): Existing list of data files to process. Default is None, which will create a new set.
 
         Returns:
             tuple[set[str], set[str]]: Set of metadata files to process, Set of data files to process
@@ -313,6 +312,11 @@ class FileHandler:
         Raises: None
         """
         
+        if catalog_to_process is None:
+            catalog_to_process = set()
+        if data_files_to_process is None:
+            data_files_to_process = set()
+            
         subfolder = set()
             
         for item in folder_content:
@@ -367,9 +371,9 @@ class FileHandler:
         else:
             # add path to filenames
             folder_content = set(map(lambda x: os.path.join(self.config.temp, x), folder_content))
-            self.log.info(f"TEMP Folder has {len(folder_content)} files/folders to process.")
+            self.log.debug(f"TEMP Folder has {len(folder_content)} files/folders to process.")
 
-            catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content, move=False)
+            catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content)
         
         # Get files from post folder
         for post_folder in self.config.post:
@@ -381,9 +385,11 @@ class FileHandler:
             else:
                 # add path to filenames
                 folder_content = set(map(lambda x: os.path.join(post_folder, x), folder_content))
-                self.log.info(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
+                self.log.debug(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
                 
-                catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content, catalog_to_process=catalog_to_process, data_files_to_process=data_files_to_process)
+                catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content,
+                                                                                catalog_to_process=catalog_to_process,
+                                                                                data_files_to_process=data_files_to_process)
                         
         return catalog_to_process, data_files_to_process
 

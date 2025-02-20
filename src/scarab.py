@@ -31,6 +31,8 @@ import time
 # Global variables
 keep_watching: bool = True
 """Flag to keep the main loop running."""
+error_count = 0
+"""Counter of errors to stop the process if too many errors occur."""
 log: logging.Logger = None
 """Logger object."""
 
@@ -48,6 +50,18 @@ def sigint_handler( signal_code: signal.Signals = None,
     
     log.critical(f"{signal.Signals(signal_code).name} received when rolling at [{line_number}] in {module_name}")
     keep_watching = False
+    
+def count_errors(threshold: int) -> None:
+    """Count errors to stop the process if too many errors occur."""
+    
+    global error_count
+    global keep_watching
+    global log
+    
+    error_count += 1
+    if error_count > threshold:
+        log.critical("Too many errors. Exiting...")
+        keep_watching = False
 
 # --------------------------------------------------------------
 # Main function
@@ -90,13 +104,18 @@ def main(config_path: str) -> None:
             fh.clean_folders()
             
             time.sleep(config.check_period)
+            
+            error_count = 0
         
         except (FileNotFoundError, OSError) as e:
-            log.critical(f"Error accessing folders or files: {e}")
-            keep_watching = False
-        
+            log.critical(f"Error {error_count} accessing folders or files: {e}")
+            
+            count_errors(threshold=config.maximum_errors_before_exit)
+                    
         except Exception as e:
             log.exception(f"Error in main loop: {e}")
+            
+            count_errors(threshold=config.maximum_errors_before_exit)
 
     log.info(f"Scarab is moving away from ({config.name})...")
     

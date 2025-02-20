@@ -15,6 +15,7 @@ import json
 import os
 import pandas as pd
 from typing import Any, Dict, List, Set
+import re
 
 # --------------------------------------------------------------
 class Config:
@@ -107,6 +108,17 @@ class Config:
             except (KeyError, ValueError):
                 self.last_clean: pd.Timestamp = pd.to_datetime("now") - self.clean_period
                 
+            try:
+                self.maximum_errors_before_exit: int = self.raw["maximum errors before exit"]
+                """ Maximum number of errors before exiting"""
+            except KeyError:
+                self.maximum_errors_before_exit = 5
+            try:
+                self.character_scope: str = self.raw["character scope"]
+                """ characters that will be retained from the column names. Characters not in the scope will be removed"""
+            except KeyError:
+                self.character_scope = '[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><"-_ ]+'
+
             self.store_data_overwrite: bool = self.raw["overwrite data in store"]
             """ Flag to indicate if data should be overwritten in store folder"""
             self.get_data_overwrite: bool = self.raw["overwrite data in get"]
@@ -115,6 +127,7 @@ class Config:
             """ Flag to indicate if data should be overwritten in trash folder"""
             self.discard_invalid_data_files: bool = self.raw["discard invalid data files"]
             """ Flag to indicate if invalid data files should be discarded"""
+            
             self.log_level: str = self.raw["log"]["level"]
             """ Logging level"""
             self.log_to_screen: bool = self.raw["log"]["screen output"]
@@ -151,30 +164,33 @@ class Config:
                 self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
                 """ Folder path where data files are to be stored"""
             except KeyError:
-                self.get: List[str] = []
+                self.get = []
 
             try:                
                 self.data_extension: str = self.raw["files"]["data extension"]
                 """ Data file extension, used to identify the raw data files"""
             except KeyError:
-                self.data_extension: str = ""
+                self.data_extension = ""
                 
-            self.columns_in: Set[str] = set(self.raw["metadata"]["in columns"])
+            self.columns_in: Set[str] = set(self.limit_character_scope(self.raw["metadata"]["in columns"]))
             """ Columns required in the input metadata file"""
-            self.columns_key: List[str] = self.__ensure_list(self.raw["metadata"]["key"])
+            self.columns_key: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
             """ Columns that define the uniqueness of each row in the metadata file"""
             
             try:
-                self.columns_data_filenames: List[str] = self.__ensure_list(self.raw["metadata"]["data filenames"])
+                self.columns_data_filenames: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
                 """ Columns that contain the names of data files associated with each row metadata"""
             except KeyError:
-                self.columns_data_filenames: List[str] = []
+                self.columns_data_filenames = []
                 
             try:
-                self.columns_data_published: str = self.raw["metadata"]["data published flag"]
+                self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
                 """ Columns that contain the publication status of each row"""
             except KeyError:
-                self.columns_data_published: str = ""
+                self.columns_data_published = ""
+                
+                
+            # TODO: #6 Create method to load default configuration values if missing instead of handling than individually
                 
             # TODO: #2 Parse file metadata separated from the data metadata since data may be aggregated from multiple files
 
@@ -295,6 +311,26 @@ class Config:
             output_format = f"{output_format}{item}{self.raw['log']['separator']}"
         
         return output_format[:-len(self.raw['log']['separator'])]
+    
+    # --------------------------------------------------------------
+    def limit_character_scope(self, string_list: List[str]) -> List[str]:
+        """Remove characters that are not in the character_scope from the string.
+        
+        Args:
+            string_list (List[str]): Input string set to be cleaned.
+            
+        Returns:
+            List[str]: Output string set, in which only characters in the character_scope are kept.
+        """
+        if self.character_scope == "all":
+            return string_list
+        else:
+            output_list = string_list.copy()
+            for index, string in enumerate(output_list):
+                output_list[index] = re.sub(self.character_scope, '', string)
+                
+            return output_list
+    
     # --------------------------------------------------------------
     def set_last_clean(self) -> None:
         """Update object attribute and store state to JSON file

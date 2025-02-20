@@ -196,6 +196,29 @@ Different from the previous test, at this time there is no data, but only tables
     <br><br>
 </div>
 
+## Special characters test
+
+Use `8test_special_chars.bat` to set the sandbox folder structure for the test
+
+This tests will try to insert data with special characters in the column names.
+
+The `config.json` file includes a requeired column with all characters allowed, but and the metadata file has a column with a special character that is not allowed.
+
+After `uv run .\src\scarab.py .\tests\sandbox\config.json` is executed from the root repository path.
+
+Its expected that all metadata files to be moved to trash. Messages should point that the column with all charateres allowed is not present in the metadata file. Check if the name is correct.
+
+If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters should be renamed, removing this characters.
+
+<div>
+    <a href="../README.md">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#indexerd-md-top">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 ## Creating new tests
 
