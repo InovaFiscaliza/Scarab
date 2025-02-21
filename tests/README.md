@@ -43,7 +43,7 @@ Where `TEST_NAME` is the name of the test to be used in the batch file.
 Create the new test modifying the `xtest_TEST_NAME.bat` file, using the TEST_NAME where required and using the number of the test as prefix for convienience.
 
 <div>
-    <a href="../README.md">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -71,7 +71,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests
 To finish the test use `ctrl+c`. It may take up to 10 seconds to stop the script after the interruption is received and registered in the log.
 
 <div>
-    <a href="../README.md">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -98,7 +98,7 @@ To finish the test you may use the command `kill -9 <pid>` from another terminal
 The pid is number displayed in the log file and screen, between square brackets after the script name.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -119,7 +119,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 > * Folder `get_other`, that was initially empty, should have the same content as the `get` folder, including pre-existing files in the raw subfolder.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -140,7 +140,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 > * Same file posted in multiple folders are processed only once.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -167,7 +167,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 > New rows should be added whenever one of the columns associated with the keys are changed.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -187,7 +187,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 Results are expected to be similar to the previous tests, but with a larger file to process and errors such as missing key data, key conflicts and variable columns.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -208,7 +208,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 Different from the previous test, at this time there is no data, but only tables to process. There are conflicts in file naming and missing data to be handled.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -232,7 +232,7 @@ Its expected that all metadata files to be moved to trash. Messages should point
 If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters should be renamed, removing this characters.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -252,7 +252,7 @@ The test need to be run twice using two different configuration files, either us
 Two metadata files will be produced, one consolidating the xlsx files that summarize the raw data and other the two different types of json files, that provide metadata fot the raw files.
 
 <div>
-    <a href="../README.md">
+    < a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">

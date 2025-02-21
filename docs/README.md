@@ -1,10 +1,4 @@
 
-<div>
-    <a href="../README.md">
-        <img align="left" width="50" height="50" src="./images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
-    </a>
-    <br><br>
-</div>
 <details>
     <summary>Table of Contents</summary>
     <ol>
@@ -66,7 +60,7 @@ Keys in the json file are described in the table below:
 | | | | | |
 
 <div>
-    <a href="../README.md">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="./images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-documentation">
