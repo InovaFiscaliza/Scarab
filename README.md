@@ -23,7 +23,7 @@ Application is written in Python and uses the UV package for environment managem
 </div>
 
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -71,7 +71,7 @@ Information in the metadata files are consolidated  and cleaning the input and t
 To stop, the script monitor the occurrence of kill signal from the system or ctrl+c if running in the terminal.
 
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -86,7 +86,7 @@ Please check the [tests folder](./tests/README.md) for more details.
 
 
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -104,7 +104,7 @@ For more details about UV, please check the [UV documentation](https://docs.astr
 Please check Scarab [documentation](./docs/README.md) for more details on the configuration file.
 
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -131,7 +131,7 @@ For more details, see the [open issues](https://github.com/FSLobao/RF.Fusion/iss
   * [ ] Release version 1.0.0
   
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -145,7 +145,7 @@ Contributions are what make the open source community such an amazing place to l
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -169,7 +169,7 @@ Further reading material can be found at:
 * <https://opensource.stackexchange.com/questions/21/whats-the-difference-between-permissive-and-copyleft-licenses/42#42>
 
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -182,7 +182,7 @@ Further reading material can be found at:
 * [Readme Template](https://github.com/othneildrew/Best-README-Template)
 
 <div>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>

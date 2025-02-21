@@ -46,7 +46,7 @@ Create the new test modifying the `xtest_TEST_NAME.bat` file, using the TEST_NAM
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -74,7 +74,7 @@ To finish the test use `ctrl+c`. It may take up to 10 seconds to stop the script
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -101,7 +101,7 @@ The pid is number displayed in the log file and screen, between square brackets 
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -122,7 +122,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -143,7 +143,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -170,7 +170,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -190,7 +190,7 @@ Results are expected to be similar to the previous tests, but with a larger file
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -211,7 +211,7 @@ Different from the previous test, at this time there is no data, but only tables
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -235,7 +235,7 @@ If the `config.json` file is changed to remove the column with all characters, t
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
@@ -255,7 +255,7 @@ Two metadata files will be produced, one consolidating the xlsx files that summa
     <a href="../README.md">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-tests">
         <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>

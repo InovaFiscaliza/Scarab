@@ -16,9 +16,9 @@
 
 Scarab is configured through a json file
 
-You may get examples in the test setups. Check the [tests folder](./tests/README.md) for more details.
+You may get examples in the test setups. Check the [tests folder](../tests/README.md) for more details.
 
-Optional parameters are set to default values if not included in the configuration file. These default parameteres are defined in the [default_config.json](./src/default_config.json) file.
+Optional parameters are set to default values if not included in the configuration file. These default parameters are defined in the [default_config.json](../src/default_config.json) file.
 
 
 Keys in the json file are described in the table below:
@@ -69,7 +69,7 @@ Keys in the json file are described in the table below:
     <a href="../README.md">
         <img align="left" width="50" height="50" src="./images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
-    <a href="#indexerd-md-top">
+    <a href="#about-scarab-documentation">
         <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="Back to the top of this page">
     </a>
     <br><br>
