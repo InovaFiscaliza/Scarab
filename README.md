@@ -118,7 +118,7 @@ This section presents a simplified view of the roadmap and knwon issues.
 
 For more details, see the [open issues](https://github.com/FSLobao/RF.Fusion/issues)
 
-* [ ] Initial deployment
+* [x] Initial deployment
   * [x] Create the project structure
   * [x] Create the configuration file
   * [x] Create the main script
@@ -128,7 +128,7 @@ For more details, see the [open issues](https://github.com/FSLobao/RF.Fusion/iss
   * [x] Create the metadata handler
   * [x] Expand functionality to handle multiple input and output folders
   * [x] Create tests and validate release candidate
-  * [ ] Release version 1.0.0
+  * [x] Release version 1.0.0
   
 <div>
     <a href="#about-scarab">
