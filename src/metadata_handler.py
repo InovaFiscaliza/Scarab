@@ -20,6 +20,10 @@ import uuid
 import base58
 import json
 
+
+# Constants
+NA_VALUES = ['<NA>', 'NA', 'N/A', 'na', 'Na', 'n/a', 'None', 'null', '', 'pd.NA', 'pd.NaT', 'pd.NA', 'pd.NaT', 'nan', 'NaN', 'NAN', 'missing value', 'Missing Value', 'MISSING VALUE']
+
 # --------------------------------------------------------------
 class DataHandler:
 
@@ -37,12 +41,17 @@ class DataHandler:
         self.file : fm.FileHandler = fm.FileHandler(config=config, log=log)
         """FileHandler object."""
 
-        self.unique_id : str = base58.b58encode(uuid.uuid4().bytes).decode('utf-8')
-        """Unique identifier for the in class column naming."""
         self.pending_metadata_processing : bool = True
         """Flag to indicate that there is metadata needs to be processed."""
         self.data_files_to_ignore : set[str] = set()
         """List of data files that were processed but not found in the reference data. To be processed only if the reference data is updated."""
+        
+        self.unique_id : str = base58.b58encode(uuid.uuid4().bytes).decode('utf-8')
+        """Unique identifier for the in class column naming."""
+        self.index_column : str = f"index-{self.unique_id}"
+        """Unique identifier for the in class column naming."""
+        self.data_file_column : str = f"files-{self.unique_id}"
+        """Unique identifier for the in class column naming."""
         
         df, col = self.read_reference_df()
         
@@ -63,14 +72,11 @@ class DataHandler:
             pd.DataFrame: DataFrame with the rows where the ID column is not null.
         """
         
-        unique_name = f"index-{self.unique_id}"
         rows_before = df.shape[0]
         
-        na_strings = ['<NA>', 'NA', 'N/A', 'None', 'null', '']
+        df = df[~df[self.index_column].isin(NA_VALUES)]
         
-        df = df[~df[unique_name].isin(na_strings)]
-        
-        df = df.dropna(subset=[unique_name])
+        df = df.dropna(subset=[self.index_column])
         
         removed_rows = rows_before - df.shape[0]
         if removed_rows:
@@ -100,12 +106,94 @@ class DataHandler:
                 return ', '.join(non_null_values)            
 
     # --------------------------------------------------------------
-    def read_metadata(self, file: str, filetype: str, index_column: list) -> tuple[pd.DataFrame, list]:
+    def create_index(self, df: pd.DataFrame, file: str) -> pd.DataFrame:
+        """Create an index for the DataFrame based on the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
+
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+            file (str): File name to be used in the log message.
+
+        Returns:
+            pd.DataFrame: DataFrame with the index column created.
+        """
+        
+        try:
+            # create a column to be used as index, merging the columns in index_column list
+            df[self.index_column] = df[self.config.columns_key].astype(str).agg('-'.join, axis=1)
+            
+            # drop rows in which the unique_name column has value null
+            df = self.drop_na(df=df, file=file)
+        
+            # Identify rows with duplicate unique_name values
+            duplicate_ids = df[self.index_column].duplicated(keep=False)
+            duplicate_rows = df[duplicate_ids]
+            
+            if not duplicate_rows.empty:
+                self.log.warning(f"Duplicated keys in {len(duplicate_rows)} rows in {file}. Rows will be merged")
+                # Apply the custom aggregation function to the duplicate rows
+                aggregated_rows = duplicate_rows.groupby(self.index_column).agg(self._custom_agg)
+                
+                # get the rows that are not duplicated
+                unique_rows = df[~duplicate_ids]
+                unique_rows = unique_rows.set_index(self.index_column)
+                
+                # Combine the unique rows with the aggregated rows
+                df = pd.concat([unique_rows, aggregated_rows])
+            else:
+                df = df.set_index(self.index_column)
+                
+        except KeyError as e:
+            if not df.empty:
+                self.log.error(f"Key error in dataframe from file {file}: {e}")
+            return pd.DataFrame()
+        except Exception as e:
+            self.log.error(f"Error creating index in dataframe from file {file}: {e}")
+            return pd.DataFrame()
+        
+        return df
+
+    # --------------------------------------------------------------
+    def create_data_file_control_column(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Create a column with the filenames of the data files that were used to create the DataFrame. The column is created by concatenating the values of the columns defined in the config file.
+
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+
+        Returns:
+            pd.DataFrame: DataFrame with the filenames column created.
+        """
+        
+        try:
+            # create a column to be used as index, merging the columns in index_column list
+            df[self.data_file_column] = df[self.config.columns_data_filenames].astype(str).agg('-'.join, axis=1)
+        except ValueError as e:
+            self.log.warning(f"No data file column found in {self.config.columns_data_filenames}. Error: {e}")
+            return df
+        except Exception as e:	
+            self.log.error(f"Error creating data filenames column: {e}")
+            return pd.DataFrame()
+        
+        # if column self.config.columns_data_published is not present in the reference_df, create it with false string values
+        if self.config.columns_data_published not in df.columns:
+            df[self.config.columns_data_published] = pd.Series(dtype='string')
+            
+        # Replace the Null values in the self.config.columns_data_published column with the string "False"
+        df[self.config.columns_data_published] = df[self.config.columns_data_published].fillna("False")
+                    
+        df[self.config.columns_data_published] = (
+            df[self.config.columns_data_published]
+            .replace(NA_VALUES, "False")
+        )
+        
+        return df
+    
+    # --------------------------------------------------------------
+    def read_metadata(self, file: str, filetype: str) -> tuple[pd.DataFrame, list]:
         """Read an metadata file and return a DataFrame indexed according to the defined keys
 
         Args:
             file (str): Excel file to read.
-            index_column (list): Columns to be used as index in the DataFrame.
+            filetype (str): Type of the file to read. Supported types are '.xlsx', '.csv' and '.json'.
 
         Returns:
             pd.DataFrame: DataFrame with the data from the Excel file.
@@ -115,61 +203,33 @@ class DataHandler:
         try:
             match filetype:
                 case '.xlsx':
-                    new_data_df = pd.read_excel(file, dtype="string")
+                    new_df = pd.read_excel(file, dtype="string")
                 case '.csv':
-                    new_data_df = pd.read_csv(file, dtype="string")
+                    new_df = pd.read_csv(file, dtype="string")
                 case '.json':
                     with open(file, 'r', encoding='utf-8') as json_file:
                         data = json.load(json_file)
                     if isinstance(data, list):
-                        new_data_df = pd.DataFrame(data, dtype="string")
+                        new_df = pd.DataFrame(data, dtype="string")
                     else:
-                        new_data_df = pd.DataFrame([data], dtype="string")
+                        new_df = pd.DataFrame([data], dtype="string")
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
         except Exception as e:
             self.log.error(f"Error reading metadata file {file}: {e}")
             return pd.DataFrame(), []
         
-        
         # Remove escaped characters from column names
-        new_data_df.columns = self.config.limit_character_scope(new_data_df.columns.tolist())
+        new_df.columns = self.config.limit_character_scope(new_df.columns.tolist())
         
+        new_df = self.create_index(df=new_df, file=file)
+
         # get the columns from new_data_df
-        columns = new_data_df.columns.tolist()
-        
-        unique_name = f"index-{self.unique_id}"
-        
-        try:
-            # create a column to be used as index, merging the columns in index_column list
-            new_data_df[unique_name] = new_data_df[index_column].astype(str).agg('-'.join, axis=1)
-            
-            # drop rows in which the unique_name column has value null
-            new_data_df = self.drop_na(df=new_data_df, file=file)
-        
-            # Identify rows with duplicate unique_name values
-            duplicate_ids = new_data_df[unique_name].duplicated(keep=False)
-            duplicate_rows = new_data_df[duplicate_ids]
-            
-            if not duplicate_rows.empty:
-                self.log.warning(f"Duplicated keys in {len(duplicate_rows)} rows in {file}. Rows will be merged")
-                # Apply the custom aggregation function to the duplicate rows
-                aggregated_rows = duplicate_rows.groupby(unique_name).agg(self._custom_agg)
-                
-                # get the rows that are not duplicated
-                unique_rows = new_data_df[~duplicate_ids]
-                unique_rows = unique_rows.set_index(unique_name)
-                
-                # Combine the unique rows with the aggregated rows
-                new_data_df = pd.concat([unique_rows, aggregated_rows])
-            else:
-                new_data_df = new_data_df.set_index(unique_name)
-                
-        except Exception as e:
-            self.log.error(f"Error creating index: {e}")
-            return pd.DataFrame(), []
-        
-        return new_data_df, columns
+        columns = new_df.columns.tolist()
+                        
+        new_df = self.create_data_file_control_column(df=new_df)
+
+        return new_df, columns
 
     # --------------------------------------------------------------
     def valid_data(self, df: pd.DataFrame, file: str) -> bool:
@@ -188,7 +248,7 @@ class DataHandler:
         
         # since self.excel_read will remove rows with null values in the key columns, the resulting DataFrame may be empty
         if df.empty:
-            self.log.error(f"File '{file}' is empty or has nor data in columns defined as keys.")
+            self.log.warning(f"File '{file}' is empty or has nor data in columns defined as keys.")
             return False
         
         df_columns = set(df.columns.tolist())
@@ -219,26 +279,22 @@ class DataHandler:
         """
         
         # find the newest file in the list of catalog files
-        latest_time = 0.0
+        latest_time:float = 0.0
+        latest_file:str = None
+        
         for file in self.config.catalog_files:
             if os.path.isfile(file):
                 if os.path.getmtime(file) > latest_time:
                     latest_time = os.path.getmtime(file)
                     latest_file = file
         
-        if latest_time > 0.0:
+        if latest_file:
             self.log.info(f"Reference data loaded from file: {latest_file}")
             ref_df, ref_cols = self.read_metadata(  file=latest_file,
-                                                    filetype=self.config.catalog_extension,
-                                                    index_column=self.config.columns_key)
+                                                    filetype=self.config.catalog_extension)
         else:
             self.log.warning("No reference data found")
             ref_df, ref_cols = pd.DataFrame(), []
-        
-        # if column self.config.columns_data_published is not present in the reference_df, create it with false string values
-        if self.config.columns_data_published not in ref_df.columns:
-            ref_df[self.config.columns_data_published] = pd.Series(dtype='string')
-            ref_cols.append(self.config.columns_data_published)
 
         return ref_df, ref_cols
 
@@ -334,7 +390,7 @@ class DataHandler:
         """Process a set of xlsx files and update the reference data file.
 
         Args:
-             metadata_files (set[str]): List of xlsx files to process.
+            metadata_files (set[str]): List of xlsx files to process.
             config (Config): Configuration object.
             log (logging.Logger): Logger object.
             
@@ -345,8 +401,7 @@ class DataHandler:
         
         for file in metadata_files:
             new_data_df, column_in = self.read_metadata(file=file,
-                                                        filetype=self.config.metadata_extension,
-                                                        index_column=self.config.columns_key)
+                                                        filetype=self.config.metadata_extension)
             
             # test the content of the file
             if not self.valid_data(df=new_data_df, file=file):
@@ -358,7 +413,10 @@ class DataHandler:
             # Compute the new column order for the reference DataFrame
             self.ref_cols = self.merge_lists(new_list=column_in, legacy_list=self.ref_cols)
             
-            # Compute the new dataframe            
+            # add column with combined data filenames string column
+            if len(self.config.columns_data_filenames) > 1:
+                self.ref_cols.append(self.config.columns_data_filenames)
+            
             # update the reference data with the new data where index matches
             self.ref_df.update(new_data_df)
             
@@ -369,6 +427,8 @@ class DataHandler:
 
         if self.persist_reference():
             self.file.move_to_store(files_to_move)
+            
+            # Reset set of data files to ignore, since the reference data has been updated
             self.data_files_to_ignore = set()
 
     # --------------------------------------------------------------
@@ -382,44 +442,31 @@ class DataHandler:
             
         Returns: None
         """
-
-        unique_name = f"files-{self.unique_id}"
         
         self.log.info(f"Processing {len(files_to_process)} data files")
         
-        # Force column [self.config.columns_data_filenames] to string type
-        self.ref_df[self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].astype(str)
-        
-        # Set column [self.config.columns_data_published] to "False" for any remaining NA values
-        self.ref_df.loc[:, self.config.columns_data_published] = self.ref_df[self.config.columns_data_published].fillna("False")
-
-        # create a copy of the reference dataframe, using the same index but with only one data column, containing the merged string from all columns indicated in self.config.columns_data_filenames
-        self.ref_df[unique_name] = self.ref_df[self.config.columns_data_filenames].agg(' '.join, axis=1)
-
         files_found_in_ref = set()
 
-        for item in files_to_process:
+        for file in files_to_process:
             
-            # Find the row in the reference DataFrame that matches the filename
-            match = self.ref_df[self.ref_df[unique_name].str.contains(os.path.basename(item))]
+            # Find the row in the reference DataFrame in which the data_file_column contains filename
+            match = self.ref_df[self.ref_df[self.data_file_column].str.contains(os.path.basename(file))]
             
             # Set column [self.config.columns_data_published] to "Gotcha!" for any matching rows
             if not match.empty:
                 self.ref_df.loc[match.index, self.config.columns_data_published] = "True"
-                files_found_in_ref.add(item)
+                files_found_in_ref.add(file)
                         
         
-        if files_found_in_ref:
-            files_not_counted = files_to_process - files_found_in_ref
-            if files_not_counted:
-                self.data_files_to_ignore = files_not_counted
-                self.log.warning(f"Not all data files were considered. Leaving {files_not_counted} in TEMP folder.")
-                        
+        files_not_counted = files_to_process - files_found_in_ref
+        if files_not_counted:
+            self.data_files_to_ignore = files_not_counted
+            self.log.warning(f"Not all data files were considered. Leaving {len(files_not_counted)} in TEMP folder.")
+        
+        if files_found_in_ref:                
             if self.persist_reference():
                 if self.file.publish_data_file(files_found_in_ref):
                     self.file.remove_file_list(files_found_in_ref)
-                
-                self.metadata_not_changed = False
 
     # --------------------------------------------------------------
     def persist_reference(self) -> bool:
@@ -431,12 +478,12 @@ class DataHandler:
             bool: True if the reference data is saved successfully
         """
 
-        # reorder columns to match order defined the config file as columns_out_order
-        self.ref_df = self.ref_df[self.ref_cols]
+        # reorder columns to match order defined the config file as columns_out_order and remove data file control column
+        df = self.ref_df[self.ref_cols]
         
         for catalog_file in self.config.catalog_files:
             try:
-                self.ref_df.to_excel(catalog_file, index=False)
+                df.to_excel(catalog_file, index=False)
                 self.log.info(f"Reference data file updated: {catalog_file}")
                 return True
             except Exception as e:
