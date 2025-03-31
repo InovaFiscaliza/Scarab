@@ -2,16 +2,16 @@
 
 To install the application, follow these steps:
 
-1. Download the latest release from the [releases page](https://github.com/InovaFiscaliza/Scarab/releases/tag/v1.0.0)
-2. Extract the contents of the tgz file to a folder of your choice e.g. `tar -xzvf Scarab-1.0.0.tgz`.
-3. If not already installed, [install UV](https://docs.astral.sh/uv/getting-started/installation/)
-4. Create the python environment at the root of the extracted folder by running `uv venv`
+1. [Install UV](https://docs.astral.sh/uv/getting-started/installation/)
+2. You may clone the repository using `git clone` or you may download the release package.
+2.1 If you clone the repository, just use `uv sync` at the root of the project folder and it will download all the dependencies for you.
+2.2 If you downloaded the release package, extract it to a folder of your choice and use `uv sync` to download the dependancies 
 
-You may run the script directly from the command line by running `uv run .\src\scarab.py .\config\<name_of_youor_config_file.json>`
+You may run the script directly from the command line from the root of the installed folder by running `uv run .\src\scarab.py .\config\<name_of_youor_config_file.json>`
 
-Examples of config files are already provided in the `config` folder.
+Examples of config files are already provided in the `config` folder of the relese package or in the `data/examples` folder of the cloned repository.
 
-For creating tasks in windows, you may find corresponding XLM examples in the `task_manager` folder.
+For creating tasks in windows, you may find corresponding XLM examples in the `task_manager` folder of the release package or in the `data/examples` folder of the cloned repository.
 
 <div>
     <a href="https://github.com/InovaFiscaliza/Scarab">
