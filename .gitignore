@@ -11,3 +11,6 @@ wheels/
 
 # Test areas
 tests/sandbox
+
+# Related files
+scarab_release.tgz
