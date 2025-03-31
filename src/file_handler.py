@@ -426,19 +426,19 @@ class FileHandler:
                     if file_creation_time < pd.to_datetime("now") - self.config.clean_period:
                         self.trash_it(file=item_name, overwrite=self.config.trash_data_overwrite)
                 else:
-                    folder_to_remove.append(item)
+                    folder_to_remove.append(item_name)
 
         # Remove empty subfolder after moving files. 
         if folder_to_remove:
             # TODO: #1  Check if the subfolder is expected as defined in the config file and do not remove it
-            for item in folder_to_remove:
+            for folder in folder_to_remove:
                 # New files that may have appeared in the subfolder will be processed in the next run, so test if it is empty before removing
-                if not os.listdir(item):
+                if not os.listdir(folder):
                     try:
-                        os.rmdir(item)
-                        self.log.info(f"Removed folder {item}")
+                        os.rmdir(folder)
+                        self.log.info(f"Removed folder {folder}")
                     except Exception as e:
-                        self.log.warning(f"Error removing folder {item}: {e}")
+                        self.log.warning(f"Error removing folder {folder}: {e}")
 
     # --------------------------------------------------------------
     def clean_folders(self) -> None:
