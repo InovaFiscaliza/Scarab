@@ -39,7 +39,7 @@
             "Z:/sp/POST/monitorRNI",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/monitorRNI"
         ],
-        "get": [],
+        "get": [C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/monitorRNI/raw],
         "temp": "C:/ProgramData/Anatel/scarab/temp/monitorRNI",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/monitorRNI",
         "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/monitorRNI"
