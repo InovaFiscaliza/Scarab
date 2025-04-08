@@ -13,6 +13,8 @@
         <li><a href="#SCH_Null_Data_Test">SCH Null Data Test</a></li>
         <li><a href="#Special_characters_test">Special characters test</a></li>
         <li><a href="#Mixed_metadata_formats">Mixed metadata formats</a></li>
+        <li><a href="#Null_Data_Filename_Test">Null Data Filename Test</a></li>
+        <li><a href="#Input_files_and_folders_to_ignore">Input files and folders to ignore</a></li>
     </ol>
 </details>
 
@@ -270,6 +272,26 @@ This test uses search for data file references where the columns with filenames 
 After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 
 Metadata files will be consolidated and data files will be left in the temp folder, waiting for clean operation, which may be triggered according to the files timestamp.
+
+<div>
+    < a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Input files and folders to ignore
+
+Use `Btest_mixed_metadata.bat` to set the sandbox folder structure for the test
+
+This test the same performed in the initial test, adding a folder and a file to be ignored in the input folders.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+
+The file `.file_to_ignore` and folder `folder_to_ignore` should be ignored in the input folders.
 
 <div>
     < a href="https://github.com/InovaFiscaliza/Scarab">
