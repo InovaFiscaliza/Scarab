@@ -481,13 +481,16 @@ class DataHandler:
         # reorder columns to match order defined the config file as columns_out_order and remove data file control column
         df = self.ref_df[self.ref_cols]
         
+        save_at_least_one = False
         for catalog_file in self.config.catalog_files:
             try:
                 df.to_excel(catalog_file, index=False)
                 self.log.info(f"Reference data file updated: {catalog_file}")
-                return True
+                save_at_least_one = True
             except Exception as e:
                 self.log.error(f"Error saving reference data: {e}")
-                return False
+        
+        return save_at_least_one
+        
 
 # --------------------------------------------------------------
