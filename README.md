@@ -103,6 +103,14 @@ For more details about UV, please check the [UV documentation](https://docs.astr
 
 Please check Scarab [documentation](./docs/README.md) for more details on the configuration file.
 
+Additional examples can be found in the [data folder](./data/examples/) of the repository.
+
+These examples include.
+
+- `.json` configuration files for the application in some scenarios currently in use.
+- `.xml` files for the Windows task manager to run the application as a service.
+- `zip` file with a companion script to be used with [PowerAutomate](https://en.wikipedia.org/wiki/Microsoft_Power_Automate) to extract data from [MS Sharepoint](https://en.wikipedia.org/wiki/SharePoint) repositories and post them to the input folders.
+
 <div>
     <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
