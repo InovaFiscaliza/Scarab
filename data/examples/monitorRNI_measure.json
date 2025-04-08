@@ -50,7 +50,8 @@
         "catalog names": [
             "Z:/sp/GET/monitorRNI/monitorRNI.xlsx",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/monitorRNI.xlsx"
-        ]
+        ],
+        "input to ignore": ["Z:/sp/POST/monitorRNI/.monitorrni_post"]
     },
     "metadata": {
         "in columns": [

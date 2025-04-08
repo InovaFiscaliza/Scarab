@@ -50,6 +50,10 @@
         "catalog names": [
             "Z:/sp/GET/SCH/Annotation.xlsx",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH/Annotation.xlsx"
+        ],
+        "input to ignore": [
+            "Z:/sp/POST/SCH/.sch_post",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/SCH/.sch_post"
         ]
     },
     "metadata": {

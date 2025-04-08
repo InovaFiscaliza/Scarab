@@ -53,6 +53,10 @@
         "catalog names": [
             "Z:/sp/GET/Regulatron/Anuncios.xlsx",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Anuncios.xlsx"
+        ],
+        "input to ignore": [
+            "Z:/sp/POST/Regulatron/.regulatron_post",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/Regulatron/.regulatron_post"
         ]
     },
     "metadata": {
