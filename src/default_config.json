@@ -38,7 +38,8 @@
     "files" : {
         "metadata extension": "",
         "data extension": "",
-        "catalog names":[]
+        "catalog names":[],
+        "input to ignore": []
     },
     "metadata": {
         "in columns": [],

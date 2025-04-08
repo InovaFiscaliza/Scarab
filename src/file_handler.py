@@ -383,6 +383,9 @@ class FileHandler:
             if not folder_content:
                 self.log.debug(f"POST Folder {post_folder} is empty.")
             else:
+                # remove files and folders to ignore from the list
+                folder_content = set(folder_content) - self.config.input_to_ignore
+                
                 # add path to filenames
                 folder_content = set(map(lambda x: os.path.join(post_folder, x), folder_content))
                 self.log.debug(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
@@ -406,6 +409,9 @@ class FileHandler:
         
         # Get content from folder
         folder_content = glob.glob("**", root_dir=folder, recursive=True)
+        
+        # Remove files and folder to ignore from the list of cleaning
+        folder_content = set(folder_content) - self.config.input_to_ignore
         
         if not folder_content:
             self.log.info(f"Nothing to clean in {folder}.")

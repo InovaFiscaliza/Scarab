@@ -102,6 +102,8 @@ class Config:
             """ Extension used to identify the metadata files"""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
+            self.input_to_ignore: List[str] = set(self.__ensure_list(self.raw["files"]["input to ignore"]))
+            """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
 
             self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
             """ Folder path where data files are to be stored"""
