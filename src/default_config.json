@@ -1,5 +1,6 @@
 {
     "name": "unnamed",
+    "scarab version": "1.1.0",
     "check period in seconds": 10,
     "clean period in hours": 1,
     "last clean": "2025-02-21 12:00:00",

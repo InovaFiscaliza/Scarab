@@ -49,6 +49,8 @@ class Config:
         try:
             self.name: str = self.raw["name"]
             """ Name of the configuration, used for logging"""
+            self.sacrab_version: str = self.raw["scarab version"]
+            """ Version of the scarab script"""
             self.check_period: int = self.raw["check period in seconds"]
             """ Period to check input folders in seconds """
             self.clean_period: pd.Timedelta = pd.Timedelta(hours=self.raw["clean period in hours"])
