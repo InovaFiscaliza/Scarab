@@ -56,6 +56,7 @@ Keys in the json file are described in the table below:
 | **metadata** | | Root key to metadata configuration keys | Optional | - |
 | metadata | **in columns** | `List of Strings`. List of columns required for posted metadata file. Will be used to validate the new files. May not include all existing columns, but only the essential ones. Keys are automatically required and may not be included in the list. | Optional | default: [] |
 | metadata | **key** | `List of Strings`. List of columns to be used as key in the metadata file. This is used for merging data. Each row will have a single combination of the key columns. If new data is posted with the same key column combination, the data will be updated | Optional | default:[] |
+| metadata | **sort by** | `List of Strings`. Columns that define how metadata table should be ordered. Default will sort by the order in which the files were posted adding a column named `Scarab Post Order` with serial number to the data | Optional | default: [] |
 | metadata | **data filenames** | `List of Strings`. List of columns with filenames of data files associated with the metadata in the row | Optional | default: [] |
 | metadata | **data published flag** | `String`. Column that store a boolean flag that indicates if data files are available at the _GET_ folder. This column will be added to the output, regardless of being present in the input files | Optional | default: "" |
 | | | | | |
