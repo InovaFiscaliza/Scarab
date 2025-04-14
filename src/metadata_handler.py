@@ -23,6 +23,9 @@ import json
 
 # Constants
 NA_VALUES = ['<NA>', 'NA', 'N/A', 'na', 'Na', 'n/a', 'None', 'null', '', 'pd.NA', 'pd.NaT', 'pd.NA', 'pd.NaT', 'nan', 'NaN', 'NAN', 'missing value', 'Missing Value', 'MISSING VALUE']
+SCARAB_POST_ORDER_COLUMN = "Scarab Post Order"
+INDEX_COLUMN_PREFIX = "index-"
+DATA_FILE_COLUMN_PREFIX = "file-"
 
 # --------------------------------------------------------------
 class DataHandler:
@@ -48,12 +51,14 @@ class DataHandler:
         
         self.unique_id : str = base58.b58encode(uuid.uuid4().bytes).decode('utf-8')
         """Unique identifier for the in class column naming."""
-        self.index_column : str = f"index-{self.unique_id}"
+        self.index_column : str = f"{INDEX_COLUMN_PREFIX}{self.unique_id}"
         """Index column name. Used to concatenate the values of the columns defined as keys."""
-        self.data_file_column : str = f"files-{self.unique_id}"
+        self.data_file_column : str = f"{DATA_FILE_COLUMN_PREFIX}{self.unique_id}"
         """Data file control column name. Used to contatenate the filenames of the data files when multiple columns are defined."""
-        self.post_order_column : str = f"order-{self.unique_id}"
+        self.post_order_column : str = SCARAB_POST_ORDER_COLUMN
         """Post order column name. Used to keep ordering of the rows in the DataFrame."""
+        if not self.config.rows_sort_by:
+            self.config.rows_sort_by = [self.post_order_column]
         
         self.ordering_index : int = 0
         """Index user for sequentially ordering rows in the DataFrame if no ordering column is defined."""
@@ -169,14 +174,18 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
-        if self.config.rows_sort_by is None:
-            df[self.post_order_column] = range(self.ordering_index, self.ordering_index + len(df))
-            self.ordering_index += len(df)
-            self.config.rows_sort_by = [self.post_order_column]
+        df[self.post_order_column] = range(self.ordering_index, self.ordering_index + len(df))
+        self.ordering_index += len(df)
         
         try:
             # sort the DataFrame by the columns defined in the config file
-            df = df.sort_values(by=self.config.sort_by, ascending=True)
+            df = df.sort_values(by=self.config.rows_sort_by, ascending=True)
+        except AttributeError as e:
+            if df.empty:
+                self.log.info(f"No data in file {file}")
+            else:
+                self.log.error(f"Attribute error in sorting metadata from file {file}: {e}")
+            return pd.DataFrame()
         except KeyError as e:
             if not df.empty:
                 self.log.error(f"Key error in sorting metadata from file {file}: {e}")
