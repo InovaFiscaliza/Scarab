@@ -86,6 +86,8 @@ def main(config_path: str) -> None:
     # initialize raw data folders to be synchronized
     fh.mirror_raw_data()
     
+    error_count = 0
+
     # keep thread running until a ctrl+C or kill command is received, even if an error occurs
     while keep_watching:
         
