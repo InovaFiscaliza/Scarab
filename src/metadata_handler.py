@@ -49,9 +49,14 @@ class DataHandler:
         self.unique_id : str = base58.b58encode(uuid.uuid4().bytes).decode('utf-8')
         """Unique identifier for the in class column naming."""
         self.index_column : str = f"index-{self.unique_id}"
-        """Unique identifier for the in class column naming."""
+        """Index column name. Used to concatenate the values of the columns defined as keys."""
         self.data_file_column : str = f"files-{self.unique_id}"
-        """Unique identifier for the in class column naming."""
+        """Data file control column name. Used to contatenate the filenames of the data files when multiple columns are defined."""
+        self.post_order_column : str = f"order-{self.unique_id}"
+        """Post order column name. Used to keep ordering of the rows in the DataFrame."""
+        
+        self.ordering_index : int = 0
+        """Index user for sequentially ordering rows in the DataFrame if no ordering column is defined."""
         
         df, col = self.read_reference_df()
         
@@ -153,8 +158,38 @@ class DataHandler:
         return df
 
     # --------------------------------------------------------------
+    def sort_dataframe(self, df: pd.DataFrame, file: str) -> pd.DataFrame:
+        """Sort the DataFrame by the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
+
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+            file (str): File name to be used in the log message.
+
+        Returns:
+            pd.DataFrame: DataFrame with the index column created.
+        """
+        
+        if self.config.rows_sort_by is None:
+            df[self.post_order_column] = range(self.ordering_index, self.ordering_index + len(df))
+            self.ordering_index += len(df)
+            self.config.rows_sort_by = [self.post_order_column]
+        
+        try:
+            # sort the DataFrame by the columns defined in the config file
+            df = df.sort_values(by=self.config.sort_by, ascending=True)
+        except KeyError as e:
+            if not df.empty:
+                self.log.error(f"Key error in sorting metadata from file {file}: {e}")
+            return pd.DataFrame()
+        except Exception as e:
+            self.log.error(f"Error sorting metadata from file {file}: {e}")
+            return pd.DataFrame()
+        
+        return df
+    # --------------------------------------------------------------
     def create_data_file_control_column(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Create a column with the filenames of the data files that were used to create the DataFrame. The column is created by concatenating the values of the columns defined in the config file.
+        """Create a column with the filenames of the data files that were used to create the DataFrame. 
+        The column is created by concatenating the values of the columns defined in the config file.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
@@ -223,6 +258,8 @@ class DataHandler:
         new_df.columns = self.config.limit_character_scope(new_df.columns.tolist())
         
         new_df = self.create_index(df=new_df, file=file)
+        
+        new_df = self.sort_dataframe(df=new_df, file=file)
 
         # get the columns from new_data_df
         columns = new_df.columns.tolist()
@@ -478,9 +515,14 @@ class DataHandler:
             bool: True if the reference data is saved successfully
         """
 
-        # reorder columns to match order defined the config file as columns_out_order and remove data file control column
+        # sort the reference DataFrame by the columns defined in the config file
+        self.ref_df = self.ref_df.sort_values(by=self.config.rows_sort_by, ascending=True)
+        
+        # get selected columns in the defined order
         df = self.ref_df[self.ref_cols]
         
+        # loop through the target catalog files and save the reference data, 
+        # ensuring that at least one file is saved successfully before returning True
         save_at_least_one = False
         for catalog_file in self.config.catalog_files:
             try:

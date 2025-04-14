@@ -116,6 +116,8 @@ class Config:
             """ Columns required in the input metadata file"""
             self.columns_key: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
             """ Columns that define the uniqueness of each row in the metadata file"""
+            self.rows_sort_by: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["sort by"]))
+            """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted"""
             self.columns_data_filenames: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
             """ Columns that contain the names of data files associated with each row metadata"""
             self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
