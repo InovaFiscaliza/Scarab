@@ -114,7 +114,6 @@ class Config:
             self.worksheet_names: List[dict] = self.__ensure_list(self.raw["files"]["worksheet names"])
             """ List of worksheet names to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
             
-
             self.columns_in: Set[str] = set(self.limit_character_scope(self.raw["metadata"]["in columns"]))
             """ Columns required in the input metadata file"""
             self.columns_key: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
@@ -127,13 +126,10 @@ class Config:
             """ Columns that contain the names of data files associated with each row metadata"""
             self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
-            self.add_filename: List = self.__ensure_list(self.raw["metadata"]["add filename"])
+            self.add_filename: Dict = self.raw["metadata"]["add filename"]
             """ List of tables into which a column with the filename will be added. The column name will be the same as the table name"""
-# TODO: Define the column name to be used
             self.filename_format: str = self.raw["metadata"]["filename format"]
             """ Formatting string using re.match.groupdict() syntax. Parsed data will be added in the same table as the filename."""
-                
-            # TODO: #2 Parse file metadata separated from the data metadata since data may be aggregated from multiple files
 
         except Exception as e:
             print(f"Configuration files missing arguments: {e}")

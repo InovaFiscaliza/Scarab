@@ -61,7 +61,7 @@ Keys in the json file are described in the table below:
 | metadata | **sort by** | `List of Strings`. Columns that define how metadata table should be ordered. Default will sort by the order in which the files were posted adding a column named `Scarab Post Order` with serial number to the data | Optional | default: [] |
 | metadata | **data filenames** | `List of Strings`. List of columns with filenames of data files associated with the metadata in the row | Optional | default: [] |
 | metadata | **data published flag** | `String`. Column that store a boolean flag that indicates if data files are available at the _GET_ folder. This column will be added to the output, regardless of being present in the input files | Optional | default: "" |
-| metadata | **add_filename** | `Boolean`. If _True_, the filename of the metadata file will be added to the output file, regardless of being present as a datafield in input files | Optional | default: false |
+| metadata | **add_filename** | `Dict`. Specify how the filename of the metadata file will be added to the output, regardless of being present as a datafield in input files. Defined in the form of a dictionary using the structure: `{"name":"","tables":[]}` containing the name of the column to be created and the list of tables in which it should be included. | Optional | default: {"name":"","tables":[]} |
 | metadata | **filename_format** | `String`. Format string used to parse information from the filename. Based in the re.match.groupdict method. See [re](https://docs.python.org/3/library/re.html#re.Match.groupdict) for more information. | Optional | default: "" |
 | | | | | |
 

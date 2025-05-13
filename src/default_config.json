@@ -50,7 +50,7 @@
         "sort by": [],
         "data filenames": [],
         "data published flag": "",
-        "add_filename": [],
+        "add_filename": {"name":"","tables":[]},
         "filename_format": ""
     }
 }
