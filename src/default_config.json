@@ -40,7 +40,7 @@
         "metadata extension": "",
         "data extension": "",
         "catalog names":[],
-        "worksheet names": [],
+        "worksheet names": "",
         "input to ignore": []
     },
     "metadata": {
@@ -50,7 +50,7 @@
         "sort by": [],
         "data filenames": [],
         "data published flag": "",
-        "add_filename": false,
+        "add_filename": [],
         "filename_format": ""
     }
 }

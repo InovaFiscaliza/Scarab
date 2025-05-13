@@ -22,7 +22,7 @@ import hashlib
 import itertools
 
 from dataclasses import dataclass
-from typing import Union, List
+from typing import List
 
 # --------------------------------------------------------------
 @dataclass
@@ -31,7 +31,8 @@ class FileHandler:
     config: cm.Config
     log: logging.Logger
     
-    MAXIMUM_VARIANT = 100
+    MAXIMUM_VARIANT:int = 100
+    """Constant tha defines the maximum number of name variants to be used as filenames."""
     
     # --------------------------------------------------------------
     def move_file(self, source_file: str, target_file: str) -> str:
@@ -250,7 +251,7 @@ class FileHandler:
             bool: True if all files were published successfully, False otherwise.
         """
                         
-        publish_succeded = True
+        publish_succeeded = True
 
         for file in files_to_publish:
             
@@ -270,9 +271,9 @@ class FileHandler:
                     self.log.info(f"Copied {filename} to {publish_folder}")
                 except Exception as e:
                     self.log.error(f"Error publishing {file} to {publish_folder}: {e}")
-                    publish_succeded = False
+                    publish_succeeded = False
         
-        return publish_succeded
+        return publish_succeeded
 
     # --------------------------------------------------------------
     def remove_unused_subfolder(self, subfolder: set[str]) -> None:
@@ -511,4 +512,19 @@ class FileHandler:
                         shutil.copy(os.path.join(folder2, file), folder1)
                         self.log.info(f"Copied {file} from {folder2} to {folder1}")
                     except Exception as e:
-                        self.log.error(f"Error copying {file} from {folder2} to {folder1}")
+                        self.log.error(f"Error copying {file} from {folder2} to {folder1}: {e}")
+                        
+    # --------------------------------------------------------------
+    def get_data_from_filename(self, filename: str) -> str:
+        """Get the data from the filename.
+        
+        Args:
+            filename (str): Filename to extract data from.
+            
+        Returns:
+            str: Data extracted from the filename.
+            
+        Raises: None
+        """
+        
+        logging.debug(f"Extracting data from {filename}")

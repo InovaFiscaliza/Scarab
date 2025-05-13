@@ -111,17 +111,27 @@ class Config:
             """ Folder path where data files are to be stored"""
             self.data_extension: str = self.raw["files"]["data extension"]
             """ Data file extension, used to identify the raw data files"""
+            self.worksheet_names: List[dict] = self.__ensure_list(self.raw["files"]["worksheet names"])
+            """ List of worksheet names to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
+            
 
             self.columns_in: Set[str] = set(self.limit_character_scope(self.raw["metadata"]["in columns"]))
             """ Columns required in the input metadata file"""
             self.columns_key: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
             """ Columns that define the uniqueness of each row in the metadata file"""
+            self.tables_associations: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["association"]))
+            """ Columns that define the tables associations in the metadata file with multiple tables"""
             self.rows_sort_by: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["sort by"]))
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
             self.columns_data_filenames: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
             """ Columns that contain the names of data files associated with each row metadata"""
             self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
+            self.add_filename: List = self.__ensure_list(self.raw["metadata"]["add filename"])
+            """ List of tables into which a column with the filename will be added. The column name will be the same as the table name"""
+# TODO: Define the column name to be used
+            self.filename_format: str = self.raw["metadata"]["filename format"]
+            """ Formatting string using re.match.groupdict() syntax. Parsed data will be added in the same table as the filename."""
                 
             # TODO: #2 Parse file metadata separated from the data metadata since data may be aggregated from multiple files
 
