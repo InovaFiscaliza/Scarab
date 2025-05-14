@@ -129,6 +129,8 @@ class Config:
             """ Columns that define the uniqueness of each row in the metadata file"""
             self.tables_associations: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["association"]))
             """ Columns that define the tables associations in the metadata file with multiple tables"""
+            self.required_tables: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
+            """ Columns that define the tables required in the metadata file"""
             self.rows_sort_by: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["sort by"]))
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
             self.columns_data_filenames: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))

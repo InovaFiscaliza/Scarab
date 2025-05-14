@@ -350,7 +350,7 @@ class DataHandler:
         
         for table, df in tables.items():
             # since self.excel_read will remove rows with null values in the key columns, the resulting DataFrame may be empty
-            if df.empty:
+            if df.empty and table in self.config.required_tables:
                 self.log.warning(f"File '{file}' is empty or has nor data in columns defined as keys.")
                 return False
             

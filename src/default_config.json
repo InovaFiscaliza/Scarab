@@ -49,6 +49,7 @@
         "in columns": [],
         "key": [],
         "association": [],
+        "required tables": [],
         "sort by": [],
         "data filenames": [],
         "data published flag": "",
