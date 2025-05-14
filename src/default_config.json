@@ -42,7 +42,7 @@
         "metadata extension": "",
         "data extension": "",
         "catalog names":[],
-        "worksheet names": "",
+        "worksheet names": [{"_":"<name>"}],
         "input to ignore": []
     },
     "metadata": {

@@ -53,7 +53,7 @@ class DataHandler:
         self.index_column : str = f"{INDEX_COLUMN_PREFIX}{self.unique_id}"
         """Index column name. Used to concatenate the values of the columns defined as keys."""
         self.data_file_column : str = f"{DATA_FILE_COLUMN_PREFIX}{self.unique_id}"
-        """Data file control column name. Used to contatenate the filenames of the data files when multiple columns are defined."""
+        """Data file control column name. Used to concatenate the filenames of the data files when multiple columns are defined."""
         self.post_order_column : str = SCARAB_POST_ORDER_COLUMN
         """Post order column name. Used to keep ordering of the rows in the DataFrame."""
         if not self.config.rows_sort_by:
@@ -278,7 +278,7 @@ class DataHandler:
 
     # --------------------------------------------------------------
     def valid_data(self, df: pd.DataFrame, file: str) -> bool:
-        """Check if the input dataframme is valid with the following tests:
+        """Check if the input dataframe is valid with the following tests:
             - If columns are a superset of the minimum required columns.
             - If columns contain the key columns.
             - If key columns contain any non null values.

@@ -18,6 +18,14 @@ from typing import Any, Dict, List, Set
 import re
 
 # --------------------------------------------------------------
+# Global Constants
+
+DEFAULT_WORKSHEET_NAME_KEY:str = "_"
+"""Default key for the worksheet name in default_config.json file."""
+DEFAULT_WORKSHEET_NAME_VALUE:str = "<name>"
+"""Default value for the worksheet name in default_config.json file."""
+
+# --------------------------------------------------------------
 class Config:
     """Class to load and store the configuration values from a JSON file."""
 
@@ -49,7 +57,7 @@ class Config:
         try:
             self.name: str = self.raw["name"]
             """ Name of the configuration, used for logging"""
-            self.sacrab_version: str = self.raw["scarab version"]
+            self.scarab_version: str = self.raw["scarab version"]
             """ Version of the scarab script"""
             self.check_period: int = self.raw["check period in seconds"]
             """ Period to check input folders in seconds """
@@ -114,7 +122,7 @@ class Config:
             """ Folder path where data files are to be stored"""
             self.data_extension: str = self.raw["files"]["data extension"]
             """ Data file extension, used to identify the raw data files"""
-            self.worksheet_names: List[dict] = self.__ensure_list(self.raw["files"]["worksheet names"])
+            self.worksheet_names: List[dict] = self.__build_worksheet_dict(self.raw["files"]["worksheet names"])
             """ List of worksheet names to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
             
             self.columns_in: Set[str] = set(self.limit_character_scope(self.raw["metadata"]["in columns"]))
@@ -374,6 +382,25 @@ class Config:
             test_result = False
     
         return test_result, message
+    
+    # --------------------------------------------------------------
+    def __build_worksheet_dict(self, worksheet_names: List[dict]) -> List[dict]:
+        """Build a dictionary with the worksheet names to be used in the data files.
+
+        Args:
+            worksheet_names (List[str]): List of worksheet names to be used in the data files.
+
+        Returns:
+            List[dict]: List of dictionaries with the worksheet names.
+        """
+        global DEFAULT_WORKSHEET_NAME_KEY
+        global DEFAULT_WORKSHEET_NAME_VALUE
+        
+        if worksheet_names[DEFAULT_WORKSHEET_NAME_KEY] == DEFAULT_WORKSHEET_NAME_VALUE:
+            worksheet_names[DEFAULT_WORKSHEET_NAME_KEY] = self.name
+        
+        return worksheet_names
+
     
     # --------------------------------------------------------------
     def is_config_ok(self) -> bool:
