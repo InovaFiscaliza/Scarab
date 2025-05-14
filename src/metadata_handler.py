@@ -231,8 +231,60 @@ class DataHandler:
         return df
     
     # --------------------------------------------------------------
-    def read_metadata(self, file: str, filetype: str) -> tuple[pd.DataFrame, list]:
-        """Read an metadata file and return a DataFrame indexed according to the defined keys
+    def process_table(self, df: pd.DataFrame, file: str) -> tuple[pd.DataFrame, list]:
+        """Process the DataFrame to create, clean column names and other adjustments.
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+            file (str): File name to be used in the log message.
+            
+        Returns:
+            pd.DataFrame: DataFrame with the data from the Excel file.
+            list: List of columns in the DataFrame.
+        """
+        
+        # Remove escaped characters from column names
+        df.columns = self.config.limit_character_scope(df.columns.tolist())
+        
+        df = self.create_index(df=df, file=file)
+        
+        df = self.sort_dataframe(df=df, file=file)
+
+        # get the columns from new_data_df
+        columns = df.columns.tolist()
+                        
+        new_df = self.create_data_file_control_column(df=df)
+
+        return new_df, columns
+
+    # --------------------------------------------------------------
+    def create_dataframe(self, data: dict) -> pd.DataFrame:
+        """Create a DataFrame from list of dictionaries.
+        The dictionary keys are the column names and the values are the column values.
+        If the input is a list of dictionaries, each dictionary will be a row in the DataFrame.
+        If the input is a single dictionary, the DataFrame will have a single row.
+
+        Args:
+            data (dict): Dictionary with the data to create the DataFrame.
+
+        Returns:
+            pd.DataFrame: DataFrame with the data from the dictionary.
+        """
+        
+        if isinstance(data, list):
+            return pd.DataFrame(data, dtype="string")
+        elif isinstance(data, dict):
+            return pd.DataFrame([data], dtype="string")
+        elif data is None:
+            self.log.debug("Input data is None. Returning an empty DataFrame.")
+            return pd.DataFrame()
+        else:
+            self.log.error(f"Unsupported data type: {type(data)}. Expected list, dict, or None.")
+            raise ValueError(f"Unsupported data type: {type(data)}")
+
+    # --------------------------------------------------------------
+    def read_metadata(self, file: str, filetype: str) -> tuple[dict[str:pd.DataFrame], dict[str:list]]:
+        """Read an metadata file and return a list of tuples with the DataFrame and the columns in the DataFrame.
+        The file can be an Excel file, a CSV file or a JSON file.
 
         Args:
             file (str): Excel file to read.
@@ -243,6 +295,10 @@ class DataHandler:
             list: List of columns in the DataFrame.
         """
         
+        new_data_df = self.config.table_names
+        new_data_columns = self.config.table_names
+        base_key = self.config.DEFAULT_WORKSHEET_NAME_KEY
+        
         try:
             match filetype:
                 case '.xlsx':
@@ -250,34 +306,35 @@ class DataHandler:
                 case '.csv':
                     new_df = pd.read_csv(file, dtype="string")
                 case '.json':
+                    # get data from the json file
                     with open(file, 'r', encoding='utf-8') as json_file:
                         data = json.load(json_file)
-                    if isinstance(data, list):
-                        new_df = pd.DataFrame(data, dtype="string")
-                    else:
-                        new_df = pd.DataFrame([data], dtype="string")
+                    
+                    # look for each defined table name in the json file and create a corresponding DataFrame
+                    for key in new_data_df.keys():
+                        if key in data:
+                            new_df = self.create_dataframe(data[key])
+
+                            new_data_df[key], new_data_columns[key] = self.process_table(new_df, file)
+                            del data[key]
+                    
+                    # add the remaining data from the json file to the default base_key table
+                    if data:
+                        new_df = self.create_dataframe(data)
+                    
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
+                    
+            new_data_df[base_key], new_data_columns[base_key] = self.process_table(new_df, file)
+            
+            return new_data_df, new_data_columns
+            
         except Exception as e:
             self.log.error(f"Error reading metadata file {file}: {e}")
             return pd.DataFrame(), []
         
-        # Remove escaped characters from column names
-        new_df.columns = self.config.limit_character_scope(new_df.columns.tolist())
-        
-        new_df = self.create_index(df=new_df, file=file)
-        
-        new_df = self.sort_dataframe(df=new_df, file=file)
-
-        # get the columns from new_data_df
-        columns = new_df.columns.tolist()
-                        
-        new_df = self.create_data_file_control_column(df=new_df)
-
-        return new_df, columns
-
     # --------------------------------------------------------------
-    def valid_data(self, df: pd.DataFrame, file: str) -> bool:
+    def valid_data(self, tables: dict[str:pd.DataFrame], file: str) -> bool:
         """Check if the input dataframe is valid with the following tests:
             - If columns are a superset of the minimum required columns.
             - If columns contain the key columns.
@@ -291,23 +348,24 @@ class DataHandler:
             bool: True if the data is valid.
         """
         
-        # since self.excel_read will remove rows with null values in the key columns, the resulting DataFrame may be empty
-        if df.empty:
-            self.log.warning(f"File '{file}' is empty or has nor data in columns defined as keys.")
-            return False
-        
-        df_columns = set(df.columns.tolist())
-    
-        if not self.config.columns_in.issubset(df_columns):
-            # find which elements from self.config.columns_in are missing in df_columns
-            missing_columns = self.config.columns_in - df_columns
-            self.log.error(f"File '{file}' does not contain the required metadata columns: {missing_columns}")
-            return False
+        for table, df in tables.items():
+            # since self.excel_read will remove rows with null values in the key columns, the resulting DataFrame may be empty
+            if df.empty:
+                self.log.warning(f"File '{file}' is empty or has nor data in columns defined as keys.")
+                return False
             
-        if not set(self.config.columns_key).issubset(df_columns):
-            missing_columns = set(self.config.columns_key) - df_columns
-            self.log.error(f"File '{file}' does not contain the required key columns: {missing_columns}")
-            return False        
+            df_columns = set(df.columns.tolist())
+        
+            if not self.config.columns_in.issubset(df_columns):
+                # find which elements from self.config.columns_in are missing in df_columns
+                missing_columns = self.config.columns_in - df_columns
+                self.log.error(f"File '{file}' does not contain the required metadata columns: {missing_columns}")
+                return False
+                
+            if not set(self.config.columns_key).issubset(df_columns):
+                missing_columns = set(self.config.columns_key) - df_columns
+                self.log.error(f"File '{file}' does not contain the required key columns: {missing_columns}")
+                return False        
             
         return True
 

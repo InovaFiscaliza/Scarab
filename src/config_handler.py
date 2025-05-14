@@ -18,14 +18,6 @@ from typing import Any, Dict, List, Set
 import re
 
 # --------------------------------------------------------------
-# Global Constants
-
-DEFAULT_WORKSHEET_NAME_KEY:str = "_"
-"""Default key for the worksheet name in default_config.json file."""
-DEFAULT_WORKSHEET_NAME_VALUE:str = "<name>"
-"""Default value for the worksheet name in default_config.json file."""
-
-# --------------------------------------------------------------
 class Config:
     """Class to load and store the configuration values from a JSON file."""
 
@@ -41,6 +33,12 @@ class Config:
             FileNotFoundError: If the configuration file is not found.
             Exception: If the configuration file is missing parameters.
         """
+        
+        # define default values
+        self.DEFAULT_WORKSHEET_NAME_KEY:str = "_"
+        """Default key for the worksheet name in default_config.json file."""
+        self.DEFAULT_WORKSHEET_NAME_VALUE:str = "<name>"
+        """Default value for the worksheet name in default_config.json file."""
         
         self.config_file = filename
         """Configuration file name."""
@@ -122,8 +120,8 @@ class Config:
             """ Folder path where data files are to be stored"""
             self.data_extension: str = self.raw["files"]["data extension"]
             """ Data file extension, used to identify the raw data files"""
-            self.worksheet_names: List[dict] = self.__build_worksheet_dict(self.raw["files"]["worksheet names"])
-            """ List of worksheet names to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
+            self.table_names: Dict = self.__build_worksheet_dict(self.raw["files"]["table_names"])
+            """ List of tables to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
             
             self.columns_in: Set[str] = set(self.limit_character_scope(self.raw["metadata"]["in columns"]))
             """ Columns required in the input metadata file"""
@@ -384,22 +382,22 @@ class Config:
         return test_result, message
     
     # --------------------------------------------------------------
-    def __build_worksheet_dict(self, worksheet_names: List[dict]) -> List[dict]:
-        """Build a dictionary with the worksheet names to be used in the data files.
+    def __build_worksheet_dict(self, tables: List[dict]) -> dict:
+        """Build a dictionary with the tables to be used in the data files.
 
         Args:
-            worksheet_names (List[str]): List of worksheet names to be used in the data files.
+            tables (List[str]): List of tables to be used in the data files.
 
         Returns:
-            List[dict]: List of dictionaries with the worksheet names.
+            List[dict]: List of dictionaries with the tables.
         """
         global DEFAULT_WORKSHEET_NAME_KEY
         global DEFAULT_WORKSHEET_NAME_VALUE
         
-        if worksheet_names[DEFAULT_WORKSHEET_NAME_KEY] == DEFAULT_WORKSHEET_NAME_VALUE:
-            worksheet_names[DEFAULT_WORKSHEET_NAME_KEY] = self.name
+        if tables[DEFAULT_WORKSHEET_NAME_KEY] == DEFAULT_WORKSHEET_NAME_VALUE:
+            tables[DEFAULT_WORKSHEET_NAME_KEY] = self.name
         
-        return worksheet_names
+        return tables
 
     
     # --------------------------------------------------------------
