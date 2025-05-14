@@ -20,6 +20,7 @@ import glob
 import pandas as pd
 import hashlib
 import itertools
+import re
 
 from dataclasses import dataclass
 from typing import List
@@ -524,4 +525,8 @@ class FileHandler:
         Raises: None
         """
         
-        logging.debug(f"Extracting data from {filename}")
+        match = re.match(self.config.filename_format, filename)
+        if match:
+            return match.groupdict()
+        else:
+            return None
