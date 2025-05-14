@@ -31,9 +31,6 @@ class FileHandler:
     config: cm.Config
     log: logging.Logger
     
-    MAXIMUM_VARIANT:int = 100
-    """Constant tha defines the maximum number of name variants to be used as filenames."""
-    
     # --------------------------------------------------------------
     def move_file(self, source_file: str, target_file: str) -> str:
         """Move a file from the source path to the target path, resetting the file timestamp for the current time and creating entry in self.log.
@@ -196,7 +193,7 @@ class FileHandler:
                         except Exception as e:
                             self.log.warning(f"Duplicate name for {new_trashed_file}. Trying variant")
                             variant = variant + 1
-                            if variant > self.MAXIMUM_VARIANT:
+                            if variant > self.config.maximum_file_variations:
                                 self.log.error(f"Too many variants of {filename} in trash folder.")
                                 raise Exception(f"Too many variants of the same file in trash folder. Check folder properties. Error: {e}")
 

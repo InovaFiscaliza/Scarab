@@ -58,10 +58,13 @@ class Config:
             self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
             """ Timestamp of the last clean operation"""
             self.maximum_errors_before_exit: int = self.raw["maximum errors before exit"]
-            """ Maximum number of errors before exiting"""
+            """ Maximum number of errors before exiting with raised error"""
+            self.maximum_file_variations: int = self.raw["maximum file variations"]
+            """ Maximum number of file variations before exiting with raised error"""
             self.character_scope: str = self.raw["character scope"]
             """ characters that will be retained from the column names. Characters not in the scope will be removed"""
-
+            self.null_string_values: List[str] = self.__ensure_list(self.raw["null string values"])
+            """ List of strings that will be considered as null values in the metadata file"""
             self.store_data_overwrite: bool = self.raw["overwrite data in store"]
             """ Flag to indicate if data should be overwritten in store folder"""
             self.get_data_overwrite: bool = self.raw["overwrite data in get"]

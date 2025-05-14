@@ -20,9 +20,8 @@ import uuid
 import base58
 import json
 
-
-# Constants
-NA_VALUES = ['<NA>', 'NA', 'N/A', 'na', 'Na', 'n/a', 'None', 'null', '', 'pd.NA', 'pd.NaT', 'pd.NA', 'pd.NaT', 'nan', 'NaN', 'NAN', 'missing value', 'Missing Value', 'MISSING VALUE']
+# ---------------------------------------------------------------
+# Constants used only in this module and not affected by the config file
 SCARAB_POST_ORDER_COLUMN = "Scarab Post Order"
 INDEX_COLUMN_PREFIX = "index-"
 DATA_FILE_COLUMN_PREFIX = "file-"
@@ -84,7 +83,7 @@ class DataHandler:
         
         rows_before = df.shape[0]
         
-        df = df[~df[self.index_column].isin(NA_VALUES)]
+        df = df[~df[self.index_column].isin(self.config.null_string_values)]
         
         df = df.dropna(subset=[self.index_column])
         
@@ -226,7 +225,7 @@ class DataHandler:
                     
         df[self.config.columns_data_published] = (
             df[self.config.columns_data_published]
-            .replace(NA_VALUES, "False")
+            .replace(self.config.null_string_values, "False")
         )
         
         return df

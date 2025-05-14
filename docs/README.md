@@ -14,7 +14,6 @@ You may get examples in the test setups. Check the [tests folder](../tests/READM
 
 Optional parameters are set to default values if not included in the configuration file. These default parameters are defined in the [default_config.json](../src/default_config.json) file.
 
-
 Keys in the json file are described in the table below:
 
 | json key [root] | json key [branch] | Description | Use | Example |
@@ -24,7 +23,9 @@ Keys in the json file are described in the table below:
 | **clean period in hours** | | `Integer`. Time in hours between cleaning post and temp folders to remove to trash files with the correct extension but not processed, due to missing metadata | Optional | default: 1 |
 | **last clean** | | `String`. Date and time of the last clean operation. Is updated whenever the clean methods is executed using the format _"%Y-%m-%d_ _%H:%M:%S"_. Should not be manually edited, but can be left blank or even not included in the initial configuration file, condition in which the clean operation will be executed in the initial verifications and a new value will be set. | Optional | default: "2025-02-21 12:00:00" |
 | **maximum errors before exit** | | `Integer`. Maximum number of errors before the program exits. Attempts will be made at intervals defined by _"check_ _period_ _in_ _seconds"_ | Optional | default: 5 |
-| **character scope** | | `String`. Characters allowed in column names. If set to _"all"_, any character is allowed, including invisible signaling characters. Otherwise, Characters should be defined as in a regex string. | Optional | default to include latin chars and a bit more "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><"-_ ]+" |
+| **maximum file variations** | | `Integer`. Maximum number of filename variations before an error is raised and the program exits. Filename variations are used when trash overright is set to false and files with the same name are saved with added number at the end, which will vary from 1 to the maximum defined number of variations. | Optional | default: 100 |
+| **character scope** | | `String`. Characters allowed in column names. If set to _"all"_, any character is allowed, including invisible signaling characters. Otherwise, Characters should be defined as in a regex string. | Optional | default to include latin chars and a bit more "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%\|?!.,><"-_ ]+" |
+| **null_string_values** | | `List of Strings`. List of strings to be considered as null values. If not included, the default list will be used. | Optional | default: ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"] |
 | **overwrite data in store** | | `Boolean`. if _True_, new files with the same name will overwrite files in store folder, if _False_, previously existing files will be moved to trash. | Optional | default: false |
 | **overwrite data in get** | | `Boolean`. if _True_, new files with the same name will overwrite files in get folder, if _False_, previously existing files will be moved to trash. | Optional | default: true |
 | **overwrite data in trash** | | `Boolean`. if _True_, new files with the same name will overwrite files in trash folder, if _False_, previously existing files will be moved to trash. | Optional | default: false |
