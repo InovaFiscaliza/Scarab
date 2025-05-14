@@ -351,19 +351,24 @@ class DataHandler:
         for table, df in tables.items():
             # since self.excel_read will remove rows with null values in the key columns, the resulting DataFrame may be empty
             if df.empty and table in self.config.required_tables:
+                if table == self.config.DEFAULT_WORKSHEET_NAME_KEY:
+                    self.log.warning(f"File '{file}' is empty or has no data in columns defined as keys.")
                 self.log.warning(f"File '{file}' is empty or has nor data in columns defined as keys.")
                 return False
             
             df_columns = set(df.columns.tolist())
+            
+            required_columns = set(self.config.columns_in[table])
+            key_columns = set(self.config.columns_key[table])
         
-            if not self.config.columns_in.issubset(df_columns):
+            if not required_columns.issubset(df_columns):
                 # find which elements from self.config.columns_in are missing in df_columns
-                missing_columns = self.config.columns_in - df_columns
+                missing_columns = required_columns - df_columns
                 self.log.error(f"File '{file}' does not contain the required metadata columns: {missing_columns}")
                 return False
                 
-            if not set(self.config.columns_key).issubset(df_columns):
-                missing_columns = set(self.config.columns_key) - df_columns
+            if not key_columns.issubset(df_columns):
+                missing_columns = key_columns - df_columns
                 self.log.error(f"File '{file}' does not contain the required key columns: {missing_columns}")
                 return False        
             

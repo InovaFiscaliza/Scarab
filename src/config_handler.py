@@ -69,7 +69,7 @@ class Config:
             """ Maximum number of file variations before exiting with raised error"""
             self.character_scope: str = self.raw["character scope"]
             """ characters that will be retained from the column names. Characters not in the scope will be removed"""
-            self.null_string_values: List[str] = self.__ensure_list(self.raw["null string values"])
+            self.null_string_values: list[str] = self.__ensure_list(self.raw["null string values"])
             """ List of strings that will be considered as null values in the metadata file"""
             self.store_data_overwrite: bool = self.raw["overwrite data in store"]
             """ Flag to indicate if data should be overwritten in store folder"""
@@ -99,7 +99,7 @@ class Config:
             self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]
             """ Flag to overwrite log in trash"""
             
-            self.post: List[str] = self.__ensure_list(self.raw["folders"]["post"])
+            self.post: list[str] = self.__ensure_list(self.raw["folders"]["post"])
             """ Folder path where users post files"""
             self.temp: str = self.raw["folders"]["temp"]
             """ Temp folder used form metadata processing"""
@@ -107,33 +107,33 @@ class Config:
             """ Trash folder path used for files posted using wrong format"""
             self.store: str = self.raw["folders"]["store"]
             """ Store folder path used to store processed files"""
-            self.catalog_files: List[str] = self.__ensure_list(self.raw["files"]["catalog names"])
+            self.catalog_files: list[str] = self.__ensure_list(self.raw["files"]["catalog names"])
             """ Full path to the catalog file, where metadata is stored"""
             self.metadata_extension: str = self.raw["files"]["metadata extension"]
             """ Extension used to identify the metadata files"""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
-            self.input_to_ignore: List[str] = set(self.__ensure_list(self.raw["files"]["input to ignore"]))
+            self.input_to_ignore: list[str] = set(self.__ensure_list(self.raw["files"]["input to ignore"]))
             """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
 
-            self.get: List[str] = self.__ensure_list(self.raw["folders"]["get"])
+            self.get: list[str] = self.__ensure_list(self.raw["folders"]["get"])
             """ Folder path where data files are to be stored"""
             self.data_extension: str = self.raw["files"]["data extension"]
             """ Data file extension, used to identify the raw data files"""
             self.table_names: Dict = self.__build_worksheet_dict(self.raw["files"]["table_names"])
             """ List of tables to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
             
-            self.columns_in: Set[str] = set(self.limit_character_scope(self.raw["metadata"]["in columns"]))
+            self.columns_in: list[dict[str:list[str]]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
             """ Columns required in the input metadata file"""
-            self.columns_key: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
+            self.columns_key: list[dict[str:list[str]]] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.tables_associations: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["association"]))
+            self.tables_associations: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["association"]))
             """ Columns that define the tables associations in the metadata file with multiple tables"""
-            self.required_tables: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
+            self.required_tables: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
             """ Columns that define the tables required in the metadata file"""
-            self.rows_sort_by: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["sort by"]))
+            self.rows_sort_by: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["sort by"]))
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
-            self.columns_data_filenames: List[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
+            self.columns_data_filenames: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
             """ Columns that contain the names of data files associated with each row metadata"""
             self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
@@ -147,14 +147,14 @@ class Config:
             exit(1)
 
     # --------------------------------------------------------------
-    def __ensure_list(self, item: Any) -> List[str]:
+    def __ensure_list(self, item: Any) -> list[str]:
         """Create a list from a string or a list, adding a root path if it exists.
         
         Args:
             item (Any): Input string or list.
             
         Returns:
-            List[str]: List of strings.
+            list[str]: List of strings.
         
         Raises: None
         """
@@ -282,14 +282,14 @@ class Config:
         return output_format[:-len(self.raw['log']['separator'])]
     
     # --------------------------------------------------------------
-    def limit_character_scope(self, string_list: List[str]) -> List[str]:
+    def limit_character_scope(self, string_list: list[str]) -> list[str]:
         """Remove characters that are not in the character_scope from the string.
         
         Args:
-            string_list (List[str]): Input string set to be cleaned.
+            string_list (list[str]): Input string set to be cleaned.
             
         Returns:
-            List[str]: Output string set, in which only characters in the character_scope are kept.
+            list[str]: Output string set, in which only characters in the character_scope are kept.
         """
         if self.character_scope == "all":
             return string_list
@@ -384,14 +384,14 @@ class Config:
         return test_result, message
     
     # --------------------------------------------------------------
-    def __build_worksheet_dict(self, tables: List[dict]) -> dict:
+    def __build_worksheet_dict(self, tables: list[dict]) -> dict:
         """Build a dictionary with the tables to be used in the data files.
 
         Args:
-            tables (List[str]): List of tables to be used in the data files.
+            tables (list[str]): List of tables to be used in the data files.
 
         Returns:
-            List[dict]: List of dictionaries with the tables.
+            list[dict]: List of dictionaries with the tables.
         """
         global DEFAULT_WORKSHEET_NAME_KEY
         global DEFAULT_WORKSHEET_NAME_VALUE

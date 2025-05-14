@@ -49,7 +49,7 @@
         "in columns": [],
         "key": [],
         "association": [],
-        "required tables": [],
+        "required tables": ["_"],
         "sort by": [],
         "data filenames": [],
         "data published flag": "",
