@@ -46,14 +46,14 @@
         "input to ignore": []
     },
     "metadata": {
-        "in columns": [],
-        "key": [],
-        "association": [],
+        "key": {"_":[]},
+        "association": {},
+        "in columns": {"_":[]},
         "required tables": ["_"],
-        "sort by": [],
-        "data filenames": [],
-        "data published flag": "",
-        "add_filename": {"name":"","tables":[]},
+        "sort by": {"_":""},
+        "data filenames": {"_":[]},
+        "data published flag": {"_":[]},
+        "add_filename": {},
         "filename_format": ""
     }
 }
