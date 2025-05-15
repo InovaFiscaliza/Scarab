@@ -46,10 +46,10 @@
         "input to ignore": []
     },
     "metadata": {
+        "required tables": ["_"],
         "key": {"_":[]},
         "association": {},
         "in columns": {"_":[]},
-        "required tables": ["_"],
         "sort by": {"_":""},
         "data filenames": {"_":[]},
         "data published flag": {"_":[]},

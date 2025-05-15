@@ -123,21 +123,21 @@ class Config:
             self.table_names: Dict = self.__build_worksheet_dict(self.raw["files"]["table_names"])
             """ List of tables to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
             
-            self.columns_in: list[dict[str:list[str]]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
-            """ Columns required in the input metadata file"""
-            self.columns_key: list[dict[str:list[str]]] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["key"]))
-            """ Columns that define the uniqueness of each row in the metadata file"""
-            self.tables_associations: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["association"]))
-            """ Columns that define the tables associations in the metadata file with multiple tables"""
             self.required_tables: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
             """ Columns that define the tables required in the metadata file"""
-            self.rows_sort_by: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["sort by"]))
+            self.columns_key: dict[str:list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
+            """ Columns that define the uniqueness of each row in the metadata file"""
+            self.tables_associations: dict[str:dict["PK":list,"FK":list]] = self.limit_character_scope(self.raw["metadata"]["association"])
+            """ Columns that define the tables associations in the metadata file with multiple tables"""
+            self.columns_in: dict[str:list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
+            """ Columns required in the input metadata file"""
+            self.rows_sort_by: dict[str:str] = self.limit_character_scope(self.raw["metadata"]["sort by"])
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
-            self.columns_data_filenames: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["data filenames"]))
+            self.columns_data_filenames: dict[str:list[str]] = self.limit_character_scope(self.raw["metadata"]["data filenames"])
             """ Columns that contain the names of data files associated with each row metadata"""
-            self.columns_data_published: str = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
+            self.columns_data_published: dict[str:list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
-            self.add_filename: Dict = self.raw["metadata"]["add filename"]
+            self.add_filename: Dict[str:str] = self.raw["metadata"]["add filename"]
             """ List of tables into which a column with the filename will be added. The column name will be the same as the table name"""
             self.filename_format: str = self.raw["metadata"]["filename format"]
             """ Formatting string using re.match.groupdict() syntax. Parsed data will be added in the same table as the filename."""
@@ -282,23 +282,29 @@ class Config:
         return output_format[:-len(self.raw['log']['separator'])]
     
     # --------------------------------------------------------------
-    def limit_character_scope(self, string_list: list[str]) -> list[str]:
-        """Remove characters that are not in the character_scope from the string.
+    def limit_character_scope(self, data: Any) -> Any:
+        """
+        Remove characters that are not in the character_scope from the string(s).
         
         Args:
-            string_list (list[str]): Input string set to be cleaned.
+            data (list[str] | dict): Input list of strings or dictionary to be cleaned.
             
         Returns:
-            list[str]: Output string set, in which only characters in the character_scope are kept.
+            list[str] | dict: Output with only characters in the character_scope kept.
         """
         if self.character_scope == "all":
-            return string_list
-        else:
-            output_list = string_list.copy()
-            for index, string in enumerate(output_list):
-                output_list[index] = re.sub(self.character_scope, '', string)
-                
-            return output_list
+            return data
+
+        # Serialize input to JSON string
+        json_data = json.dumps(data)
+        # Remove unwanted characters using re.sub
+        cleaned_json = re.sub(self.character_scope, '', json_data)
+        # Deserialize back to original structure
+        try:
+            return json.loads(cleaned_json)
+        except Exception:
+            # If deserialization fails, return original data
+            return data
     
     # --------------------------------------------------------------
     def set_last_clean(self) -> None:

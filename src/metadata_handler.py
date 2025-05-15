@@ -70,11 +70,12 @@ class DataHandler:
         """List of columns in the reference DataFrame."""
 
     # --------------------------------------------------------------
-    def drop_na(self, df: pd.DataFrame, file: str) -> pd.DataFrame:
+    def drop_na(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Drop rows from the DataFrame where the ID column has a null value in any variant form, including NA, NaN, strings such as '<NA>', 'NA', 'N/A', 'None', 'null' and empty strings.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
+            table (str): Name of the table to be used in the log message.
             file (str): File name to be used in the log message.
 
         Returns:
@@ -89,7 +90,7 @@ class DataHandler:
         
         removed_rows = rows_before - df.shape[0]
         if removed_rows:
-            self.log.info(f"Removed {removed_rows} rows with null values in key column(s) in file '{file}'")
+            self.log.info(f"Removed {removed_rows} rows with null values in key column(s) in table {table}, file '{file}'")
         
         return df
     
@@ -115,30 +116,35 @@ class DataHandler:
                 return ', '.join(non_null_values)            
 
     # --------------------------------------------------------------
-    def create_index(self, df: pd.DataFrame, file: str) -> pd.DataFrame:
+    def create_index(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
         """Create an index for the DataFrame based on the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
+            table_name (str): Name of the table to be used as defined in the config file.
             file (str): File name to be used in the log message.
 
         Returns:
             pd.DataFrame: DataFrame with the index column created.
         """
         
+        columns = self.config.columns_key[table_name]
+        if not columns:
+            self.log.debug(f"No key columns defined for table {table_name} to use for processing file {file}")
+            return df
         try:
             # create a column to be used as index, merging the columns in index_column list
-            df[self.index_column] = df[self.config.columns_key].astype(str).agg('-'.join, axis=1)
+            df[self.index_column] = df[columns].astype(str).agg('-'.join, axis=1)
             
-            # drop rows in which the unique_name column has value null
-            df = self.drop_na(df=df, file=file)
+            # drop rows in which the column with name defined in the self.index_column has value null
+            df = self.drop_na(df=df, table=table_name, file=file)
         
             # Identify rows with duplicate unique_name values
             duplicate_ids = df[self.index_column].duplicated(keep=False)
             duplicate_rows = df[duplicate_ids]
             
             if not duplicate_rows.empty:
-                self.log.warning(f"Duplicated keys in {len(duplicate_rows)} rows in {file}. Rows will be merged")
+                self.log.warning(f"Duplicated keys in {len(duplicate_rows)} rows in {file}, table {table_name}. Rows will be merged")
                 # Apply the custom aggregation function to the duplicate rows
                 aggregated_rows = duplicate_rows.groupby(self.index_column).agg(self._custom_agg)
                 
@@ -153,20 +159,21 @@ class DataHandler:
                 
         except KeyError as e:
             if not df.empty:
-                self.log.error(f"Key error in dataframe from file {file}: {e}")
+                self.log.error(f"Key error in dataframe from file {file}, table {table_name}: {e}")
             return pd.DataFrame()
         except Exception as e:
-            self.log.error(f"Error creating index in dataframe from file {file}: {e}")
+            self.log.error(f"Error creating index in dataframe from file {file}, table {table_name}: {e}")
             return pd.DataFrame()
         
         return df
 
     # --------------------------------------------------------------
-    def sort_dataframe(self, df: pd.DataFrame, file: str) -> pd.DataFrame:
+    def sort_dataframe(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
         """Sort the DataFrame by the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
+            table_name (str): Name of the table to be used as defined in the config file.
             file (str): File name to be used in the log message.
 
         Returns:
@@ -178,25 +185,25 @@ class DataHandler:
         
         try:
             # sort the DataFrame by the columns defined in the config file
-            df = df.sort_values(by=self.config.rows_sort_by, ascending=True)
+            df = df.sort_values(by=self.config.rows_sort_by[table_name], ascending=True)
         except AttributeError as e:
             if df.empty:
                 self.log.info(f"No data in file {file}")
             else:
-                self.log.error(f"Attribute error in sorting metadata from file {file}: {e}")
+                self.log.error(f"Attribute error in sorting metadata from file {file}, table {table_name}: {e}")
             return pd.DataFrame()
         except KeyError as e:
             if not df.empty:
-                self.log.error(f"Key error in sorting metadata from file {file}: {e}")
+                self.log.error(f"Key error in sorting metadata from file {file}, table {table_name}: {e}")
             return pd.DataFrame()
         except Exception as e:
-            self.log.error(f"Error sorting metadata from file {file}: {e}")
+            self.log.error(f"Error sorting metadata from file {file}, table {table_name}: {e}")
             return pd.DataFrame()
         
         return df
     # --------------------------------------------------------------
-    def create_data_file_control_column(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Create a column with the filenames of the data files that were used to create the DataFrame. 
+    def create_data_file_control_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
+        """Create a column with the filenames of the data files to which the metadata refers to. 
         The column is created by concatenating the values of the columns defined in the config file.
 
         Args:
@@ -231,10 +238,11 @@ class DataHandler:
         return df
     
     # --------------------------------------------------------------
-    def process_table(self, df: pd.DataFrame, file: str) -> tuple[pd.DataFrame, list]:
+    def process_table(self, df: pd.DataFrame, table_name: str, file: str) -> tuple[pd.DataFrame, list]:
         """Process the DataFrame to create, clean column names and other adjustments.
         Args:
             df (pd.DataFrame): DataFrame to process.
+            table_name (str): Name of the table to be used as defined in the config file.
             file (str): File name to be used in the log message.
             
         Returns:
@@ -245,9 +253,9 @@ class DataHandler:
         # Remove escaped characters from column names
         df.columns = self.config.limit_character_scope(df.columns.tolist())
         
-        df = self.create_index(df=df, file=file)
+        df = self.create_index(df=df, table_name=table_name, file=file)
         
-        df = self.sort_dataframe(df=df, file=file)
+        df = self.sort_dataframe(df=df, table_name=table_name, file=file)
 
         # get the columns from new_data_df
         columns = df.columns.tolist()
@@ -291,8 +299,8 @@ class DataHandler:
             filetype (str): Type of the file to read. Supported types are '.xlsx', '.csv' and '.json'.
 
         Returns:
-            pd.DataFrame: DataFrame with the data from the Excel file.
-            list: List of columns in the DataFrame.
+            dict[str:pd.DataFrame]: Dictionary with the DataFrames containing various tables.
+            dict[str:list]: Dictionary with the lists of columns for each table.
         """
         
         new_data_df = self.config.table_names
@@ -312,10 +320,12 @@ class DataHandler:
                     
                     # look for each defined table name in the json file and create a corresponding DataFrame
                     for key in new_data_df.keys():
-                        if key in data:
+                        if data and key in data:
                             new_df = self.create_dataframe(data[key])
 
-                            new_data_df[key], new_data_columns[key] = self.process_table(new_df, file)
+                            new_data_df[key], new_data_columns[key] = self.process_table(   df=new_df,
+                                                                                            table_name=key,
+                                                                                            file=file)
                             del data[key]
                     
                     # add the remaining data from the json file to the default base_key table
@@ -325,7 +335,9 @@ class DataHandler:
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
                     
-            new_data_df[base_key], new_data_columns[base_key] = self.process_table(new_df, file)
+            new_data_df[base_key], new_data_columns[base_key] = self.process_table( df=new_df,
+                                                                                    table_name=base_key,
+                                                                                    file=file)
             
             return new_data_df, new_data_columns
             
@@ -349,7 +361,7 @@ class DataHandler:
         """
         
         for table, df in tables.items():
-            # since self.excel_read will remove rows with null values in the key columns, the resulting DataFrame may be empty
+            # processing of the original data may remove rows with null values in the key columns, the resulting DataFrame may be empty
             if df.empty and table in self.config.required_tables:
                 if table == self.config.DEFAULT_WORKSHEET_NAME_KEY:
                     self.log.warning(f"File '{file}' is empty or has no data in columns defined as keys.")
