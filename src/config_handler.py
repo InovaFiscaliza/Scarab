@@ -17,11 +17,19 @@ import pandas as pd
 from typing import Any, Dict, TypedDict
 import re
 
-# Define the structure of the inner dictionary
+# Define the structure of complex objects
+
+class PKInfo(TypedDict):
+    """Structure of the primary key in the table association."""
+    name: str
+    int_type: bool
+    relative_value: bool
+
 class TableAssociation(TypedDict):
-    PK: str  # Primary key column name
-    FK: dict[str,str]  # Foreign key column names and their associated table names
-    
+    """Structure of the table association."""
+    PK: PKInfo
+    FK: Dict[str, str]  # Foreign key mapping: table name -> column name
+
 # --------------------------------------------------------------
 class Config:
     """Class to load and store the configuration values from a JSON file."""

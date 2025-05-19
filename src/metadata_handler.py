@@ -68,7 +68,39 @@ class DataHandler:
         """Dictionary with various dataframes containing the reference metadata in various tables."""
         self.ref_cols : dict[str:list[str]] = col
         """Dictionary with list of columns in in each reference DataFrame."""
+        
+        self.next_pk_counter : dict[str, int] = self.initialize_next_pk_counter()
+        """ Dictionary with initial number to be used as primary keys in each table. The key is the table name and the value is the number of free primary keys. """
+        self.pk_mod_table : dict[str,dict[str:str]] = {}
+        """ Dictionary with the table name and key associated with the primary key in relative (in file) indexing and absolute (in reference data) indexing. """
+        
+    # --------------------------------------------------------------
+    def initialize_next_pk_counter(self) -> dict[str, int]:
+        """Initialize the free primary key counter for each table in the reference data.
 
+        Returns:
+            dict[str, int]: Dictionary with the initial number to be used as primary keys in each table.
+        """
+        
+        next_pk_counter = {}
+        for table in self.ref_df.keys():
+            # get the maximum value of the primary key column in the reference DataFrame
+            try:
+                pk_column = self.config.tables_associations[table]["PK"]["name"]
+            except KeyError:
+                self.log.debug(f"Table {table} does not have a primary key column defined in the config file.")
+            
+            try:
+                max_pk = self.ref_df[table][pk_column].max()
+            except Exception as e:
+                self.log.warning(f"Could not getting maximum primary key value for table {table}: {e}")
+                max_pk = 0
+            
+            next_pk_counter[table] = max_pk + 1
+            
+            
+        return next_pk_counter
+    
     # --------------------------------------------------------------
     def drop_na(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Drop rows from the DataFrame where the ID column has a null value in any variant form, including NA, NaN, strings such as '<NA>', 'NA', 'N/A', 'None', 'null' and empty strings.
@@ -550,6 +582,118 @@ class DataHandler:
             
         return new_dict
 
+    # --------------------------------------------------------------
+    def update_reference_data(self, new_data_df: dict[str:pd.DataFrame], file: str) -> None:
+        """Update reference data with new data from a processed metadata file.
+        
+        Args:
+            new_data_df (dict[str:pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            file (str): The metadata file being processed.
+            
+        Returns:
+            None
+        """
+        # Add column with combined data filenames string column
+        for table in new_data_df.keys():
+            if len(self.config.columns_data_filenames[table]) > 1:
+                self.ref_cols[table].append(self.config.columns_data_filenames[table])
+            
+            # Update the reference data with the new data where index matches
+            self.ref_df[table].update(new_data_df[table])
+            
+            # Add new_data_df rows where index does not match
+            self.ref_df[table] = self.ref_df[table].combine_first(new_data_df[table])
+            
+            self.log.info(f"Reference data updated for table {table} with data from file: {file}")
+
+    # --------------------------------------------------------------
+    def update_pk(self, new_data_df: dict[str:pd.DataFrame], file: str) -> dict[str:pd.DataFrame]:
+        """Update the primary key when relative association is used.
+        
+        Args:
+            new_data_df (dict[str:pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            file (str): The metadata file being processed.
+            
+        Returns:
+            None
+        """
+        
+        for table in new_data_df.keys():
+            
+            try:
+                association = self.config.tables_associations[table]
+                
+                # if PK is int, get the minimum value of the PK column as offset to be discounted
+                # and add the corresponding next_pk_counter value
+                if association["PK"]["int_type"]:
+                    min_value = new_data_df[table][association["PK"]["name"]].min()
+                    max_value = new_data_df[table][association["PK"]["name"]].max()
+                    
+                    offset = self.next_pk_counter[table] - min_value
+                        
+                    # if the PK is relative and an int, add the next_pk_counter value to the minimum value
+                    new_data_df[table][association["PK"]["name"]] = new_data_df[table][association["PK"]["name"]] + offset
+                        
+                    # update the next_pk_counter value for the table
+                    self.next_pk_counter[table] += max_value
+                    
+                    self.pk_mod_table[table]["offset"] = offset
+                
+                # else, if PK is relative but not an int, generate a new UI
+                else:
+                    # Get the primary key column name
+                    pk_column = association["PK"]["name"]
+                    
+                    # Extract original primary key values
+                    original_pks = new_data_df[table][pk_column].tolist()
+                    
+                    # Create a list of unique IDs with the same length as the DataFrame
+                    new_pks = [base58.b58encode(uuid.uuid4().bytes).decode('utf-8') for _ in range(len(new_data_df[table]))]
+                    
+                    # Initialize the table entry in pk_mod_table if it doesn't exist
+                    if table not in self.pk_mod_table:
+                        self.pk_mod_table[table] = {}
+                    
+                    # Store mapping of original to new primary keys
+                    for i, (original_pk, new_pk) in enumerate(zip(original_pks, new_pks)):
+                        self.pk_mod_table[table][original_pk] = new_pk
+                    
+                    # Replace the primary key column values with the new unique IDs
+                    new_data_df[table][pk_column] = new_pks
+                        
+            except KeyError:
+                self.log.debug(f"Missing configuration for table {table} association. Skipping.")
+                continue
+            
+        return new_data_df
+    # --------------------------------------------------------------
+    def update_table_associations(self, new_data_df: dict[str:pd.DataFrame], file: str) -> dict[str:pd.DataFrame]:
+        """Update the table associations in the reference DataFrame with the new data from a processed metadata file.
+        
+        Args:
+            new_data_df (dict[str:pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            file (str): The metadata file being processed.
+            
+        Returns:
+            dict[str:pd.DataFrame]: Updated DataFrame with the new data.
+        """
+        
+        for table in new_data_df.keys():
+            
+            try:
+                association = self.config.tables_associations[table]
+                
+                # If PK is an integer relative (not absolute to multiple files) to the file
+                if association["PK"]["relative_value"]:
+                    new_data_df = self.update_pk(new_data_df=new_data_df, file=file)
+                    #! TODO: Implement this function
+                    new_data_df = self.update_fk(new_data_df=new_data_df, file=file)
+            
+            except KeyError:
+                self.log.debug(f"Missing configuration for table {table} association. Skipping.")
+                continue
+        
+        return new_data_df
 
     # --------------------------------------------------------------
     def read_reference_df(self) -> tuple[dict[str:pd.DataFrame], dict[str:list]]:
@@ -614,18 +758,14 @@ class DataHandler:
             # Compute the new column order for the reference DataFrame
             self.ref_cols = self.merge_dicts(new_list=column_in, legacy_dict=self.ref_cols)
             
-            # add column with combined data filenames string column
-            for table in new_data_df.keys():
-                if len(self.config.columns_data_filenames[table]) > 1:
-                    self.ref_cols[table].append(self.config.columns_data_filenames[table])
+            # update relative associations.
+            new_data_df = self.update_table_associations(new_data_df=new_data_df, file=file)
             
-                # update the reference data with the new data where index matches
-                self.ref_df[table].update(new_data_df[table])
+            #! TODO: Implement this function
+            new_data_df = self.complement_data(new_data_df=new_data_df, file=file)
             
-                # add new_data_df rows where index does not match
-                self.ref_df[table] = self.ref_df[table].combine_first(new_data_df[table])
-            
-                self.log.info(f"Reference data updated for table {table} with data from file: {file}")
+            # Update reference data with new data from the file
+            self.update_reference_data(new_data_df=new_data_df, file=file)
 
         if self.persist_reference():
             self.file.move_to_store(files_to_move)
