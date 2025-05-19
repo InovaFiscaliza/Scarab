@@ -14,9 +14,14 @@ Raises:
 import json
 import os
 import pandas as pd
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, TypedDict
 import re
 
+# Define the structure of the inner dictionary
+class TableAssociation(TypedDict):
+    PK: str  # Primary key column name
+    FK: dict[str,str]  # Foreign key column names and their associated table names
+    
 # --------------------------------------------------------------
 class Config:
     """Class to load and store the configuration values from a JSON file."""
@@ -120,24 +125,24 @@ class Config:
             """ Folder path where data files are to be stored"""
             self.data_extension: str = self.raw["files"]["data extension"]
             """ Data file extension, used to identify the raw data files"""
-            self.table_names: Dict = self.__build_worksheet_dict(self.raw["files"]["table_names"])
+            self.table_names: Dict[str,str] = self.__build_worksheet_dict(self.raw["files"]["table_names"])
             """ Table names to be used. {"json_root_table_name": "worksheet_name", ...]"""
             
             self.required_tables: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
             """ Columns that define the tables required in the metadata file"""
-            self.columns_key: dict[str:list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
+            self.columns_key: dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.tables_associations: dict[str:dict["PK":list,"FK":list]] = self.limit_character_scope(self.raw["metadata"]["association"])
-            """ Columns that define the tables associations in the metadata file with multiple tables"""
-            self.columns_in: dict[str:list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
+            self.tables_associations: dict[str, TableAssociation] = self.limit_character_scope(self.raw["metadata"]["association"])
+            """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
+            self.columns_in: dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
             """ Columns required in the input metadata file"""
-            self.rows_sort_by: dict[str:str] = self.limit_character_scope(self.raw["metadata"]["sort by"])
+            self.rows_sort_by: dict[str,str] = self.limit_character_scope(self.raw["metadata"]["sort by"])
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
-            self.columns_data_filenames: dict[str:list[str]] = self.limit_character_scope(self.raw["metadata"]["data filenames"])
+            self.columns_data_filenames: dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["data filenames"])
             """ Columns that contain the names of data files associated with each row metadata"""
-            self.columns_data_published: dict[str:list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
+            self.columns_data_published: dict[str,list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
-            self.add_filename: Dict[str:str] = self.raw["metadata"]["add filename"]
+            self.add_filename: Dict[str,str] = self.raw["metadata"]["add filename"]
             """ List of tables into which a column with the filename will be added. The column name will be the same as the table name"""
             self.filename_format: str = self.raw["metadata"]["filename format"]
             """ Formatting string using re.match.groupdict() syntax. Parsed data will be added in the same table as the filename."""
