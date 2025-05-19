@@ -39,14 +39,14 @@
             "Z:/sp/POST/SCH",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/SCH"
         ],
-        "get": [],
+        "get": ["C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH"],
         "temp": "C:/ProgramData/Anatel/scarab/temp/SCH",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/SCH",
         "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/SCH"
     },
     "files": {
         "metadata extension": ".xlsx",
-        "data extension": "",
+        "data extension": ".parquet",
         "catalog names": [
             "Z:/sp/GET/SCH/Annotation.xlsx",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH/Annotation.xlsx"
