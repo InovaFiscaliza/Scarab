@@ -121,7 +121,7 @@ class Config:
             self.data_extension: str = self.raw["files"]["data extension"]
             """ Data file extension, used to identify the raw data files"""
             self.table_names: Dict = self.__build_worksheet_dict(self.raw["files"]["table_names"])
-            """ List of tables to be used in the data files. [{"json_root_table_name": "worksheet_name"}, ...]"""
+            """ Table names to be used. {"json_root_table_name": "worksheet_name", ...]"""
             
             self.required_tables: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
             """ Columns that define the tables required in the metadata file"""
@@ -390,7 +390,7 @@ class Config:
         return test_result, message
     
     # --------------------------------------------------------------
-    def __build_worksheet_dict(self, tables: list[dict]) -> dict:
+    def __build_worksheet_dict(self, tables: dict) -> dict:
         """Build a dictionary with the tables to be used in the data files.
 
         Args:
@@ -399,11 +399,9 @@ class Config:
         Returns:
             list[dict]: List of dictionaries with the tables.
         """
-        global DEFAULT_WORKSHEET_NAME_KEY
-        global DEFAULT_WORKSHEET_NAME_VALUE
         
-        if tables[DEFAULT_WORKSHEET_NAME_KEY] == DEFAULT_WORKSHEET_NAME_VALUE:
-            tables[DEFAULT_WORKSHEET_NAME_KEY] = self.name
+        if tables[self.DEFAULT_WORKSHEET_NAME_KEY] == self.DEFAULT_WORKSHEET_NAME_VALUE:
+            tables[self.DEFAULT_WORKSHEET_NAME_KEY] = self.name
         
         return tables
 

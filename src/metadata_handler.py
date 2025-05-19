@@ -64,10 +64,10 @@ class DataHandler:
         
         df, col = self.read_reference_df()
         
-        self.ref_df : pd.DataFrame = df
-        """Reference DataFrame with the data from the most recently updated catalog file."""
-        self.ref_cols : list = col
-        """List of columns in the reference DataFrame."""
+        self.ref_df : dict[str:pd.DataFrame] = df
+        """Dictionary with various dataframes containing the reference metadata in various tables."""
+        self.ref_cols : dict[str:list[str]] = col
+        """Dictionary with list of columns in in each reference DataFrame."""
 
     # --------------------------------------------------------------
     def drop_na(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
@@ -208,6 +208,7 @@ class DataHandler:
 
         Args:
             df (pd.DataFrame): DataFrame to process.
+            table_name (str): Name of the table to be used as defined in the config file.
 
         Returns:
             pd.DataFrame: DataFrame with the filenames column created.
@@ -215,23 +216,23 @@ class DataHandler:
         
         try:
             # create a column to be used as index, merging the columns in index_column list
-            df[self.data_file_column] = df[self.config.columns_data_filenames].astype(str).agg('-'.join, axis=1)
+            df[self.data_file_column] = df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)
         except ValueError as e:
-            self.log.warning(f"No data file column found in {self.config.columns_data_filenames}. Error: {e}")
+            self.log.warning(f"No data file column found in {self.config.columns_data_filenames[table_name]}. Error: {e}")
             return df
         except Exception as e:	
             self.log.error(f"Error creating data filenames column: {e}")
             return pd.DataFrame()
         
         # if column self.config.columns_data_published is not present in the reference_df, create it with false string values
-        if self.config.columns_data_published not in df.columns:
-            df[self.config.columns_data_published] = pd.Series(dtype='string')
+        if self.config.columns_data_published[table_name] not in df.columns:
+            df[self.config.columns_data_published[table_name]] = pd.Series(dtype='string')
             
         # Replace the Null values in the self.config.columns_data_published column with the string "False"
-        df[self.config.columns_data_published] = df[self.config.columns_data_published].fillna("False")
+        df[self.config.columns_data_published[table_name]] = df[self.config.columns_data_published[table_name]].fillna("False")
                     
-        df[self.config.columns_data_published] = (
-            df[self.config.columns_data_published]
+        df[self.config.columns_data_published[table_name]] = (
+            df[self.config.columns_data_published[table_name]]
             .replace(self.config.null_string_values, "False")
         )
         
@@ -303,16 +304,63 @@ class DataHandler:
             dict[str:list]: Dictionary with the lists of columns for each table.
         """
         
-        new_data_df = self.config.table_names
-        new_data_columns = self.config.table_names
+        new_data_df = self.config.table_names.copy()
+        new_data_columns = self.config.table_names.copy()
         base_key = self.config.DEFAULT_WORKSHEET_NAME_KEY
+        default_table_not_loaded =  True
         
         try:
             match filetype:
                 case '.xlsx':
-                    new_df = pd.read_excel(file, dtype="string")
+                    # Read all worksheets from Excel file
+                    excel_file = pd.ExcelFile(file)
+                    sheet_names = excel_file.sheet_names
+                    
+                    # If there are multiple worksheets
+                    if len(sheet_names) > 1:
+                        self.log.info(f"XLSX file {file} contains multiple worksheets: {sheet_names}")
+                        
+                        # create a copy of sheet_names to avoid modifying the original list with the for loop
+                        sheet_names_copy = sheet_names.copy()
+                        
+                        # Process each worksheet separately
+                        for sheet_name in sheet_names_copy:
+                            if sheet_name in new_data_df:
+                                # Read the worksheet into a DataFrame
+                                sheet_df = excel_file.parse(sheet_name, dtype="string")
+                                
+                                if sheet_name == self.config.name:
+                                    key = self.config.DEFAULT_WORKSHEET_NAME_KEY
+                                    default_table_not_loaded = False
+                                else:
+                                    key = sheet_name
+                                
+                                # Process the worksheet data
+                                new_data_df[key], new_data_columns[key] = self.process_table(
+                                    df=sheet_df,
+                                    table_name=sheet_name,
+                                    file=file
+                                )
+                            
+                                # remove the processed sheet name from the list of new_data_df
+                                sheet_names.remove(sheet_name)
+                            
+                        if len(sheet_names) == 1 and default_table_not_loaded:
+                            new_df = excel_file.parse(sheet_names[0], dtype="string")
+                            self.config.table_names[base_key] = sheet_names[0]
+                    
+                    else:
+                        try:
+                            self.config.table_names[base_key] = sheet_names[0]
+                            new_df = excel_file.parse(sheet_names[0], dtype="string")
+                            
+                        except IndexError as e:
+                            self.log.error(f"Error reading sheet names from file {file}: {e}")
+                            return pd.DataFrame(), []
+                        
                 case '.csv':
                     new_df = pd.read_csv(file, dtype="string")
+                    
                 case '.json':
                     # get data from the json file
                     with open(file, 'r', encoding='utf-8') as json_file:
@@ -335,9 +383,10 @@ class DataHandler:
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
                     
-            new_data_df[base_key], new_data_columns[base_key] = self.process_table( df=new_df,
-                                                                                    table_name=base_key,
-                                                                                    file=file)
+            if default_table_not_loaded:
+                new_data_df[base_key], new_data_columns[base_key] = self.process_table( df=new_df,
+                                                                                        table_name=base_key,
+                                                                                        file=file)
             
             return new_data_df, new_data_columns
             
@@ -386,41 +435,10 @@ class DataHandler:
             
         return True
 
-
-    # --------------------------------------------------------------
-    def read_reference_df(self) -> tuple[pd.DataFrame, list]:
-        """Read the most recently updated reference DataFrame from the list of catalog files.
-
-        Args: None
-
-        Returns:
-            pd.DataFrame: DataFrame with the data from the most recently updated catalog file.
-            list: List of columns in the DataFrame.
-        """
-        
-        # find the newest file in the list of catalog files
-        latest_time:float = 0.0
-        latest_file:str = None
-        
-        for file in self.config.catalog_files:
-            if os.path.isfile(file):
-                if os.path.getmtime(file) > latest_time:
-                    latest_time = os.path.getmtime(file)
-                    latest_file = file
-        
-        if latest_file:
-            self.log.info(f"Reference data loaded from file: {latest_file}")
-            ref_df, ref_cols = self.read_metadata(  file=latest_file,
-                                                    filetype=self.config.catalog_extension)
-        else:
-            self.log.warning("No reference data found")
-            ref_df, ref_cols = pd.DataFrame(), []
-
-        return ref_df, ref_cols
-
     # --------------------------------------------------------------
     def merge_lists(self, new_list: list, legacy_list: list) -> list:
-        """Merge two lists into a single list, preserving the order of the elements in new_list with minimum distance to the element order in the legacy_list.
+        """Merge two lists into a single list
+        Order of the elements in new_list keep minimum distance to the element order in the legacy_list.
         
         Args:
             new_list (list): List that will be the basis for the merged result.
@@ -506,6 +524,69 @@ class DataHandler:
         return merged_list
 
     # --------------------------------------------------------------
+    def merge_dicts(self, new_dict: dict[str:[list[str]]], legacy_dict: dict[str:[list[str]]]) -> dict[str:[list[str]]]:
+        """Merge dictionaries with column lists from multiple tables.
+        Column lists with the same key are combined into single list,
+        The order of the elements in new_dict keeps minimum distance to the element order in the legacy_dict.
+        
+        Args:
+            new_dict: Incoming dict with table lists.
+            legacy_dict: Existing dict with table lists.
+            
+        Returns:
+            Merged dictionary.
+        """
+        
+        legacy_dict_copy = legacy_dict.copy()
+        # merge keys that are both in the legacy and the new column list
+        for key in new_dict.keys():
+            if key in legacy_dict:
+                new_dict[key] = self.merge_lists(new_list=new_dict[key], legacy_list=legacy_dict[key])
+                legacy_dict_copy.pop(key, None)
+                
+        # add any remaining table column list, not present in the new dict, to the result dict.
+        if legacy_dict_copy:
+            new_dict.update(legacy_dict_copy)
+            
+        return new_dict
+
+
+    # --------------------------------------------------------------
+    def read_reference_df(self) -> tuple[dict[str:pd.DataFrame], dict[str:list]]:
+        """Read the most recently updated reference DataFrame from the list of catalog files.
+
+        Args: None
+
+        Returns:
+            dict[str:pd.DataFrame]: Dictionary with the DataFrames containing various tables.
+            dict[str:list]: Dictionary with the lists of columns for each table.
+        """
+        
+        # find the newest file in the list of catalog files
+        latest_time:float = 0.0
+        latest_file:str = None
+        
+        for file in self.config.catalog_files:
+            if os.path.isfile(file):
+                if os.path.getmtime(file) > latest_time:
+                    latest_time = os.path.getmtime(file)
+                    latest_file = file
+        
+        if latest_file:
+            self.log.info(f"Reference data loaded from file: {latest_file}")
+            ref_df, ref_cols = self.read_metadata(  file=latest_file,
+                                                    filetype=self.config.catalog_extension)
+        else:
+            self.log.warning("No reference data found. Starting with a blank reference.")
+            ref_df = self.config.table_names.copy()
+            ref_cols = self.config.table_names.copy()
+            for key in self.config.table_names.items():
+                ref_df[key] = pd.DataFrame()
+                ref_cols[key] = []
+
+        return ref_df, ref_cols
+
+    # --------------------------------------------------------------
     def process_metadata_files(self,  metadata_files: set[str]) -> None:
         """Process a set of xlsx files and update the reference data file.
 
@@ -531,19 +612,20 @@ class DataHandler:
                 continue
             
             # Compute the new column order for the reference DataFrame
-            self.ref_cols = self.merge_lists(new_list=column_in, legacy_list=self.ref_cols)
+            self.ref_cols = self.merge_dicts(new_list=column_in, legacy_dict=self.ref_cols)
             
             # add column with combined data filenames string column
-            if len(self.config.columns_data_filenames) > 1:
-                self.ref_cols.append(self.config.columns_data_filenames)
+            for table in new_data_df.keys():
+                if len(self.config.columns_data_filenames[table]) > 1:
+                    self.ref_cols[table].append(self.config.columns_data_filenames[table])
             
-            # update the reference data with the new data where index matches
-            self.ref_df.update(new_data_df)
+                # update the reference data with the new data where index matches
+                self.ref_df[table].update(new_data_df[table])
             
-            # add new_data_df rows where index does not match
-            self.ref_df = self.ref_df.combine_first(new_data_df)
+                # add new_data_df rows where index does not match
+                self.ref_df[table] = self.ref_df[table].combine_first(new_data_df[table])
             
-            self.log.info(f"Reference data updated with file: {file}")
+                self.log.info(f"Reference data updated for table {table} with data from file: {file}")
 
         if self.persist_reference():
             self.file.move_to_store(files_to_move)
@@ -569,14 +651,17 @@ class DataHandler:
 
         for file in files_to_process:
             
-            # Find the row in the reference DataFrame in which the data_file_column contains filename
-            match = self.ref_df[self.ref_df[self.data_file_column].str.contains(os.path.basename(file))]
-            
-            # Set column [self.config.columns_data_published] to "Gotcha!" for any matching rows
-            if not match.empty:
-                self.ref_df.loc[match.index, self.config.columns_data_published] = "True"
-                files_found_in_ref.add(file)
-                        
+            for table in self.ref_df.keys():
+                
+                data_file_column = self.config.columns_data_filenames[table]
+                if data_file_column:
+                    # Find the row in the reference DataFrame in which the data_file_column contains filename
+                    match = self.ref_df[table][self.ref_df[table][data_file_column].str.contains(os.path.basename(file))]
+                    
+                    # Set column [self.config.columns_data_published] to "Gotcha!" for any matching rows
+                    if not match.empty:
+                        self.ref_df[table].loc[match.index, data_file_column] = True
+                        files_found_in_ref.add(file)
         
         files_not_counted = files_to_process - files_found_in_ref
         if files_not_counted:
@@ -598,22 +683,29 @@ class DataHandler:
             bool: True if the reference data is saved successfully
         """
 
-        # sort the reference DataFrame by the columns defined in the config file
-        self.ref_df = self.ref_df.sort_values(by=self.config.rows_sort_by, ascending=True)
+        for table in self.ref_df.keys():
+            # sort the reference DataFrame by the columns defined in the config file
+            self.ref_df[table] = self.ref_df[table].sort_values(by=self.config.rows_sort_by[table], ascending=True)
         
-        # get selected columns in the defined order
-        df = self.ref_df[self.ref_cols]
+            # get selected columns in the defined order
+            self.ref_df[table] = self.ref_df[table][self.ref_cols[table]]
         
         # loop through the target catalog files and save the reference data, 
         # ensuring that at least one file is saved successfully before returning True
         save_at_least_one = False
         for catalog_file in self.config.catalog_files:
             try:
-                df.to_excel(catalog_file, index=False)
+                for table in self.ref_df.keys():
+                    # if the table is empty, remove it from the reference DataFrame
+                    self.ref_df[table].to_excel(catalog_file, sheet_name=table, index=False)
+
                 self.log.info(f"Reference data file updated: {catalog_file}")
                 save_at_least_one = True
             except Exception as e:
                 self.log.error(f"Error saving reference data: {e}")
+        
+        if not save_at_least_one:
+            self.log.error("No reference data file was saved. No changes were made.")
         
         return save_at_least_one
         
