@@ -15,6 +15,7 @@ import file_handler as fm
 
 import logging
 import os
+import re
 import pandas as pd
 import uuid
 import base58
@@ -25,6 +26,7 @@ import json
 SCARAB_POST_ORDER_COLUMN = "Scarab Post Order"
 INDEX_COLUMN_PREFIX = "index-"
 DATA_FILE_COLUMN_PREFIX = "file-"
+OFFSET_LABEL = "offset"
 
 # --------------------------------------------------------------
 class DataHandler:
@@ -64,15 +66,17 @@ class DataHandler:
         
         df, col = self.read_reference_df()
         
-        self.ref_df : dict[str:pd.DataFrame] = df
+        self.ref_df : dict[str,pd.DataFrame] = df
         """Dictionary with various dataframes containing the reference metadata in various tables."""
-        self.ref_cols : dict[str:list[str]] = col
+        self.ref_cols : dict[str,list[str]] = col
         """Dictionary with list of columns in in each reference DataFrame."""
         
         self.next_pk_counter : dict[str, int] = self.initialize_next_pk_counter()
         """ Dictionary with initial number to be used as primary keys in each table. The key is the table name and the value is the number of free primary keys. """
-        self.pk_mod_table : dict[str,dict[str:str]] = {}
+        self.pk_mod_table : dict[str,dict[str,str]] = {}
         """ Dictionary with the table name and key associated with the primary key in relative (in file) indexing and absolute (in reference data) indexing. """
+        self.pk_int_offset : dict[str, int] = {}
+        """ Dictionary with the table name and offset value to be used to convert the relative primary key to absolute primary key. """
         
     # --------------------------------------------------------------
     def initialize_next_pk_counter(self) -> dict[str, int]:
@@ -323,7 +327,7 @@ class DataHandler:
             raise ValueError(f"Unsupported data type: {type(data)}")
 
     # --------------------------------------------------------------
-    def read_metadata(self, file: str, filetype: str) -> tuple[dict[str:pd.DataFrame], dict[str:list]]:
+    def read_metadata(self, file: str, filetype: str) -> tuple[dict[str,pd.DataFrame], dict[str,list]]:
         """Read an metadata file and return a list of tuples with the DataFrame and the columns in the DataFrame.
         The file can be an Excel file, a CSV file or a JSON file.
 
@@ -332,8 +336,8 @@ class DataHandler:
             filetype (str): Type of the file to read. Supported types are '.xlsx', '.csv' and '.json'.
 
         Returns:
-            dict[str:pd.DataFrame]: Dictionary with the DataFrames containing various tables.
-            dict[str:list]: Dictionary with the lists of columns for each table.
+            dict[str,pd.DataFrame]: Dictionary with the DataFrames containing various tables.
+            dict[str,list]: Dictionary with the lists of columns for each table.
         """
         
         new_data_df = self.config.table_names.copy()
@@ -427,7 +431,7 @@ class DataHandler:
             return pd.DataFrame(), []
         
     # --------------------------------------------------------------
-    def valid_data(self, tables: dict[str:pd.DataFrame], file: str) -> bool:
+    def valid_data(self, tables: dict[str,pd.DataFrame], file: str) -> bool:
         """Check if the input dataframe is valid with the following tests:
             - If columns are a superset of the minimum required columns.
             - If columns contain the key columns.
@@ -556,7 +560,7 @@ class DataHandler:
         return merged_list
 
     # --------------------------------------------------------------
-    def merge_dicts(self, new_dict: dict[str:[list[str]]], legacy_dict: dict[str:[list[str]]]) -> dict[str:[list[str]]]:
+    def merge_dicts(self, new_dict: dict[str,list[str]], legacy_dict: dict[str,list[str]]) -> dict[str,list[str]]:
         """Merge dictionaries with column lists from multiple tables.
         Column lists with the same key are combined into single list,
         The order of the elements in new_dict keeps minimum distance to the element order in the legacy_dict.
@@ -583,11 +587,11 @@ class DataHandler:
         return new_dict
 
     # --------------------------------------------------------------
-    def update_reference_data(self, new_data_df: dict[str:pd.DataFrame], file: str) -> None:
+    def update_reference_data(self, new_data_df: dict[str,pd.DataFrame], file: str) -> None:
         """Update reference data with new data from a processed metadata file.
         
         Args:
-            new_data_df (dict[str:pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
             file (str): The metadata file being processed.
             
         Returns:
@@ -607,103 +611,207 @@ class DataHandler:
             self.log.info(f"Reference data updated for table {table} with data from file: {file}")
 
     # --------------------------------------------------------------
-    def update_pk(self, new_data_df: dict[str:pd.DataFrame], file: str) -> dict[str:pd.DataFrame]:
+    def update_pk(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
         """Update the primary key when relative association is used.
         
         Args:
-            new_data_df (dict[str:pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            file (str): The metadata file being processed.
+            
+        Returns:
+            None
+        """
+        for primary_table, association in self.config.tables_associations.items():
+
+            try:
+                # if PK is int, get the minimum value of the PK column as offset to be discounted
+                # and add the corresponding next_pk_counter value
+                association_pk = association["PK"]
+                
+                if not association_pk["relative_value"]:
+                    continue
+                
+                if association_pk["int_type"]:
+                    min_value = new_data_df[primary_table][association_pk["name"]].min()
+                    max_value = new_data_df[primary_table][association_pk["name"]].max()
+                    
+                    offset = self.next_pk_counter[primary_table] - min_value
+                        
+                    # if the PK is relative and an int, add the next_pk_counter value to the minimum value
+                    new_data_df[primary_table][association_pk["name"]] = new_data_df[primary_table][association_pk["name"]] + offset
+                        
+                    # update the next_pk_counter value for the primary_table
+                    self.next_pk_counter[primary_table] += max_value
+                    
+                    self.pk_int_offset[primary_table] = offset
+                
+                # else, if PK is relative but not an int, generate a new UI
+                else:
+                    # Get the primary key column name
+                    pk_column = association_pk["name"]
+                    
+                    # Extract original primary key values
+                    original_pks = new_data_df[primary_table][pk_column].tolist()
+                    
+                    # Create a list of IDs sequentially counting from self.next_pk_counter[primary_table] until self.next_pk_counter[primary_table] + len(original_pks)
+                    new_pks = list(range(self.next_pk_counter[primary_table], self.next_pk_counter[primary_table] + len(original_pks)))
+                    
+                    # Initialize the primary_table entry in pk_mod_primary_table if it doesn't exist
+                    if primary_table not in self.pk_mod_table:
+                        self.pk_mod_table[primary_table] = {}
+                    
+                    # Store mapping of original to new primary keys
+                    self.pk_mod_table[primary_table].update({original_pk: new_pk for original_pk, new_pk in zip(original_pks, new_pks)})
+                    
+                    # Replace the primary key column values with the new keys
+                    new_data_df[primary_table][pk_column] = new_data_df[primary_table][pk_column].map(self.pk_mod_table[primary_table])
+                    
+                    # update self.next_pk_counter[primary_table]
+                    self.next_pk_counter[primary_table] += len(original_pks)
+                        
+            except KeyError as e:
+                self.log.debug(f"Key error in table {primary_table}, file {file}. {e}.")
+                continue
+            
+        return new_data_df
+    
+    # --------------------------------------------------------------
+    def update_fk(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+        """Update the foreign key when relative association is used.
+        
+        Args:
+            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
             file (str): The metadata file being processed.
             
         Returns:
             None
         """
         
-        for table in new_data_df.keys():
-            
+        for foreign_table, association in self.config.tables_associations.items():
+
             try:
-                association = self.config.tables_associations[table]
-                
                 # if PK is int, get the minimum value of the PK column as offset to be discounted
                 # and add the corresponding next_pk_counter value
-                if association["PK"]["int_type"]:
-                    min_value = new_data_df[table][association["PK"]["name"]].min()
-                    max_value = new_data_df[table][association["PK"]["name"]].max()
-                    
-                    offset = self.next_pk_counter[table] - min_value
-                        
-                    # if the PK is relative and an int, add the next_pk_counter value to the minimum value
-                    new_data_df[table][association["PK"]["name"]] = new_data_df[table][association["PK"]["name"]] + offset
-                        
-                    # update the next_pk_counter value for the table
-                    self.next_pk_counter[table] += max_value
-                    
-                    self.pk_mod_table[table]["offset"] = offset
+                association_fk = association["FK"]
                 
-                # else, if PK is relative but not an int, generate a new UI
-                else:
-                    # Get the primary key column name
-                    pk_column = association["PK"]["name"]
+                for primary_table, fk_column in association_fk.items():
                     
-                    # Extract original primary key values
-                    original_pks = new_data_df[table][pk_column].tolist()
-                    
-                    # Create a list of unique IDs with the same length as the DataFrame
-                    new_pks = [base58.b58encode(uuid.uuid4().bytes).decode('utf-8') for _ in range(len(new_data_df[table]))]
-                    
-                    # Initialize the table entry in pk_mod_table if it doesn't exist
-                    if table not in self.pk_mod_table:
-                        self.pk_mod_table[table] = {}
-                    
-                    # Store mapping of original to new primary keys
-                    for i, (original_pk, new_pk) in enumerate(zip(original_pks, new_pks)):
-                        self.pk_mod_table[table][original_pk] = new_pk
-                    
-                    # Replace the primary key column values with the new unique IDs
-                    new_data_df[table][pk_column] = new_pks
+                    # if primary_table exist in pk_int_offset dictionary, it means that the PK is an int
+                    if primary_table in self.pk_int_offset.keys():
+                        offset = self.pk_int_offset[primary_table]
                         
-            except KeyError:
-                self.log.debug(f"Missing configuration for table {table} association. Skipping.")
+                        # add offset to the foreign key column in the source table
+                        new_data_df[foreign_table][fk_column] = new_data_df[foreign_table][fk_column] + offset
+                    # Else, if PK is not an int, use the translation table
+                    else:
+                        # get the mapping of original to new primary keys
+                        pk_mapping = self.pk_mod_table[primary_table]
+                        
+                        # replace the foreign key column values with the new unique IDs
+                        new_data_df[foreign_table][fk_column] = new_data_df[foreign_table][fk_column].map(pk_mapping)
+                                    
+            except KeyError as e:
+                self.log.debug(f"Key error in table {foreign_table}, file {file}. {e}.")
                 continue
             
         return new_data_df
     # --------------------------------------------------------------
-    def update_table_associations(self, new_data_df: dict[str:pd.DataFrame], file: str) -> dict[str:pd.DataFrame]:
+    def update_table_associations(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
         """Update the table associations in the reference DataFrame with the new data from a processed metadata file.
         
         Args:
-            new_data_df (dict[str:pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
             file (str): The metadata file being processed.
             
         Returns:
-            dict[str:pd.DataFrame]: Updated DataFrame with the new data.
+            dict[str,pd.DataFrame]: Updated DataFrame with the new data.
         """
         
-        for table in new_data_df.keys():
-            
-            try:
-                association = self.config.tables_associations[table]
+        new_data_df = self.update_pk(new_data_df=new_data_df, file=file)
                 
-                # If PK is an integer relative (not absolute to multiple files) to the file
-                if association["PK"]["relative_value"]:
-                    new_data_df = self.update_pk(new_data_df=new_data_df, file=file)
-                    #! TODO: Implement this function
-                    new_data_df = self.update_fk(new_data_df=new_data_df, file=file)
-            
-            except KeyError:
-                self.log.debug(f"Missing configuration for table {table} association. Skipping.")
-                continue
+        new_data_df = self.update_fk(new_data_df=new_data_df, file=file)
         
         return new_data_df
 
     # --------------------------------------------------------------
-    def read_reference_df(self) -> tuple[dict[str:pd.DataFrame], dict[str:list]]:
+    def add_filename_column(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+        """Complement the data in the reference DataFrame with metadata extracted from the filename and the file itself.
+        
+        Args:
+            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            file (str): The metadata file being processed.
+            
+        Returns:
+            dict[str,pd.DataFrame]: Updated DataFrame with the new data.
+        """
+        
+        for table, new_column_name in self.config.add_filename.items():
+            try:
+                new_data_df[table][new_column_name] = os.path.basename(file)
+            except KeyError:
+                self.log.debug(f"Missing complement data info for table `{table}`. Skipping.")
+                continue
+        
+        return new_data_df
+    
+    # --------------------------------------------------------------
+    def add_filename_data(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+        """Complement the data with metadata extracted from the filename using regex groups.
+        
+        Args:
+            new_data_df (dict[str,pd.DataFrame]): Dictionary with DataFrames for various tables
+            file (str): The metadata file being processed
+            
+        Returns:
+            dict[str,pd.DataFrame]: Updated DataFrame with the filename data
+        """
+        
+        basename = os.path.basename(file)
+        
+        for table in self.config.filename_format.keys():
+            try:
+                # Get regex pattern for this table
+                re_formatting = self.config.filename_format[table]
+                
+                # Extract data from filename using regex pattern
+                match_result = re.match(re_formatting, basename)
+                if not match_result:
+                    self.log.debug(f"Filename '{basename}' doesn't match pattern for table '{table}'")
+                    continue
+                    
+                filename_data = match_result.groupdict()
+                
+                if not filename_data:
+                    self.log.debug(f"No named groups matched in filename '{basename}' for table '{table}'")
+                    continue
+                
+                # Assign each extracted group as a new column for all rows in the DataFrame
+                for key, value in filename_data.items():
+                    new_data_df[table][key] = value
+                    
+                self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
+                    
+            except KeyError:
+                self.log.debug(f"Missing filename format for table '{table}'. Skipping.")
+                continue
+            except AttributeError as e:
+                self.log.error(f"Error in regex pattern for table '{table}': {e}")
+                continue
+            except Exception as e:
+                self.log.error(f"Error processing filename data for table '{table}': {e}")
+                continue
+                
+        return new_data_df
+    
+    # --------------------------------------------------------------
+    def read_reference_df(self) -> tuple[dict[str,pd.DataFrame], dict[str,list]]:
         """Read the most recently updated reference DataFrame from the list of catalog files.
 
         Args: None
 
         Returns:
-            dict[str:pd.DataFrame]: Dictionary with the DataFrames containing various tables.
-            dict[str:list]: Dictionary with the lists of columns for each table.
+            dict[str,pd.DataFrame]: Dictionary with the DataFrames containing various tables.
+            dict[str,list]: Dictionary with the lists of columns for each table.
         """
         
         # find the newest file in the list of catalog files
@@ -758,11 +866,10 @@ class DataHandler:
             # Compute the new column order for the reference DataFrame
             self.ref_cols = self.merge_dicts(new_list=column_in, legacy_dict=self.ref_cols)
             
-            # update relative associations.
+            # Process the new data DataFrame
             new_data_df = self.update_table_associations(new_data_df=new_data_df, file=file)
-            
-            #! TODO: Implement this function
-            new_data_df = self.complement_data(new_data_df=new_data_df, file=file)
+            new_data_df = self.add_filename_column(new_data_df=new_data_df, file=file)
+            new_data_df = self.add_filename_data(new_data_df=new_data_df, file=file)
             
             # Update reference data with new data from the file
             self.update_reference_data(new_data_df=new_data_df, file=file)

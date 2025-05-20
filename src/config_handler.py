@@ -151,7 +151,7 @@ class Config:
             self.columns_data_published: dict[str,list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
             self.add_filename: Dict[str,str] = self.raw["metadata"]["add filename"]
-            """ List of tables into which a column with the filename will be added. The column name will be the same as the table name"""
+            """ Column names to be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
             self.filename_format: str = self.raw["metadata"]["filename format"]
             """ Formatting string using re.match.groupdict() syntax. Parsed data will be added in the same table as the filename."""
 

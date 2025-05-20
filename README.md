@@ -17,7 +17,7 @@
 <div>
 <img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> This app is intended to run as a service and perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation and logging.
 
-Metadata files are expected to be tables in XLSX format, with the first row as the header.
+Metadata files are expected to be tables in XLSX or CSV format, with the first row as the column headers, or JSON dictionaries. XLSX and JSON files may contain multiple tables defined in sheets or dictionaries entries in the first level, respectively. Association between the tables is defined by "Primary Key" and "Foreign Key" columns, and may be defined with absolute (UI) or relative values (specific to the file). Metadata may also be extracted from the filenames using regex patterns and the filename itself may be stored in the metadata file.
 
 Application is written in Python and uses the UV package for environment management and intended to run as a service.
 </div>
@@ -126,17 +126,13 @@ This section presents a simplified view of the roadmap and knwon issues.
 
 For more details, see the [open issues](https://github.com/FSLobao/RF.Fusion/issues)
 
-* [x] Initial deployment
-  * [x] Create the project structure
-  * [x] Create the configuration file
-  * [x] Create the main script
-  * [x] Create the configuration handler
-  * [x] Create the file handler
-  * [x] Create the log handler
-  * [x] Create the metadata handler
-  * [x] Expand functionality to handle multiple input and output folders
-  * [x] Create tests and validate release candidate
-  * [x] Release version 1.0.0
+* [x] Version 1.0.0: Completed in 21/02/2025
+  * [x] version 1.0.1: Completed in 31/03/2025, bug fix
+  * [x] version 1.1.0: Completed in 14/04/2025, bug fix and scarab companion
+* [ ] Version 2.0.0
+  * [x] Define new configuration format for multi table input 
+  * [x] Code new features
+  * [ ] Test, debug and release
   
 <div>
     <a href="#about-scarab">

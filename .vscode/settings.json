@@ -3,8 +3,12 @@
         "asctime",
         "colour",
         "colours",
+        "Fiscaliza",
         "groupdict",
+        "Homologa",
+        "Inova",
         "isin",
-        "levelname"
+        "levelname",
+        "SIGBREAK"
     ]
 }
