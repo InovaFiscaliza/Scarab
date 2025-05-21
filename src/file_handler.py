@@ -33,20 +33,6 @@ class FileHandler:
     log: logging.Logger
     
     # --------------------------------------------------------------
-    def move_file(self, source_file: str, target_file: str) -> str:
-        """Move a file from the source path to the target path, resetting the file timestamp for the current time and creating entry in self.log.
-
-        Args:
-            source_file (str): File to move.
-            target_file (str): Destination path of the file.
-            
-        Returns:
-            str: New path of the file, or the original path if the file cannot be moved.
-        """
-        
-
-        
-    # --------------------------------------------------------------
     def move_to_temp(self, source_file: str) -> str:
         """Move a file to the temp folder, return the new path, resetting the file timestamp for the current time and self.log.the event.
 
@@ -291,30 +277,30 @@ class FileHandler:
                         self.log.warning(f"Error removing folder {folder}: {e}")
 
     # --------------------------------------------------------------
-    def sort_and_clean(  self, 
-                                folder_content: set[str],
-                                catalog_to_process: set[str] = None,
-                                data_files_to_process: set[str] = None) -> tuple[set[str], set[str]]:
-        """ Move files listed according to extension to the temp folder and return the list of files to process
+    def sort_and_clean(self, 
+                    folder_content: set[str],
+                    metadata_to_process: set[str] = None,
+                    data_files_to_process: dict[str, set[str]] = None) -> tuple[set[str], dict[str, set[str]]]:
+        """ Move files listed according to regex patterns to the temp folder and return the list of files to process
             If files are already in the temp folder, they are not moved.
-            Remove files with unrecognized extensions if discard_invalid_data_files is set to True
+            Remove files with unrecognized patterns if discard_invalid_data_files is set to True
             Remove any empty subfolder after moving files.
             
         Args:
-            files (set[str]): Set of files to sort.
-            catalog_to_process (Set[str]): Existing set of metadata files to process. Default is None, which will create a new set.
-            data_files_to_process (Set[str]): Existing list of data files to process. Default is None, which will create a new set.
+            folder_content (set[str]): Set of files to sort.
+            catalog_to_process (set[str]): Existing set of metadata files to process. Default is None, which will create a new set.
+            data_files_to_process (dict[str, set[str]]): Existing dictionary of data files by category. Default is None, which will create a new dict.
 
         Returns:
-            tuple[set[str], set[str]]: Set of metadata files to process, Set of data files to process
+            tuple[set[str], dict[str, set[str]]]: Set of metadata files to process, Dictionary of data files by category
             
         Raises: None
         """
         
-        if catalog_to_process is None:
-            catalog_to_process = set()
+        if metadata_to_process is None:
+            metadata_to_process = set()
         if data_files_to_process is None:
-            data_files_to_process = set()
+            data_files_to_process = {category: set() for category in self.config.data_file_regex.keys()}
             
         subfolder = set()
             
@@ -322,30 +308,37 @@ class FileHandler:
             
             # Check if the item is a file
             if os.path.isfile(item):
+                filename = os.path.basename(item)
+                file_processed = False
                 
-                # Move file by extension
-                _, ext = os.path.splitext(item)
-                match ext:
-                    
-                    case self.config.metadata_extension:
+                # Check if file matches metadata pattern and sort it. If successful, proceed to the next file
+                if self.config.metadata_file_regex.match(filename):
+                    file_in_temp = self.move_to_temp(item)
+                    if file_in_temp:
+                        metadata_to_process.add(file_in_temp)
+                        file_processed = True
+                    continue
+                
+                # Check if file matches data file patterns and sort it. If successful, proceed to the next file
+                for category, pattern in self.config.data_file_regex.items():
+                    if pattern.match(filename):
                         file_in_temp = self.move_to_temp(item)
                         if file_in_temp:
-                            catalog_to_process.add(file_in_temp)
-                    
-                    case self.config.data_extension:
-                        file_in_temp = self.move_to_temp(item)
-                        if file_in_temp:
-                            data_files_to_process.add(file_in_temp)
+                            data_files_to_process[category].add(file_in_temp)
+                            file_processed = True
+                        break
                             
-                    case _:
-                        if self.config.discard_invalid_data_files:
-                            self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
+                # If file doesn't match any pattern, optionally trash it
+                if not file_processed and self.config.discard_invalid_data_files:
+                    self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
+                 
+            # if item is a folder, simply add it to the subfolder list to be removed later
             else:
                 subfolder.add(item)
                 
         self.remove_unused_subfolder(subfolder)
         
-        return catalog_to_process, data_files_to_process
+        return metadata_to_process, data_files_to_process
 
     # --------------------------------------------------------------
     def get_files_to_process(self) -> tuple[set[str], set[str]]:
@@ -359,41 +352,29 @@ class FileHandler:
             
         Raises: None
         """
-        catalog_to_process = set()
-        data_files_to_process = set()
+        metadata_to_process = set()
+        data_to_process = {category: set() for category in self.config.data_file_regex.keys()}
         
-        # Get files from temp folder
-        folder_content = glob.glob("**", root_dir=self.config.temp, recursive=True)
+        # Loop through all post folders and temp folder
+        for input_folder in self.config.input_path_list:
         
-        if not folder_content:
-            self.log.debug("TEMP Folder is empty.")
-        else:
-            # add path to filenames
-            folder_content = set(map(lambda x: os.path.join(self.config.temp, x), folder_content))
-            self.log.debug(f"TEMP Folder has {len(folder_content)} files/folders to process.")
-
-            catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content)
-        
-        # Get files from post folder
-        for post_folder in self.config.post:
-        
-            folder_content = glob.glob("**", root_dir=post_folder, recursive=True)
+            folder_content = glob.glob("**", root_dir=input_folder, recursive=True)
             
             if not folder_content:
-                self.log.debug(f"POST Folder {post_folder} is empty.")
+                self.log.debug(f"POST Folder {input_folder} is empty.")
             else:
                 # remove files and folders to ignore from the list
                 folder_content = set(folder_content) - self.config.input_to_ignore
                 
                 # add path to filenames
-                folder_content = set(map(lambda x: os.path.join(post_folder, x), folder_content))
-                self.log.debug(f"POST Folder {post_folder} has {len(folder_content)} files/folders to process.")
+                folder_content = set(map(lambda x: os.path.join(input_folder, x), folder_content))
+                self.log.debug(f"POST Folder {input_folder} has {len(folder_content)} files/folders to process.")
                 
-                catalog_to_process, data_files_to_process = self.sort_and_clean(folder_content,
-                                                                                catalog_to_process=catalog_to_process,
-                                                                                data_files_to_process=data_files_to_process)
+                metadata_to_process, data_to_process = self.sort_and_clean(folder_content,
+                                                                                metadata_to_process=metadata_to_process,
+                                                                                data_files_to_process=data_to_process)
                         
-        return catalog_to_process, data_files_to_process
+        return metadata_to_process, data_to_process
 
     # --------------------------------------------------------------
     def clean_old_in_folder(self, folder: str) -> None:
@@ -456,8 +437,8 @@ class FileHandler:
         Raises: None"""
 
         if pd.to_datetime("now") - self.config.last_clean > self.config.clean_period:
-            for post_folder in self.config.post:
-                self.clean_old_in_folder(post_folder)
+            for input_folder in self.config.input_path_list:
+                self.clean_old_in_folder(input_folder)
                 
             self.clean_old_in_folder(self.config.temp)
         
@@ -512,21 +493,3 @@ class FileHandler:
                     except Exception as e:
                         self.log.error(f"Error copying {file} from {folder2} to {folder1}: {e}")
                         
-    # --------------------------------------------------------------
-    def get_data_from_filename(self, filename: str) -> str:
-        """Get the data from the filename.
-        
-        Args:
-            filename (str): Filename to extract data from.
-            
-        Returns:
-            str: Data extracted from the filename.
-            
-        Raises: None
-        """
-        
-        match = re.match(self.config.filename_format, filename)
-        if match:
-            return match.groupdict()
-        else:
-            return None

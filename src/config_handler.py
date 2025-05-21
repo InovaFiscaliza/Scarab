@@ -111,48 +111,52 @@ class Config:
             self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]
             """ Flag to overwrite log in trash"""
             
-            self.post: list[str] = self.__ensure_list(self.raw["folders"]["post"])
-            """ Folder path where users post files"""
+            self.input_path_list: list[str] = [self.raw["folders"]["temp"]] + self.__ensure_list(self.raw["folders"]["post"])
+            """ File input paths. Include all post folders and the temp folder as the first element"""
             self.temp: str = self.raw["folders"]["temp"]
-            """ Temp folder used form metadata processing"""
+            """ Folder used for file storage while processing is taking place"""
             self.trash: str = self.raw["folders"]["trash"]
             """ Trash folder path used for files posted using wrong format"""
             self.store: str = self.raw["folders"]["store"]
             """ Store folder path used to store processed files"""
             self.catalog_files: list[str] = self.__ensure_list(self.raw["files"]["catalog names"])
             """ Full path to the catalog file, where metadata is stored"""
-            self.metadata_extension: str = self.raw["files"]["metadata extension"]
-            """ Extension used to identify the metadata files"""
+            self.metadata_file_regex: re.Pattern = re.compile(self.raw["files"]["metadata file regex"])
+            """ Regex pattern to be used to select files that may contain metadata."""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
             self.input_to_ignore: list[str] = set(self.__ensure_list(self.raw["files"]["input to ignore"]))
             """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
 
-            self.get: list[str] = self.__ensure_list(self.raw["folders"]["get"])
-            """ Folder path where data files are to be stored"""
-            self.data_extension: str = self.raw["files"]["data extension"]
-            """ Data file extension, used to identify the raw data files"""
+            self.get: Dict[str:list[str]] = self.raw["folders"]["get"]
+            """ For each key associated with a matching pattern defined in the "data file regex", a list of target folders is defined, to which matching files should be moved."""
+            self.data_file_regex: Dict[str, re.Pattern] = {
+                k: re.compile(v) for k, v in self.raw["files"]["data file regex"].items()
+            }
+            """ Dictionary with regex formatting to be used to select filenames to be processed as raw data files"""
             self.table_names: Dict[str,str] = self.__build_worksheet_dict(self.raw["files"]["table_names"])
             """ Table names to be used. {"json_root_table_name": "worksheet_name", ...]"""
             
             self.required_tables: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
             """ Columns that define the tables required in the metadata file"""
-            self.columns_key: dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
+            self.columns_key: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.tables_associations: dict[str, TableAssociation] = self.limit_character_scope(self.raw["metadata"]["association"])
+            self.tables_associations: Dict[str, TableAssociation] = self.limit_character_scope(self.raw["metadata"]["association"])
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.columns_in: dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
+            self.columns_in: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
             """ Columns required in the input metadata file"""
-            self.rows_sort_by: dict[str,str] = self.limit_character_scope(self.raw["metadata"]["sort by"])
+            self.rows_sort_by: Dict[str,str] = self.limit_character_scope(self.raw["metadata"]["sort by"])
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
-            self.columns_data_filenames: dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["data filenames"])
+            self.columns_data_filenames: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["data filenames"])
             """ Columns that contain the names of data files associated with each row metadata"""
-            self.columns_data_published: dict[str,list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
+            self.columns_data_published: Dict[str,list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
             self.add_filename: Dict[str,str] = self.raw["metadata"]["add filename"]
             """ Column names to be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
-            self.filename_format: str = self.raw["metadata"]["filename format"]
-            """ Formatting string using re.match.groupdict() syntax. Parsed data will be added in the same table as the filename."""
+            self.filename_data_format: Dict[str, re.Pattern] = {
+                k: re.compile(v) for k, v in self.raw["metadata"]["filename data format"].items()
+            }
+            """ Dictionary with regex patterns to extracted data from the filename and add to the indicated table. Use re.match.groupdict() syntax."""
 
         except Exception as e:
             print(f"Configuration files missing arguments: {e}")

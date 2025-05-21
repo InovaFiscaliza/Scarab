@@ -286,18 +286,26 @@ class DataHandler:
             pd.DataFrame: DataFrame with the data from the Excel file.
             list: List of columns in the DataFrame.
         """
-        
+
         # Remove escaped characters from column names
         df.columns = self.config.limit_character_scope(df.columns.tolist())
-        
-        df = self.create_index(df=df, table_name=table_name, file=file)
-        
-        df = self.sort_dataframe(df=df, table_name=table_name, file=file)
 
-        # get the columns from new_data_df
+        # Process via chaining operations
+
+        # Define pipeline of transformations
+        transformations = [
+            lambda df: self.add_filename_column(df, table_name, file),
+            lambda df: self.add_filename_data(df, table_name, file),
+            lambda df: self.create_data_file_control_column(df, table_name),
+            lambda df: self.create_index(df, table_name, file),
+            lambda df: self.sort_dataframe(df, table_name, file)
+        ]
+        
+        # Apply transformations in the defined sequence
+        [df := transform(df) for transform in transformations]
+        
+        # Get columns after all transformations
         columns = df.columns.tolist()
-                        
-        df = self.create_data_file_control_column(df=df, table_name=table_name)
 
         return df, columns
 
@@ -327,7 +335,7 @@ class DataHandler:
             raise ValueError(f"Unsupported data type: {type(data)}")
 
     # --------------------------------------------------------------
-    def read_metadata(self, file: str, filetype: str) -> tuple[dict[str,pd.DataFrame], dict[str,list]]:
+    def read_metadata(self, file: str) -> tuple[dict[str,pd.DataFrame], dict[str,list]]:
         """Read an metadata file and return a list of tuples with the DataFrame and the columns in the DataFrame.
         The file can be an Excel file, a CSV file or a JSON file.
 
@@ -344,6 +352,8 @@ class DataHandler:
         new_data_columns = self.config.table_names.copy()
         base_key = self.config.default_worksheet_key
         default_table_not_loaded =  True
+        
+        filetype = os.path.splitext(file)[1]
         
         try:
             match filetype:
@@ -425,6 +435,8 @@ class DataHandler:
                 new_data_df[base_key], new_data_columns[base_key] = self.process_table( df=new_df,
                                                                                         table_name=base_key,
                                                                                         file=file)
+            
+            new_data_df = self.update_table_associations(new_data_df, file)
             
             return new_data_df, new_data_columns
             
@@ -613,11 +625,11 @@ class DataHandler:
             self.log.info(f"Reference data updated for table {table} with data from file: {file}")
 
     # --------------------------------------------------------------
-    def update_pk(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+    def update_pk(self, df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
         """Update the primary key when relative association is used.
         
         Args:
-            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
             file (str): The metadata file being processed.
             
         Returns:
@@ -634,13 +646,13 @@ class DataHandler:
                     continue
                 
                 if association_pk["int_type"]:
-                    min_value = new_data_df[primary_table][association_pk["name"]].min()
-                    max_value = new_data_df[primary_table][association_pk["name"]].max()
+                    min_value = df[primary_table][association_pk["name"]].min()
+                    max_value = df[primary_table][association_pk["name"]].max()
                     
                     offset = self.next_pk_counter[primary_table] - min_value
                         
                     # if the PK is relative and an int, add the next_pk_counter value to the minimum value
-                    new_data_df[primary_table][association_pk["name"]] = new_data_df[primary_table][association_pk["name"]] + offset
+                    df[primary_table][association_pk["name"]] = df[primary_table][association_pk["name"]] + offset
                         
                     # update the next_pk_counter value for the primary_table
                     self.next_pk_counter[primary_table] += max_value
@@ -653,7 +665,7 @@ class DataHandler:
                     pk_column = association_pk["name"]
                     
                     # Extract original primary key values
-                    original_pks = new_data_df[primary_table][pk_column].tolist()
+                    original_pks = df[primary_table][pk_column].tolist()
                     
                     # Create a list of IDs sequentially counting from self.next_pk_counter[primary_table] until self.next_pk_counter[primary_table] + len(original_pks)
                     new_pks = list(range(self.next_pk_counter[primary_table], self.next_pk_counter[primary_table] + len(original_pks)))
@@ -666,7 +678,7 @@ class DataHandler:
                     self.pk_mod_table[primary_table].update({original_pk: new_pk for original_pk, new_pk in zip(original_pks, new_pks)})
                     
                     # Replace the primary key column values with the new keys
-                    new_data_df[primary_table][pk_column] = new_data_df[primary_table][pk_column].map(self.pk_mod_table[primary_table])
+                    df[primary_table][pk_column] = df[primary_table][pk_column].map(self.pk_mod_table[primary_table])
                     
                     # update self.next_pk_counter[primary_table]
                     self.next_pk_counter[primary_table] += len(original_pks)
@@ -675,10 +687,10 @@ class DataHandler:
                 self.log.debug(f"Key error in table {primary_table}, file {file}. {e}.")
                 continue
             
-        return new_data_df
+        return df
     
     # --------------------------------------------------------------
-    def update_fk(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+    def update_fk(self, df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
         """Update the foreign key when relative association is used.
         
         Args:
@@ -703,22 +715,22 @@ class DataHandler:
                         offset = self.pk_int_offset[primary_table]
                         
                         # add offset to the foreign key column in the source table
-                        new_data_df[foreign_table][fk_column] = new_data_df[foreign_table][fk_column] + offset
+                        df[foreign_table][fk_column] = df[foreign_table][fk_column] + offset
                     # Else, if PK is not an int, use the translation table
                     else:
                         # get the mapping of original to new primary keys
                         pk_mapping = self.pk_mod_table[primary_table]
                         
                         # replace the foreign key column values with the new unique IDs
-                        new_data_df[foreign_table][fk_column] = new_data_df[foreign_table][fk_column].map(pk_mapping)
+                        df[foreign_table][fk_column] = df[foreign_table][fk_column].map(pk_mapping)
                                     
             except KeyError as e:
                 self.log.debug(f"Key error in table {foreign_table}, file {file}. {e}.")
                 continue
             
-        return new_data_df
+        return df
     # --------------------------------------------------------------
-    def update_table_associations(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+    def update_table_associations(self, df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
         """Update the table associations in the reference DataFrame with the new data from a processed metadata file.
         
         Args:
@@ -729,81 +741,78 @@ class DataHandler:
             dict[str,pd.DataFrame]: Updated DataFrame with the new data.
         """
         
-        new_data_df = self.update_pk(new_data_df=new_data_df, file=file)
+        df = self.update_pk(df=df, file=file)
                 
-        new_data_df = self.update_fk(new_data_df=new_data_df, file=file)
+        df = self.update_fk(df=df, file=file)
         
-        return new_data_df
+        return df
 
     # --------------------------------------------------------------
-    def add_filename_column(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+    def add_filename_column(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Complement the data in the reference DataFrame with metadata extracted from the filename and the file itself.
         
         Args:
-            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            df : Dataframe into the new column with filename may be created.
+            table (str): Name of the table to be used as defined in the config file.
             file (str): The metadata file being processed.
             
         Returns:
-            dict[str,pd.DataFrame]: Updated DataFrame with the new data.
+            pd.DataFrame: Updated DataFrame with the new data.
         """
         
-        for table, new_column_name in self.config.add_filename.items():
-            try:
-                new_data_df[table][new_column_name] = os.path.basename(file)
-            except KeyError:
-                self.log.debug(f"Missing complement data info for table `{table}`. Skipping.")
-                continue
+        try:
+            new_column_name = self.config.add_filename[table]
+            df[new_column_name] = os.path.basename(file)
+        except KeyError:
+            self.log.debug(f"Missing complement data info for table `{table}`. Skipping.")
         
-        return new_data_df
+        return df
     
     # --------------------------------------------------------------
-    def add_filename_data(self, new_data_df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
+    def add_filename_data(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Complement the data with metadata extracted from the filename using regex groups.
         
         Args:
-            new_data_df (dict[str,pd.DataFrame]): Dictionary with DataFrames for various tables
-            file (str): The metadata file being processed
+            df: DataFrame into which the filename data may be added.
+            table: Name of the table to be used as defined in the config file.
+            file: The metadata file being processed
             
         Returns:
-            dict[str,pd.DataFrame]: Updated DataFrame with the filename data
+            pd.DataFrame: Updated DataFrame with the filename data
         """
         
         basename = os.path.basename(file)
         
-        for table in self.config.filename_format.keys():
-            try:
-                # Get regex pattern for this table
-                re_formatting = self.config.filename_format[table]
+        try:
+            # Get regex pattern for this table (already a compiled re.Pattern)
+            re_formatting = self.config.filename_data_format[table]
+            
+            # Extract data from filename using compiled regex pattern
+            match_result = re_formatting.match(basename)
+            if not match_result:
+                self.log.debug(f"Filename '{basename}' doesn't match pattern for table '{table}'")
+                return df
                 
-                # Extract data from filename using regex pattern
-                match_result = re.match(re_formatting, basename)
-                if not match_result:
-                    self.log.debug(f"Filename '{basename}' doesn't match pattern for table '{table}'")
-                    continue
-                    
-                filename_data = match_result.groupdict()
+            filename_data = match_result.groupdict()
+            
+            if not filename_data:
+                self.log.debug(f"No named groups matched in filename '{basename}' for table '{table}'")
+                return df
+            
+            # Assign each extracted group as a new column for all rows in the DataFrame
+            for key, value in filename_data.items():
+                df[key] = value
                 
-                if not filename_data:
-                    self.log.debug(f"No named groups matched in filename '{basename}' for table '{table}'")
-                    continue
+            self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
                 
-                # Assign each extracted group as a new column for all rows in the DataFrame
-                for key, value in filename_data.items():
-                    new_data_df[table][key] = value
-                    
-                self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
-                    
-            except KeyError:
-                self.log.debug(f"Missing filename format for table '{table}'. Skipping.")
-                continue
-            except AttributeError as e:
-                self.log.error(f"Error in regex pattern for table '{table}': {e}")
-                continue
-            except Exception as e:
-                self.log.error(f"Error processing filename data for table '{table}': {e}")
-                continue
+        except KeyError:
+            self.log.debug(f"Missing filename format for table '{table}'. Skipping.")
+        except AttributeError as e:
+            self.log.error(f"Error in regex pattern for table '{table}': {e}")
+        except Exception as e:
+            self.log.error(f"Error processing filename data for table '{table}': {e}")
                 
-        return new_data_df
+        return df
     
     # --------------------------------------------------------------
     def read_reference_df(self) -> tuple[dict[str,pd.DataFrame], dict[str,list]]:
@@ -852,8 +861,7 @@ class DataHandler:
         files_to_move = metadata_files.copy()
         
         for file in metadata_files:
-            new_data_df, column_in = self.read_metadata(file=file,
-                                                        filetype=self.config.metadata_extension)
+            new_data_df, column_in = self.read_metadata(file=file)
             
             # test the content of the file
             if not self.valid_data(df=new_data_df, file=file):
@@ -864,12 +872,7 @@ class DataHandler:
             
             # Compute the new column order for the reference DataFrame
             self.ref_cols = self.merge_dicts(new_list=column_in, legacy_dict=self.ref_cols)
-            
-            # Process the new data DataFrame
-            new_data_df = self.update_table_associations(new_data_df=new_data_df, file=file)
-            new_data_df = self.add_filename_column(new_data_df=new_data_df, file=file)
-            new_data_df = self.add_filename_data(new_data_df=new_data_df, file=file)
-            
+                        
             # Update reference data with new data from the file
             self.update_reference_data(new_data_df=new_data_df, file=file)
 

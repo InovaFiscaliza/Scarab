@@ -8,8 +8,8 @@
     "maximum file variations" : 100,
     "character scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><\"-_ ]+",
     "null string values": ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"],
-    "default worksheet name key": "_",
-    "default worksheet name value": "<name>",
+    "default worksheet key": "_",
+    "default worksheet name": "<name>",
     "overwrite data in store": false,
     "overwrite data in get": true,
     "overwrite data in trash": false,
@@ -38,11 +38,11 @@
     },
     "folders": {
         "post": [],
-        "get" : []
+        "get" : {}
     },
     "files" : {
-        "metadata extension": "",
-        "data extension": "",
+        "metadata file regex": "",
+        "data file regex": {},
         "catalog names":[],
         "table names": {"_":"<name>"},
         "input to ignore": []
@@ -56,6 +56,6 @@
         "data filenames": {"_":[]},
         "data published flag": {"_":[]},
         "add filename": {},
-        "filename format": ""
+        "filename data format": {}
     }
 }
