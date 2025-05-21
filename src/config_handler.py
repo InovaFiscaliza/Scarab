@@ -152,11 +152,11 @@ class Config:
             self.columns_data_published: Dict[str,list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
             """ Columns that contain the publication status of each row"""
             self.add_filename: Dict[str,str] = self.raw["metadata"]["add filename"]
-            """ Column names to be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
+            """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
             self.filename_data_format: Dict[str, re.Pattern] = {
                 k: re.compile(v) for k, v in self.raw["metadata"]["filename data format"].items()
             }
-            """ Dictionary with regex patterns to extracted data from the filename and add to the indicated table. Use re.match.groupdict() syntax."""
+            """ Dictionary with table names (keys) and regex patterns (values) to extracted data from the filename and add to the indicated table. Use re.match.groupdict() syntax."""
 
         except Exception as e:
             print(f"Configuration files missing arguments: {e}")
