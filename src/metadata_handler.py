@@ -97,7 +97,7 @@ class DataHandler:
             try:
                 max_pk = self.ref_df[table][pk_column].max()
             except Exception as e:
-                self.log.warning(f"Could not getting maximum primary key value for table {table}: {e}")
+                self.log.debug(f"Could not getting maximum primary key value for table {table}: {e}")
                 max_pk = 0
             
             next_pk_counter[table] = max_pk + 1
@@ -253,8 +253,8 @@ class DataHandler:
         try:
             # create a column to be used as index, merging the columns in index_column list
             df[self.data_file_column] = df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)
-        except ValueError as e:
-            self.log.warning(f"No data file column found in {self.config.columns_data_filenames[table_name]}. Error: {e}")
+        except (ValueError, KeyError) as e:
+            self.log.debug(f"No file control column in {table_name}. Error: {e}")
             return df
         except Exception as e:	
             self.log.error(f"Error creating data filenames column: {e}")
@@ -297,9 +297,9 @@ class DataHandler:
         # get the columns from new_data_df
         columns = df.columns.tolist()
                         
-        new_df = self.create_data_file_control_column(df=df)
+        df = self.create_data_file_control_column(df=df, table_name=table_name)
 
-        return new_df, columns
+        return df, columns
 
     # --------------------------------------------------------------
     def create_dataframe(self, data: dict) -> pd.DataFrame:
@@ -342,7 +342,7 @@ class DataHandler:
         
         new_data_df = self.config.table_names.copy()
         new_data_columns = self.config.table_names.copy()
-        base_key = self.config.DEFAULT_WORKSHEET_NAME_KEY
+        base_key = self.config.default_worksheet_key
         default_table_not_loaded =  True
         
         try:
@@ -366,7 +366,7 @@ class DataHandler:
                                 sheet_df = excel_file.parse(sheet_name, dtype="string")
                                 
                                 if sheet_name == self.config.name:
-                                    key = self.config.DEFAULT_WORKSHEET_NAME_KEY
+                                    key = self.config.default_worksheet_key
                                     default_table_not_loaded = False
                                 else:
                                     key = sheet_name
@@ -415,6 +415,8 @@ class DataHandler:
                     # add the remaining data from the json file to the default base_key table
                     if data:
                         new_df = self.create_dataframe(data)
+                    else:
+                        default_table_not_loaded = False
                     
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
@@ -448,7 +450,7 @@ class DataHandler:
         for table, df in tables.items():
             # processing of the original data may remove rows with null values in the key columns, the resulting DataFrame may be empty
             if df.empty and table in self.config.required_tables:
-                if table == self.config.DEFAULT_WORKSHEET_NAME_KEY:
+                if table == self.config.default_worksheet_key:
                     self.log.warning(f"File '{file}' is empty or has no data in columns defined as keys.")
                 self.log.warning(f"File '{file}' is empty or has nor data in columns defined as keys.")
                 return False
@@ -830,11 +832,8 @@ class DataHandler:
                                                     filetype=self.config.catalog_extension)
         else:
             self.log.warning("No reference data found. Starting with a blank reference.")
-            ref_df = self.config.table_names.copy()
-            ref_cols = self.config.table_names.copy()
-            for key in self.config.table_names.items():
-                ref_df[key] = pd.DataFrame()
-                ref_cols[key] = []
+            ref_df = {key: pd.DataFrame() for key in self.config.table_names}
+            ref_cols = {key: [] for key in self.config.table_names}
 
         return ref_df, ref_cols
 

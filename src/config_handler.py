@@ -47,12 +47,7 @@ class Config:
             Exception: If the configuration file is missing parameters.
         """
         
-        # define default values
-        self.DEFAULT_WORKSHEET_NAME_KEY:str = "_"
-        """Default key for the worksheet name in default_config.json file."""
-        self.DEFAULT_WORKSHEET_NAME_VALUE:str = "<name>"
-        """Default value for the worksheet name in default_config.json file."""
-        
+        # define default values        
         self.config_file = filename
         """Configuration file name."""
         self.raw: Dict[str, Any] = {}
@@ -84,6 +79,10 @@ class Config:
             """ characters that will be retained from the column names. Characters not in the scope will be removed"""
             self.null_string_values: list[str] = self.__ensure_list(self.raw["null string values"])
             """ List of strings that will be considered as null values in the metadata file"""
+            self.default_worksheet_key:str = self.raw["default worksheet key"] 
+            """Default key to be used for the worksheet that will retain single table values or non mapped values in the json root."""
+            self.default_worksheet_name:str = self.raw["default worksheet name"]
+            """Default value for the worksheet name. If value of assigned to the default key is equal to this value, will use the name of the configuration."""
             self.store_data_overwrite: bool = self.raw["overwrite data in store"]
             """ Flag to indicate if data should be overwritten in store folder"""
             self.get_data_overwrite: bool = self.raw["overwrite data in get"]
@@ -413,8 +412,8 @@ class Config:
             list[dict]: List of dictionaries with the tables.
         """
         
-        if tables[self.DEFAULT_WORKSHEET_NAME_KEY] == self.DEFAULT_WORKSHEET_NAME_VALUE:
-            tables[self.DEFAULT_WORKSHEET_NAME_KEY] = self.name
+        if tables[self.default_worksheet_key] == self.default_worksheet_name:
+            tables[self.default_worksheet_key] = self.name
         
         return tables
 

@@ -1,13 +1,15 @@
 {
     "name": "unnamed",
-    "scarab version": "1.2.0",
+    "scarab version": "2.0.0",
     "check period in seconds": 10,
     "clean period in hours": 1,
     "last clean": "2025-02-21 12:00:00",
     "maximum errors before exit" : 5,
     "maximum file variations" : 100,
     "character scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><\"-_ ]+",
-    "null_string_values": ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"],
+    "null string values": ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"],
+    "default worksheet name key": "_",
+    "default worksheet name value": "<name>",
     "overwrite data in store": false,
     "overwrite data in get": true,
     "overwrite data in trash": false,
@@ -42,7 +44,7 @@
         "metadata extension": "",
         "data extension": "",
         "catalog names":[],
-        "table_names": {"_":"<name>"},
+        "table names": {"_":"<name>"},
         "input to ignore": []
     },
     "metadata": {
@@ -53,7 +55,7 @@
         "sort by": {"_":""},
         "data filenames": {"_":[]},
         "data published flag": {"_":[]},
-        "add_filename": {},
-        "filename_format": ""
+        "add filename": {},
+        "filename format": ""
     }
 }
