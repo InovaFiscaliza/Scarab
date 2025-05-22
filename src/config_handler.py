@@ -197,7 +197,7 @@ class Config:
             else:
                 d[k] = v
         return d
-            
+    
     # --------------------------------------------------------------
     def __load_into_config(self, filename: str) -> None:
         """Load;update the configuration values from a JSON file encoded with UTF-8.

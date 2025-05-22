@@ -56,13 +56,9 @@ class DataHandler:
         """Index column name. Used to concatenate the values of the columns defined as keys."""
         self.data_file_column : str = f"{DATA_FILE_COLUMN_PREFIX}{self.unique_id}"
         """Data file control column name. Used to concatenate the filenames of the data files when multiple columns are defined."""
-        self.post_order_column : str = SCARAB_POST_ORDER_COLUMN
+        self.post_order_column : str = f"{SCARAB_POST_ORDER_COLUMN}{self.unique_id}"
         """Post order column name. Used to keep ordering of the rows in the DataFrame."""
-        if not self.config.rows_sort_by:
-            self.config.rows_sort_by = [self.post_order_column]
-        
-        self.ordering_index : int = 0
-        """Index user for sequentially ordering rows in the DataFrame if no ordering column is defined."""
+        self.__replace_empty_sorting_value()
         
         df, col = self.read_reference_df()
         
@@ -70,16 +66,36 @@ class DataHandler:
         """Dictionary with various dataframes containing the reference metadata in various tables."""
         self.ref_cols : dict[str,list[str]] = col
         """Dictionary with list of columns in in each reference DataFrame."""
-        
-        self.next_pk_counter : dict[str, int] = self.initialize_next_pk_counter()
+
+        self.ordering_index : dict[str, int] = {key: 0 for key in self.ref_df.keys()}
+        """Index used for sequentially ordering rows in the various tables if no ordering column is defined. """        
+        self.next_pk_counter : dict[str, int] = self.__initialize_next_pk_counter()
         """ Dictionary with initial number to be used as primary keys in each table. The key is the table name and the value is the number of free primary keys. """
         self.pk_mod_table : dict[str,dict[str,str]] = {}
         """ Dictionary with the table name and key associated with the primary key in relative (in file) indexing and absolute (in reference data) indexing. """
         self.pk_int_offset : dict[str, int] = {}
         """ Dictionary with the table name and offset value to be used to convert the relative primary key to absolute primary key. """
         
+        # --------------------------------------------------------------
+    def __replace_empty_sorting_value(self) -> None:
+        """Process the row sorting dictionary to ensure all values are lists.
+        
+        Args:
+            sort_by (Dict[str, str]): The original dictionary with sorting values.
+            
+        Returns:
+            Dict[str, str]: The processed dictionary with lists as values.
+        """
+        
+        # Use dictionary comprehension to identify keys needing default values
+        empty_keys = {k for k, v in self.config.rows_sort_by.items() if not v}
+        
+        # Bulk update only the keys that need changing
+        if empty_keys:
+            self.config.rows_sort_by.update({k: self.post_order_column for k in empty_keys})
+    
     # --------------------------------------------------------------
-    def initialize_next_pk_counter(self) -> dict[str, int]:
+    def __initialize_next_pk_counter(self) -> dict[str, int]:
         """Initialize the free primary key counter for each table in the reference data.
 
         Returns:
@@ -90,11 +106,14 @@ class DataHandler:
         for table in self.ref_df.keys():
             # get the maximum value of the primary key column in the reference DataFrame
             try:
-                pk_column = self.config.tables_associations[table]["PK"]["name"]
+                pk_column = self.config.tables_associations[table]["PK"]["name"]                
             except KeyError:
                 self.log.debug(f"Table {table} does not have a primary key column defined in the config file.")
             
             try:
+                if not pd.api.types.is_integer_dtype(self.ref_df[table][pk_column]):
+                    self.ref_df[table][pk_column] = self.ref_df[table][pk_column].astype(int)
+                
                 max_pk = self.ref_df[table][pk_column].max()
             except Exception as e:
                 self.log.debug(f"Could not getting maximum primary key value for table {table}: {e}")
@@ -216,8 +235,9 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
-        df[self.post_order_column] = range(self.ordering_index, self.ordering_index + len(df))
-        self.ordering_index += len(df)
+        index_value = self.ordering_index[table_name]
+        df[self.post_order_column] = range(index_value, index_value + len(df))
+        self.ordering_index[table_name] += len(df)
         
         try:
             # sort the DataFrame by the columns defined in the config file
@@ -646,6 +666,11 @@ class DataHandler:
                     continue
                 
                 if association_pk["int_type"]:
+                    
+                    # test if type of df[primary_table][association_pk["name"]] is int, if not, convert to int
+                    if not pd.api.types.is_integer_dtype(df[primary_table][association_pk["name"]]):
+                        df[primary_table][association_pk["name"]] = df[primary_table][association_pk["name"]].astype(int)
+
                     min_value = df[primary_table][association_pk["name"]].min()
                     max_value = df[primary_table][association_pk["name"]].max()
                     
