@@ -17,8 +17,27 @@ import pandas as pd
 from typing import Any, Dict, TypedDict
 import re
 
-# Define the structure of complex objects
+# --------------------------------------------------------------
+# Control Constants
+FK_KEY:str = "FK"
+"""Key to identify foreign key values in table association dictionaries."""
+PK_KEY:str = "PK"
+"""Key to identify primary key values in table association dictionaries."""
+NAME_KEY:str = "name"
+"""Key to identify table name values in table association dictionaries."""
+REPLACE_KEY:str = "replace"
+"""Key to identify replacement rules in filename data replacement dictionaries."""
+OLD_KEY:str = "old"
+"""key to identify character to be replaced (old) in filename data replacement dictionaries."""
+NEW_KEY:str = "new"
+"""Key to state character to be used in replacement (new) in filename data replacement dictionaries."""
+ADD_SUFFIX_KEY:str = "add suffix"
+"""Key to identify suffix to be added in filename data replacement dictionaries."""
+ADD_PREFIX_KEY:str = "add prefix"
+"""Key to identify prefix to be added in filename data replacement dictionaries."""
 
+# --------------------------------------------------------------
+# Define the structure of complex objects
 class PKInfo(TypedDict):
     """Structure of the primary key in the table association."""
     name: str
@@ -139,11 +158,11 @@ class Config:
             
             self.required_tables: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
             """ Columns that define the tables required in the metadata file"""
-            self.columns_key: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
+            self.key_columns: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
             """ Columns that define the uniqueness of each row in the metadata file"""
             self.tables_associations: Dict[str, TableAssociation] = self.limit_character_scope(self.raw["metadata"]["association"])
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.columns_in: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
+            self.required_columns: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
             """ Columns required in the input metadata file"""
             self.rows_sort_by: Dict[str,str] = self.limit_character_scope(self.raw["metadata"]["sort by"])
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
@@ -157,6 +176,8 @@ class Config:
                 k: re.compile(v) for k, v in self.raw["metadata"]["filename data format"].items()
             }
             """ Dictionary with table names (keys) and regex patterns (values) to extracted data from the filename and add to the indicated table. Use re.match.groupdict() syntax."""
+            self.filename_data_processing_rules: Dict[str, Dict[str, Any]] = self.raw["metadata"]["filename data replace rules"]
+            """ Dictionary with old and new characters to be replaced in the data extracted from the filename, defined for each key in the replacement pattern."""
 
         except Exception as e:
             print(f"Configuration files missing arguments: {e}")

@@ -56,6 +56,7 @@
         "data filenames": {},
         "data published flag": {"_":[]},
         "add filename": {},
-        "filename data format": {}
+        "filename data format": {},
+        "filename data processing rules" : {}
     }
 }

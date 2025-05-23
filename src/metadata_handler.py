@@ -17,6 +17,7 @@ import logging
 import os
 import re
 import pandas as pd
+import numpy as np
 import uuid
 import base58
 import json
@@ -106,7 +107,7 @@ class DataHandler:
         for table in self.ref_df.keys():
             # get the maximum value of the primary key column in the reference DataFrame
             try:
-                pk_column = self.config.tables_associations[table]["PK"]["name"]                
+                pk_column = self.config.tables_associations[table][cm.PK_KEY][cm.NAME_KEY]                
             except KeyError:
                 self.log.debug(f"Table {table} does not have a primary key column defined in the config file.")
             
@@ -117,7 +118,7 @@ class DataHandler:
                 max_pk = self.ref_df[table][pk_column].max()
             except Exception as e:
                 self.log.debug(f"Could not getting maximum primary key value for table {table}: {e}")
-                max_pk = 0
+                max_pk = np.int64(0)
             
             next_pk_counter[table] = max_pk + 1
             
@@ -183,7 +184,7 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
-        columns = self.config.columns_key[table_name]
+        columns = self.config.key_columns[table_name]
         if not columns:
             self.log.debug(f"No key columns defined for table {table_name} to use for processing file {file}")
             return df
@@ -489,11 +490,11 @@ class DataHandler:
             
             df_columns = set(df.columns.tolist())
             
-            required_columns = set(self.config.columns_in[table])
-            key_columns = set(self.config.columns_key[table])
+            required_columns = set(self.config.required_columns[table])
+            key_columns = set(self.config.key_columns[table])
         
             if not required_columns.issubset(df_columns):
-                # find which elements from self.config.columns_in are missing in df_columns
+                # find which elements from self.config.required_columns are missing in df_columns
                 missing_columns = required_columns - df_columns
                 self.log.error(f"File '{file}' does not contain the required metadata columns: {missing_columns}")
                 return False
@@ -660,24 +661,24 @@ class DataHandler:
             try:
                 # if PK is int, get the minimum value of the PK column as offset to be discounted
                 # and add the corresponding next_pk_counter value
-                association_pk = association["PK"]
+                association_pk = association[cm.PK_KEY]
                 
                 if not association_pk["relative_value"]:
                     continue
                 
                 if association_pk["int_type"]:
                     
-                    # test if type of df[primary_table][association_pk["name"]] is int, if not, convert to int
-                    if not pd.api.types.is_integer_dtype(df[primary_table][association_pk["name"]]):
-                        df[primary_table][association_pk["name"]] = df[primary_table][association_pk["name"]].astype(int)
+                    # test if type of df[primary_table][association_pk[cm.NAME_KEY]] is int, if not, convert to int
+                    if not pd.api.types.is_integer_dtype(df[primary_table][association_pk[cm.NAME_KEY]]):
+                        df[primary_table][association_pk[cm.NAME_KEY]] = df[primary_table][association_pk[cm.NAME_KEY]].astype(int)
 
-                    min_value = df[primary_table][association_pk["name"]].min()
-                    max_value = df[primary_table][association_pk["name"]].max()
+                    min_value = df[primary_table][association_pk[cm.NAME_KEY]].min()
+                    max_value = df[primary_table][association_pk[cm.NAME_KEY]].max()
                     
                     offset = self.next_pk_counter[primary_table] - min_value
                         
                     # if the PK is relative and an int, add the next_pk_counter value to the minimum value
-                    df[primary_table][association_pk["name"]] = df[primary_table][association_pk["name"]] + offset
+                    df[primary_table][association_pk[cm.NAME_KEY]] = df[primary_table][association_pk[cm.NAME_KEY]] + offset
                         
                     # update the next_pk_counter value for the primary_table
                     self.next_pk_counter[primary_table] += max_value
@@ -687,7 +688,7 @@ class DataHandler:
                 # else, if PK is relative but not an int, generate a new UI
                 else:
                     # Get the primary key column name
-                    pk_column = association_pk["name"]
+                    pk_column = association_pk[cm.NAME_KEY]
                     
                     # Extract original primary key values
                     original_pks = df[primary_table][pk_column].tolist()
@@ -711,6 +712,9 @@ class DataHandler:
             except KeyError as e:
                 self.log.debug(f"Key error in table {primary_table}, file {file}. {e}.")
                 continue
+            except TypeError as e:
+                self.log.debug(f"Type error in table {primary_table}, file {file}. {e}.")
+                continue
             
         return df
     
@@ -731,7 +735,7 @@ class DataHandler:
             try:
                 # if PK is int, get the minimum value of the PK column as offset to be discounted
                 # and add the corresponding next_pk_counter value
-                association_fk = association["FK"]
+                association_fk = association[cm.FK_KEY]
                 
                 for primary_table, fk_column in association_fk.items():
                     
@@ -794,6 +798,40 @@ class DataHandler:
         return df
     
     # --------------------------------------------------------------
+    def apply_filename_data_processing_rules(self, key:str, value:str) -> str:
+        """Apply the filename data processing rules to the value.
+        
+        Args:
+            key (str): Key of the filename data.
+            value (str): Value of the filename data.
+            
+        Returns:
+            str: Processed value.
+        """
+        
+        if key in self.config.filename_data_processing_rules:
+
+            for rule in self.config.filename_data_processing_rules[key].keys():
+                match rule:
+                    case cm.REPLACE_KEY:
+                        for replacement in self.config.filename_data_processing_rules[key][cm.REPLACE_KEY]:
+                            old_char = replacement[cm.OLD_KEY]
+                            new_char = replacement[cm.NEW_KEY]
+                            value = value.replace(old_char, new_char)
+                            
+                    case cm.ADD_SUFFIX_KEY:
+                        suffix = self.config.filename_data_processing_rules[key][cm.ADD_SUFFIX_KEY]
+                        value = f"{value}{suffix}"
+                        
+                    case cm.ADD_PREFIX_KEY:
+                        prefix = self.config.filename_data_processing_rules[key][cm.ADD_PREFIX_KEY]
+                        value = f"{prefix}{value}"
+                    case _:
+                        self.log.debug(f"Unknown rule '{rule}' in filename data processing rules for table '{table}'")
+                
+        return value
+    
+    # --------------------------------------------------------------
     def add_filename_data(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Complement the data with metadata extracted from the filename using regex groups.
         
@@ -826,7 +864,7 @@ class DataHandler:
             
             # Assign each extracted group as a new column for all rows in the DataFrame
             for key, value in filename_data.items():
-                df[key] = value
+                df[key] = self.apply_filename_data_processing_rules(key=key, value=value)
                 
             self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
                 
