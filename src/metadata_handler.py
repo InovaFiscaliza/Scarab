@@ -15,7 +15,6 @@ import file_handler as fm
 
 import logging
 import os
-import re
 import pandas as pd
 import numpy as np
 import uuid
@@ -24,10 +23,9 @@ import json
 
 # ---------------------------------------------------------------
 # Constants used only in this module and not affected by the config file
-SCARAB_POST_ORDER_COLUMN = "Scarab Post Order"
+POST_ORDER_COLUMN_PREFIX = "post_order-"
 INDEX_COLUMN_PREFIX = "index-"
 DATA_FILE_COLUMN_PREFIX = "file-"
-OFFSET_LABEL = "offset"
 
 # --------------------------------------------------------------
 class DataHandler:
@@ -57,7 +55,7 @@ class DataHandler:
         """Index column name. Used to concatenate the values of the columns defined as keys."""
         self.data_file_column : str = f"{DATA_FILE_COLUMN_PREFIX}{self.unique_id}"
         """Data file control column name. Used to concatenate the filenames of the data files when multiple columns are defined."""
-        self.post_order_column : str = f"{SCARAB_POST_ORDER_COLUMN}{self.unique_id}"
+        self.post_order_column : str = f"{POST_ORDER_COLUMN_PREFIX}{self.unique_id}"
         """Post order column name. Used to keep ordering of the rows in the DataFrame."""
         self.__replace_empty_sorting_value()
         
@@ -411,10 +409,16 @@ class DataHandler:
                             
                                 # remove the processed sheet name from the list of new_data_df
                                 sheet_names.remove(sheet_name)
-                            
+                        
                         if len(sheet_names) == 1 and default_table_not_loaded:
                             new_df = excel_file.parse(sheet_names[0], dtype="string")
                             self.config.table_names[base_key] = sheet_names[0]
+                            sheet_names.remove(sheet_names[0])
+                        
+                        if len(sheet_names) > 0:
+                            self.log.warning("Not all worksheets were processed in file {file}")
+                            
+                        new_data_df = self.update_table_associations(new_data_df, file)
                     
                     else:
                         try:
@@ -827,7 +831,7 @@ class DataHandler:
                         prefix = self.config.filename_data_processing_rules[key][cm.ADD_PREFIX_KEY]
                         value = f"{prefix}{value}"
                     case _:
-                        self.log.debug(f"Unknown rule '{rule}' in filename data processing rules for table '{table}'")
+                        self.log.error(f"Unknown rule '{rule}' in filename data processing rules. Ignoring")
                 
         return value
     
