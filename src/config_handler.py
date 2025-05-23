@@ -19,6 +19,8 @@ import re
 
 # --------------------------------------------------------------
 # Control Constants
+DEFAULT_CONFIG_FILENAME:str = "default_config.json"
+"""Default configuration file name."""
 FK_KEY:str = "FK"
 """Key to identify foreign key values in table association dictionaries."""
 PK_KEY:str = "PK"
@@ -69,115 +71,142 @@ class Config:
         # define default values        
         self.config_file = filename
         """Configuration file name."""
-        self.raw: Dict[str, Any] = {}
+        config: Dict[str, Any] = self.__load_into_config(filename)
+        
+        self.raw: Dict[str, Any] = config
         """Raw configuration values."""
         
         # Get config file path from the script path
         source_path = os.path.dirname(os.path.abspath(__file__))
-        default_config = os.path.join(source_path, "default_config.json")
-        self.__load_into_config(default_config)
+        default_config = os.path.join(source_path, DEFAULT_CONFIG_FILENAME)
+        default_conf = self.__load_into_config(default_config)
         
         self.__load_into_config(filename)
         
         try:
-            self.name: str = self.raw["name"]
-            """ Name of the configuration, used for logging"""
-            self.scarab_version: str = self.raw["scarab version"]
+            self.name: str = config.pop(["name"], default_conf["name"])
+            """ Name of the config.pop(uration, used for logging"""
+            self.scarab_version: str = config.pop(["scarab version"], default_conf["scarab version"])
             """ Version of the scarab script"""
-            self.check_period: int = self.raw["check period in seconds"]
+            self.check_period: int = config.pop(["check period in seconds"], default_conf["check period in seconds"])
             """ Period to check input folders in seconds """
-            self.clean_period: pd.Timedelta = pd.Timedelta(hours=self.raw["clean period in hours"])
+            self.clean_period: pd.Timedelta = pd.Timedelta(hours=config.pop(["clean period in hours"], default_conf["clean period in hours"]))
             """ Period to clean temp folders in hours"""
-            self.last_clean: pd.Timestamp = pd.to_datetime(self.raw["last clean"], format="%Y-%m-%d %H:%M:%S")
+            self.last_clean: pd.Timestamp = pd.to_datetime(config.pop(["last clean"], default_conf["last clean"]), format="%Y-%m-%d %H:%M:%S")
             """ Timestamp of the last clean operation"""
-            self.maximum_errors_before_exit: int = self.raw["maximum errors before exit"]
+            self.maximum_errors_before_exit: int = config.pop(["maximum errors before exit"], default_conf["maximum errors before exit"])
             """ Maximum number of errors before exiting with raised error"""
-            self.maximum_file_variations: int = self.raw["maximum file variations"]
+            self.maximum_file_variations: int = config.pop(["maximum file variations"], default_conf["maximum file variations"])
             """ Maximum number of file variations before exiting with raised error"""
-            self.character_scope: str = self.raw["character scope"]
+            self.character_scope: str = config.pop(["character scope"], default_conf["character scope"])
             """ characters that will be retained from the column names. Characters not in the scope will be removed"""
-            self.null_string_values: list[str] = self.__ensure_list(self.raw["null string values"])
+            self.null_string_values: list[str] = self.__ensure_list(config.pop(["null string values"], default_conf["null string values"]))
             """ List of strings that will be considered as null values in the metadata file"""
-            self.default_worksheet_key:str = self.raw["default worksheet key"] 
+            self.default_worksheet_key:str = config.pop(["default worksheet key"], default_conf["default worksheet key"])
             """Default key to be used for the worksheet that will retain single table values or non mapped values in the json root."""
-            self.default_worksheet_name:str = self.raw["default worksheet name"]
-            """Default value for the worksheet name. If value of assigned to the default key is equal to this value, will use the name of the configuration."""
-            self.store_data_overwrite: bool = self.raw["overwrite data in store"]
+            self.default_worksheet_name:str = config.pop(["default worksheet name"], default_conf["default worksheet name"])
+            """Default value for the worksheet name. If value of assigned to the default key is equal to this value, will use the name of the config.pop(uration."""
+            self.store_data_overwrite: bool = config.pop(["overwrite data in store"], default_conf["overwrite data in store"])
             """ Flag to indicate if data should be overwritten in store folder"""
-            self.get_data_overwrite: bool = self.raw["overwrite data in get"]
+            self.get_data_overwrite: bool = config.pop(["overwrite data in get"], default_conf["overwrite data in get"])
             """ Flag to indicate if data should be overwritten in get folders"""
-            self.trash_data_overwrite: bool = self.raw["overwrite data in trash"]
+            self.trash_data_overwrite: bool = config.pop(["overwrite data in trash"], default_conf["overwrite data in trash"])
             """ Flag to indicate if data should be overwritten in trash folder"""
-            self.discard_invalid_data_files: bool = self.raw["discard invalid data files"]
+            self.discard_invalid_data_files: bool = config.pop(["discard invalid data files"], default_conf["discard invalid data files"])
             """ Flag to indicate if invalid data files should be discarded"""
-            
-            self.log_level: str = self.raw["log"]["level"]
-            """ Logging level"""
-            self.log_to_screen: bool = self.raw["log"]["screen output"]
-            """ Flag to log to screen"""
-            self.log_to_file: bool = self.raw["log"]["file output"]
-            """ Flag to log to file"""
-            self.log_file_path: str = self.__ensure_list(self.raw["log"]["file path"])
-            """ Log file name with path"""
-            self.log_separator: str = self.raw["log"]["separator"]
+
+            log_separator: str = config.pop(["log"]["separator"], default_conf["log"]["separator"])
             """ Log column separator"""
-            self.log_file_format: str = self.__log_format_plain()
+            log_format: list[str] = config.pop(["log"]["format"], default_conf["log"]["format"])
             """ Data columns to be presented in the log file using logging syntax"""
-            self.log_screen_format: str = self.__log_format_colour()
-            """ Data columns to be presented in the terminal using logging syntax, with colours"""
-            self.log_title: str = self.__log_titles()
-            """ Log header line based on the log format"""
-            self.log_overwrite: bool = self.raw["log"]["overwrite log in trash"]
-            """ Flag to overwrite log in trash"""
+            colour_sequence: list[str] = config.pop(["log"]["colour sequence"], default_conf["log"]["colour sequence"])
+            """ Colour sequence to be used in the log file using logging syntax"""
             
-            self.input_path_list: list[str] = [self.raw["folders"]["temp"]] + self.__ensure_list(self.raw["folders"]["post"])
+            self.log_level: str = config.pop(["log"]["level"], default_conf["log"]["level"])
+            """ Logging level"""
+            self.log_to_screen: bool = config.pop(["log"]["screen output"], default_conf["log"]["screen output"])
+            """ Flag to log to screen"""
+            self.log_to_file: bool = config.pop(["log"]["file output"], default_conf["log"]["file output"])
+            """ Flag to log to file"""
+            self.log_file_path: str = self.__ensure_list(config.pop(["log"]["file path"], default_conf["log"]["file path"]))
+            """ Log file name with path"""            
+            self.log_file_format: str = self.__log_format_file(log_format, log_separator)
+            """ Data columns to be presented in the log file using logging syntax"""
+            self.log_screen_format: str = self.__log_format_colour(log_format, colour_sequence, log_separator)
+            """ Data columns to be presented in the terminal using logging syntax, with colours"""
+            self.log_title: str = self.__log_titles(log_format, log_separator)
+            """ Log header line based on the log format"""
+            self.log_overwrite: bool = config.pop(["log"]["overwrite log in trash"], default_conf["log"]["overwrite log in trash"])
+            """ Flag to overwrite log in trash"""
+
+            self.input_path_list: list[str] = [config.pop(["folders"]["temp"], default_conf["folders"]["temp"])] + self.__ensure_list(config.pop(["folders"]["post"], default_conf["folders"]["post"]))
             """ File input paths. Include all post folders and the temp folder as the first element"""
-            self.temp: str = self.raw["folders"]["temp"]
+            self.temp: str = config.pop(["folders"]["temp"], default_conf["folders"]["temp"])
             """ Folder used for file storage while processing is taking place"""
-            self.trash: str = self.raw["folders"]["trash"]
+            self.trash: str = config.pop(["folders"]["trash"], default_conf["folders"]["trash"])
             """ Trash folder path used for files posted using wrong format"""
-            self.store: str = self.raw["folders"]["store"]
+            self.store: str = config.pop(["folders"]["store"], default_conf["folders"]["store"])
             """ Store folder path used to store processed files"""
-            self.catalog_files: list[str] = self.__ensure_list(self.raw["files"]["catalog names"])
+            self.catalog_files: list[str] = self.__ensure_list(config.pop(["files"]["catalog names"], default_conf["files"]["catalog names"]))
             """ Full path to the catalog file, where metadata is stored"""
-            self.metadata_file_regex: re.Pattern = re.compile(self.raw["files"]["metadata file regex"])
+            self.metadata_file_regex: re.Pattern = re.compile(config.pop(["files"]["metadata file regex"], default_conf["files"]["metadata file regex"]))
             """ Regex pattern to be used to select files that may contain metadata."""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
-            self.input_to_ignore: list[str] = set(self.__ensure_list(self.raw["files"]["input to ignore"]))
+            self.input_to_ignore: list[str] = set(self.__ensure_list(config.pop(["files"]["input to ignore"], default_conf["files"]["input to ignore"])))
             """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
 
-            self.get: Dict[str:list[str]] = self.raw["folders"]["get"]
+            self.get: Dict[str:list[str]] = config.pop(["folders"]["get"], default_conf["folders"]["get"])
             """ For each key associated with a matching pattern defined in the "data file regex", a list of target folders is defined, to which matching files should be moved."""
             self.data_file_regex: Dict[str, re.Pattern] = {
-                k: re.compile(v) for k, v in self.raw["files"]["data file regex"].items()
+                k: re.compile(v) for k, v in config.pop(["files"]["data file regex"], default_conf["files"]["data file regex"]).items()
             }
             """ Dictionary with regex formatting to be used to select filenames to be processed as raw data files"""
-            self.table_names: Dict[str,str] = self.__build_worksheet_dict(self.raw["files"]["table_names"])
+            self.table_names: Dict[str,str] = self.__build_worksheet_dict(config.pop(["files"]["table_names"], default_conf["files"]["table_names"]))
             """ Table names to be used. {"json_root_table_name": "worksheet_name", ...]"""
-            
-            self.required_tables: list[str] = self.limit_character_scope(self.__ensure_list(self.raw["metadata"]["required tables"]))
+
+            self.required_tables: list[str] = self.limit_character_scope(
+                self.__ensure_list(
+                    config.pop(["metadata"]["required tables"], default_conf["metadata"]["required tables"])))
             """ Columns that define the tables required in the metadata file"""
-            self.key_columns: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["key"])
+            self.key_columns: Dict[str,list[str]] = self.limit_character_scope(
+                config.pop(["metadata"]["key"], default_conf["metadata"]["key"]))
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.tables_associations: Dict[str, TableAssociation] = self.limit_character_scope(self.raw["metadata"]["association"])
+            self.tables_associations: Dict[str, TableAssociation] = self.limit_character_scope(
+                config.pop(["metadata"]["association"], default_conf["metadata"]["association"]))
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.required_columns: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["in columns"])
+            self.required_columns: Dict[str,list[str]] = self.limit_character_scope(
+                config.pop(["metadata"]["in columns"]), default_conf["metadata"]["in columns"])
             """ Columns required in the input metadata file"""
-            self.rows_sort_by: Dict[str,str] = self.limit_character_scope(self.raw["metadata"]["sort by"])
+            self.rows_sort_by: Dict[str,str] = self.limit_character_scope(
+                config.pop(["metadata"]["sort by"]), default_conf["metadata"]["sort by"])
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
-            self.columns_data_filenames: Dict[str,list[str]] = self.limit_character_scope(self.raw["metadata"]["data filenames"])
+            self.columns_data_filenames: Dict[str,list[str]] = self.limit_character_scope(
+                config.pop(["metadata"]["data filenames"]), default_conf["metadata"]["data filenames"])
             """ Columns that contain the names of data files associated with each row metadata"""
-            self.columns_data_published: Dict[str,list[str]] = self.limit_character_scope([self.raw["metadata"]["data published flag"]])[0]
+            self.columns_data_published: Dict[str,list[str]] = self.limit_character_scope(
+                [config.pop(["metadata"]["data published flag"], default_conf["metadata"]["data published flag"])])[0]
             """ Columns that contain the publication status of each row"""
-            self.add_filename: Dict[str,str] = self.raw["metadata"]["add filename"]
+            self.add_filename: Dict[str,str] = config.pop(["metadata"]["add filename"], default_conf["metadata"]["add filename"])
             """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
             self.filename_data_format: Dict[str, re.Pattern] = {
-                k: re.compile(v) for k, v in self.raw["metadata"]["filename data format"].items()
+                k: re.compile(v) for k, v in config.pop(["metadata"]["filename data format"], default_conf["metadata"]["filename data format"]).items()
             }
             """ Dictionary with table names (keys) and regex patterns (values) to extracted data from the filename and add to the indicated table. Use re.match.groupdict() syntax."""
-            self.filename_data_processing_rules: Dict[str, Dict[str, Any]] = self.raw["metadata"]["filename data replace rules"]
+            self.filename_data_processing_rules: Dict[str, Dict[str, Any]] = config.pop(["metadata"]["filename data processing rules"],
+                                                                                        default_conf["metadata"]["filename data processing rules"])
             """ Dictionary with old and new characters to be replaced in the data extracted from the filename, defined for each key in the replacement pattern."""
+
+            # Pop empty objects within the config in the dict
+            if not config["log"]:
+                config.pop("log")
+            if not config["files"]:
+                config.pop("files")
+            if not config["metadata"]:
+                config.pop("metadata")
+            if config:
+                print(f"Configuration file contains unknown keys: {json.dumps(config)}")
+                exit(1)
 
         except Exception as e:
             print(f"Configuration files missing arguments: {e}")
@@ -202,43 +231,21 @@ class Config:
             return item
 
     # --------------------------------------------------------------
-    def __update_dict_recursive(self, d: Dict[Any, Any], u: Dict[Any, Any]) -> Dict[Any, Any]:
-        """Recursively update dictionary d with values from dictionary u.
-        
-        Args:
-            d (Dict[Any, Any]): The original dictionary to be updated.
-            u (Dict[Any, Any]): The dictionary with update values.
-            
-        Returns:
-            Dict[Any, Any]: The updated dictionary.
-        """
-        for k, v in u.items():
-            if isinstance(v, dict):
-                d[k] = self.__update_dict_recursive(d.get(k, {}), v)
-            else:
-                d[k] = v
-        return d
-    
-    # --------------------------------------------------------------
-    def __load_into_config(self, filename: str) -> None:
+    def __load_into_config(self, filename: str) -> Dict[str, Any]:
         """Load;update the configuration values from a JSON file encoded with UTF-8.
         
         Args:
             filename (str): Configuration file name.
         
-        Returns: None
+        Returns:
+            Dict[str, Any]: Configuration values.
         
         Raises: None
         """
         
         try:
             with open(filename, 'r', encoding='utf-8') as json_file:
-                raw_config = json.load(json_file)
-        
-            if not self.raw:
-                self.raw = raw_config
-            else:
-                self.raw = self.__update_dict_recursive(self.raw, raw_config)
+                return json.load(json_file)
             
         except FileNotFoundError:
             print(f"Config file not found in path: {filename}")
@@ -248,11 +255,17 @@ class Config:
             exit(1)
 
     # --------------------------------------------------------------
-    def __log_format_colour(self) -> str:
+    def __log_format_colour(self,
+                            log_format: list[str],
+                            colour_format: list[str],
+                            log_separator: str) -> str:
         """Return the log format string.
 
-        Args: None
-            
+        Args:
+            log_format (list[str]): The log format.
+            colour_format (list[str]): The colour format.
+            log_separator (str): The log separator.
+
         Returns:
             str: Log format string.
             
@@ -260,24 +273,25 @@ class Config:
         """
         
         output_format = ""
-        colour_format = self.raw["log"]["colour sequence"]
         colour_count = 0
         colour_set = '\x1b['
-        separator = f"{colour_set}0m{self.log_separator}"
-        for item in self.raw["log"]["format"]:
+        separator = f"{colour_set}0m{log_separator}"
+        for item in log_format:
             output_format = f"{output_format}{colour_set}{colour_format[colour_count]}{item}{separator}"
             colour_count += 1
             if colour_count == len(colour_format):
                 colour_count = 0
                         
-        return output_format[:-len(self.raw['log']['separator'])]
+        return output_format[:-len(log_separator)]
 
     # --------------------------------------------------------------
-    def __log_format_plain(self) -> str:
+    def __log_format_file(self, format_string:list[str], log_separator:str) -> str:
         """Return the log format string.
 
-        Args: None
-            
+        Args:
+            format_string (list[str]): The format string.
+            log_separator (str): The log separator.
+
         Returns:
             str: Log format string.
         
@@ -285,17 +299,19 @@ class Config:
         """
         
         output_format = ""
-        for item in self.raw["log"]["format"]:
-            output_format = f"{output_format}{item}{self.log_separator}"
+        for item in format_string:
+            output_format = f"{output_format}{item}{log_separator}"
         
-        return output_format[:-len(self.log_separator)]
+        return output_format[:-len(log_separator)]
 
     # --------------------------------------------------------------
-    def __log_titles(self) -> str:
+    def __log_titles(self, log_format:list[str], log_separator:str) -> str:
         """Return the log column titles as a string.
-        
-        Args: None
-            
+
+        Args:
+            log_format (list[str]): The log format.
+            log_separator (str): The log separator.
+
         Returns:
             str: Log titles stringÇ
                 "%(asctime)s" result title = "asctime"
@@ -309,14 +325,14 @@ class Config:
         
         non_title = ["%(", ")s", ")d"]
         output_format = ""
-        for item in self.raw["log"]["format"]:
+        for item in log_format:
 
             for non in non_title:
                 item = item.replace(non, "")
             
-            output_format = f"{output_format}{item}{self.raw['log']['separator']}"
+            output_format = f"{output_format}{item}{log_separator}"
         
-        return output_format[:-len(self.raw['log']['separator'])]
+        return output_format[:-len(log_separator)]
     
     # --------------------------------------------------------------
     def limit_character_scope(self, data: Any) -> Any:
