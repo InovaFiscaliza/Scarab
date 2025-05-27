@@ -294,7 +294,38 @@ class DataHandler:
         return df
     
     # --------------------------------------------------------------
-    def process_table(self, df: pd.DataFrame, table_name: str, file: str) -> tuple[pd.DataFrame, list]:
+    def _id_and_validate_table(self, df: pd.DataFrame, assigned_table: str, file: str) -> tuple[bool, str]:
+        """Identify and validate the table in the DataFrame according to required columns (columns in and keys) defined in the config file
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+            assigned_table (str): Name of the table to be used as defined in the config file.
+            file (str): File name to be used in the log message.
+            
+        Returns:
+            tuple[bool, str]: Tuple with a boolean indicating if the table is valid and the name of the table.
+
+        """
+
+        df_columns = set(df.columns.tolist())
+        
+        any_table = (assigned_table == self.config.default_multiple_object_key)
+        
+        for table, required_columns in self.config.required_columns.items():
+            if required_columns.issubset(df_columns):
+                if not assigned_table == table or any_table:
+                    self.log.warning(f"File '{file}' indicates {table} but required columns in config does not match'.")
+                return True, table
+            
+        for table, required_key_columns in self.config.key_columns.items():
+            if required_key_columns.issubset(df_columns):
+                if not assigned_table == table or any_table:
+                    self.log.warning(f"File '{file}' indicates {table} but required key columns in config does not match'.")
+                return True, table
+                            
+        return False, assigned_table
+    
+    # --------------------------------------------------------------
+    def process_table(self, df: pd.DataFrame, table_name: str, file: str) -> tuple[pd.DataFrame, list, str]:
         """Process the DataFrame to create, clean column names and other adjustments.
         Args:
             df (pd.DataFrame): DataFrame to process.
@@ -310,7 +341,12 @@ class DataHandler:
         df.columns = self.config.limit_character_scope(df.columns.tolist())
 
         # Process via chaining operations
-
+        valid_table, table_name = self._id_and_validate_table(df, table_name, file)
+        
+        if not valid_table:
+            self.log.warning(f"No valid table data found in file {file}.")
+            return pd.DataFrame(), []
+        
         # Define pipeline of transformations
         transformations = [
             lambda df: self.add_filename_column(df, table_name, file),
@@ -326,7 +362,7 @@ class DataHandler:
         # Get columns after all transformations
         columns = df.columns.tolist()
 
-        return df, columns
+        return df, columns, table_name
 
     # --------------------------------------------------------------
     def create_dataframe(self, data: dict) -> pd.DataFrame:
@@ -354,22 +390,21 @@ class DataHandler:
             raise ValueError(f"Unsupported data type: {type(data)}")
 
     # --------------------------------------------------------------
-    def read_metadata(self, file: str) -> tuple[dict[str,pd.DataFrame], dict[str,list]]:
+    def read_metadata(self, file: str, table: str) -> tuple[dict[str,pd.DataFrame], dict[str,list]]:
         """Read an metadata file and return a list of tuples with the DataFrame and the columns in the DataFrame.
         The file can be an Excel file, a CSV file or a JSON file.
 
         Args:
             file (str): Excel file to read.
-            filetype (str): Type of the file to read. Supported types are '.xlsx', '.csv' and '.json'.
-
+            table (str): Name of the table to be used as defined in the config file.
+            
         Returns:
             dict[str,pd.DataFrame]: Dictionary with the DataFrames containing various tables.
             dict[str,list]: Dictionary with the lists of columns for each table.
         """
-        
-        new_data_df = self.config.table_names.copy()
-        new_data_columns = self.config.table_names.copy()
-        base_key = self.config.default_worksheet_key
+
+        new_data_df = {key: pd.DataFrame() for key in self.config.table_names}
+        new_data_columns = {key: [] for key in self.config.table_names}
         default_table_not_loaded =  True
         
         filetype = os.path.splitext(file)[1]
@@ -388,11 +423,11 @@ class DataHandler:
                         # create a copy of sheet_names to avoid modifying the original list with the for loop
                         sheet_names_copy = sheet_names.copy()
                         
-                        # Process each worksheet separately
+                        # Process each worksheet separately.
                         for sheet_name in sheet_names_copy:
-                            if sheet_name in new_data_df:
+                            if sheet_name in new_data_df.keys():
                                 # Read the worksheet into a DataFrame
-                                sheet_df = excel_file.parse(sheet_name, dtype="string")
+                                new_df = excel_file.parse(sheet_name, dtype="string")
                                 
                                 if sheet_name == self.config.name:
                                     key = self.config.default_worksheet_key
@@ -401,34 +436,22 @@ class DataHandler:
                                     key = sheet_name
                                 
                                 # Process the worksheet data
-                                new_data_df[key], new_data_columns[key] = self.process_table(
-                                    df=sheet_df,
+                                new_df,  columns, table_name = self.process_table(
+                                    df=new_df,
                                     table_name=sheet_name,
                                     file=file
                                 )
-                            
+                                new_data_df[table_name] = new_df
+                                new_data_columns[table_name] = columns
+                                
                                 # remove the processed sheet name from the list of new_data_df
                                 sheet_names.remove(sheet_name)
                         
-                        if len(sheet_names) == 1 and default_table_not_loaded:
-                            new_df = excel_file.parse(sheet_names[0], dtype="string")
-                            self.config.table_names[base_key] = sheet_names[0]
-                            sheet_names.remove(sheet_names[0])
-                        
-                        if len(sheet_names) > 0:
-                            self.log.warning("Not all worksheets were processed in file {file}")
-                            
-                        new_data_df = self.update_table_associations(new_data_df, file)
-                    
+                    if len(sheet_names) == 1 and default_table_not_loaded:
+                        new_df = excel_file.parse(sheet_names[0], dtype="string")                        
                     else:
-                        try:
-                            self.config.table_names[base_key] = sheet_names[0]
-                            new_df = excel_file.parse(sheet_names[0], dtype="string")
-                            
-                        except IndexError as e:
-                            self.log.error(f"Error reading sheet names from file {file}: {e}")
-                            return pd.DataFrame(), []
-                        
+                        self.log.warning("Multiple worksheets in file {file}. Check configuration to include table names to all worksheets.")
+                                            
                 case '.csv':
                     new_df = pd.read_csv(file, dtype="string")
                     
@@ -442,24 +465,34 @@ class DataHandler:
                         if data and key in data:
                             new_df = self.create_dataframe(data[key])
 
-                            new_data_df[key], new_data_columns[key] = self.process_table(   df=new_df,
-                                                                                            table_name=key,
-                                                                                            file=file)
+                            new_df, columns, table_name = self.process_table(   df=new_df,
+                                                                                table_name=key,
+                                                                                file=file)
+                            new_data_df[table_name] = new_df
+                            new_data_columns[table_name] = columns
+
                             del data[key]
                     
                     # add the remaining data from the json file to the default base_key table
                     if data:
                         new_df = self.create_dataframe(data)
                     else:
+                    # else, if there is no remaining data, assume that default table data was already loaded and no further processing is needed
                         default_table_not_loaded = False
                     
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
                     
             if default_table_not_loaded:
-                new_data_df[base_key], new_data_columns[base_key] = self.process_table( df=new_df,
-                                                                                        table_name=base_key,
-                                                                                        file=file)
+                new_df, columns, table_name = self.process_table(   df=new_df,
+                                                                    table_name=table,
+                                                                    file=file)
+                new_data_df[table_name] = new_df
+                new_data_columns[table_name] = columns
+            
+            if not new_data_df.keys().issubset(self.config.required_tables):
+                self.log.warning(f"File {file} does not contain all required tables: {self.config.required_tables}. No data will be processed from it.")
+                return {}, {}
             
             new_data_df = self.update_table_associations(new_data_df, file)
             
@@ -467,48 +500,7 @@ class DataHandler:
             
         except Exception as e:
             self.log.error(f"Error reading metadata file {file}: {e}")
-            return pd.DataFrame(), []
-        
-    # --------------------------------------------------------------
-    def valid_data(self, tables: dict[str,pd.DataFrame], file: str) -> bool:
-        """Check if the input dataframe is valid with the following tests:
-            - If columns are a superset of the minimum required columns.
-            - If columns contain the key columns.
-            - If key columns contain any non null values.
-
-        Args:
-            df (pd.DataFrame): DataFrame to validate.
-            file (str): File name to be used in the log message.
-
-        Returns:
-            bool: True if the data is valid.
-        """
-        
-        for table, df in tables.items():
-            # processing of the original data may remove rows with null values in the key columns, the resulting DataFrame may be empty
-            if df.empty and table in self.config.required_tables:
-                if table == self.config.default_worksheet_key:
-                    self.log.warning(f"File '{file}' is empty or has no data in columns defined as keys.")
-                self.log.warning(f"File '{file}' is empty or has nor data in columns defined as keys.")
-                return False
-            
-            df_columns = set(df.columns.tolist())
-            
-            required_columns = set(self.config.required_columns[table])
-            key_columns = set(self.config.key_columns[table])
-        
-            if not required_columns.issubset(df_columns):
-                # find which elements from self.config.required_columns are missing in df_columns
-                missing_columns = required_columns - df_columns
-                self.log.error(f"File '{file}' does not contain the required metadata columns: {missing_columns}")
-                return False
-                
-            if not key_columns.issubset(df_columns):
-                missing_columns = key_columns - df_columns
-                self.log.error(f"File '{file}' does not contain the required key columns: {missing_columns}")
-                return False        
-            
-        return True
+            return {}, {}
 
     # --------------------------------------------------------------
     def merge_lists(self, new_list: list, legacy_list: list) -> list:
@@ -793,16 +785,16 @@ class DataHandler:
             pd.DataFrame: Updated DataFrame with the new data.
         """
         
-        try:
+        if table in self.config.add_filename.keys():
             new_column_name = self.config.add_filename[table]
             df[new_column_name] = os.path.basename(file)
-        except KeyError:
+        else:
             self.log.debug(f"Missing complement data info for table `{table}`. Skipping.")
         
         return df
     
     # --------------------------------------------------------------
-    def apply_filename_data_processing_rules(self, key:str, value:str) -> str:
+    def _apply_filename_data_processing_rules(self, key:str, value:str) -> str:
         """Apply the filename data processing rules to the value.
         
         Args:
@@ -868,7 +860,7 @@ class DataHandler:
             
             # Assign each extracted group as a new column for all rows in the DataFrame
             for key, value in filename_data.items():
-                df[key] = self.apply_filename_data_processing_rules(key=key, value=value)
+                df[key] = self._apply_filename_data_processing_rules(key=key, value=value)
                 
             self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
                 
@@ -906,6 +898,9 @@ class DataHandler:
             self.log.info(f"Reference data loaded from file: {latest_file}")
             ref_df, ref_cols = self.read_metadata(  file=latest_file,
                                                     filetype=self.config.catalog_extension)
+            
+            if not ref_df:
+                raise ValueError(f"Reference data file {latest_file} is empty or not valid.")
         else:
             self.log.warning("No reference data found. Starting with a blank reference.")
             ref_df = {key: pd.DataFrame() for key in self.config.table_names}
@@ -914,27 +909,29 @@ class DataHandler:
         return ref_df, ref_cols
 
     # --------------------------------------------------------------
-    def process_metadata_files(self,  metadata_files: set[str]) -> None:
+    def process_metadata_files(self,  metadata_files: dict[str,set[str]]) -> None:
         """Process a set of xlsx files and update the reference data file.
 
         Args:
-            metadata_files (set[str]): List of xlsx files to process.
+            metadata_files (dict[str,set[str]]): Dictionary of xlsx files to process, keyed by table name.
             config (Config): Configuration object.
             log (logging.Logger): Logger object.
             
         Returns: None            
         """
         
-        files_to_move = metadata_files.copy()
-        
-        for file in metadata_files:
-            new_data_df, column_in = self.read_metadata(file=file)
-            
-            # test the content of the file
-            if not self.valid_data(df=new_data_df, file=file):
-                if self.config.discard_invalid_data_files:
+        files_to_move_to_store = []
+
+        for table, files in metadata_files.items():
+            for file in files:
+                new_data_df, column_in = self.read_metadata(file=file, table=table)
+
+                # If data was loaded, put the file in the list to be moved to store, otherwise may move it to trash
+                if new_data_df:
+                    files_to_move_to_store.append(file)
+                elif self.config.discard_invalid_data_files:
                     self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
-                    files_to_move.remove(file)
+                    
                 continue
             
             # Compute the new column order for the reference DataFrame
@@ -944,7 +941,7 @@ class DataHandler:
             self.update_reference_data(new_data_df=new_data_df, file=file)
 
         if self.persist_reference():
-            self.file.move_to_store(files_to_move)
+            self.file.move_to_store(files_to_move_to_store)
             
             # Reset set of data files to ignore, since the reference data has been updated
             self.data_files_to_ignore = set()
