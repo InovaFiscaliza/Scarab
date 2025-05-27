@@ -57,7 +57,7 @@ class DataHandler:
         """Data file control column name. Used to concatenate the filenames of the data files when multiple columns are defined."""
         self.post_order_column : str = f"{POST_ORDER_COLUMN_PREFIX}{self.unique_id}"
         """Post order column name. Used to keep ordering of the rows in the DataFrame."""
-        self.__replace_empty_sorting_value()
+        self._replace_empty_sorting_value()
         
         df, col = self.read_reference_df()
         
@@ -68,7 +68,7 @@ class DataHandler:
 
         self.ordering_index : dict[str, int] = {key: 0 for key in self.ref_df.keys()}
         """Index used for sequentially ordering rows in the various tables if no ordering column is defined. """        
-        self.next_pk_counter : dict[str, int] = self.__initialize_next_pk_counter()
+        self.next_pk_counter : dict[str, int] = self._initialize_next_pk_counter()
         """ Dictionary with initial number to be used as primary keys in each table. The key is the table name and the value is the number of free primary keys. """
         self.pk_mod_table : dict[str,dict[str,str]] = {}
         """ Dictionary with the table name and key associated with the primary key in relative (in file) indexing and absolute (in reference data) indexing. """
@@ -76,7 +76,7 @@ class DataHandler:
         """ Dictionary with the table name and offset value to be used to convert the relative primary key to absolute primary key. """
         
         # --------------------------------------------------------------
-    def __replace_empty_sorting_value(self) -> None:
+    def _replace_empty_sorting_value(self) -> None:
         """Process the row sorting dictionary to ensure all values are lists.
         
         Args:
@@ -94,7 +94,7 @@ class DataHandler:
             self.config.rows_sort_by.update({k: self.post_order_column for k in empty_keys})
     
     # --------------------------------------------------------------
-    def __initialize_next_pk_counter(self) -> dict[str, int]:
+    def _initialize_next_pk_counter(self) -> dict[str, int]:
         """Initialize the free primary key counter for each table in the reference data.
 
         Returns:
@@ -182,7 +182,8 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
-        columns = self.config.key_columns[table_name]
+        columns = list(self.config.key_columns[table_name])
+        
         if not columns:
             self.log.debug(f"No key columns defined for table {table_name} to use for processing file {file}")
             return df
@@ -307,22 +308,52 @@ class DataHandler:
         """
 
         df_columns = set(df.columns.tolist())
+
+        distance = {}
         
-        any_table = (assigned_table == self.config.default_multiple_object_key)
+        if assigned_table == self.config.default_multiple_object_key:
+            assigned_table = None
         
-        for table, required_columns in self.config.required_columns.items():
-            if required_columns.issubset(df_columns):
-                if not assigned_table == table or any_table:
-                    self.log.warning(f"File '{file}' indicates {table} but required columns in config does not match'.")
-                return True, table
+        for table, required_columns in required_columns_dict.items():
+            # compute the distance between the DataFrame columns and the required columns.
+            # Required columns must be a subset of the DataFrame columns.
+            # Smaller distance correspond to the dataframe that is the smaller superset of the required columns. 
             
-        for table, required_key_columns in self.config.key_columns.items():
-            if required_key_columns.issubset(df_columns):
-                if not assigned_table == table or any_table:
-                    self.log.warning(f"File '{file}' indicates {table} but required key columns in config does not match'.")
-                return True, table
-                            
-        return False, assigned_table
+            if required_columns.issubset(df_columns):
+                distance[table] = len(df_columns - required_columns)
+            else:
+                distance[table] = float('inf')
+        
+        # Find the table with minimum distance value
+        if distance:
+            min_distance_value = min(distance.values())
+            
+            # Find all tables with this minimum distance
+            tables_with_min_distance = [table for table, dist in distance.items() if dist == min_distance_value]
+            
+            # If there's only one table with minimum distance, use it
+            if len(tables_with_min_distance) == 1:
+                assigned_table = tables_with_min_distance[0]
+            # If there are multiple tables with same minimum distance (tie)
+            elif len(tables_with_min_distance) > 1:
+                # If assigned_table is already set and is among the minimum distance tables, keep it
+                if assigned_table and assigned_table in tables_with_min_distance:
+                    # Keep the current assigned_table value (no change needed)
+                    pass
+                else:
+                    # Raise error if no predefined table is available for tie-breaking
+                    self.log.error(f"Multiple tables ({tables_with_min_distance}) match the data equally well in file {file}")
+                    raise ValueError(f"Ambiguous table assignment in file {file}: {tables_with_min_distance}")
+            
+            # Check if the assigned table has an infinite distance (no match)
+            if distance[assigned_table] == float('inf'):
+                self.log.warning(f"No valid table found in file {file}. Columns do not match any table.")
+                return False, assigned_table
+            
+            return True, assigned_table
+        else:
+            self.log.warning(f"No column structure defined. Can't process file {file}. Check your configuration.")
+            return False, assigned_table
     
     # --------------------------------------------------------------
     def process_table(self, df: pd.DataFrame, table_name: str, file: str) -> tuple[pd.DataFrame, list, str]:

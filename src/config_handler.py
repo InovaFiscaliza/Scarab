@@ -105,7 +105,7 @@ class Config:
             """ List of strings that will be considered as null values in the metadata file"""
             self.default_worksheet_key:str = config.pop("default worksheet key", default_conf["default worksheet key"])
             """Default key to be used for the worksheet that will retain single table values or non mapped values in the json root."""
-            self.default_multiple_object_key:str = config.pop("default multiple object key", default_conf["default multiple worksheet key"])
+            self.default_multiple_object_key:str = config.pop("default multiple object key", default_conf["default multiple object key"])
             """Default key to be used to designate operations that are applicable to multiple tables/worksheets."""
             self.default_worksheet_name:str = config.pop("default worksheet name", default_conf["default worksheet name"])
             """Default value for the worksheet name. If value of assigned to the default key is equal to this value, will use the name of the config.pop(uration."""
@@ -193,11 +193,15 @@ class Config:
             self.columns_data_published: Dict[str,list[str]] = self.limit_character_scope(
                 [config["metadata"].pop("data published flag", default_conf["metadata"]["data published flag"])])[0]
             """ Columns that contain the publication status of each row"""
+            self.expected_columns_in_files: Dict[str, set[str]] = self._get_expected_columns_in_files(
+                config["metadata"].get("add filename", default_conf["metadata"]["add filename"]),
+                config["metadata"].get("filename data format", default_conf["metadata"]["filename data format"]))
+            """ Dictionary with table names (keys) and set of new columns to be created from the filename data format and add filename rules."""
             self.add_filename: Dict[str,str] = config["metadata"].pop("add filename", default_conf["metadata"]["add filename"])
             """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
             self.filename_data_format: Dict[str, re.Pattern] = {
                 k: re.compile(v) for k, v in config["metadata"].pop("filename data format", default_conf["metadata"]["filename data format"]).items()
-            }
+            }            
             """ Dictionary with table names (keys) and regex patterns (values) to extracted data from the filename and add to the indicated table. Use re.match.groupdict() syntax."""
             self.filename_data_processing_rules: Dict[str, Dict[str, Any]] = config["metadata"].pop("filename data processing rules",
                                                                                         default_conf["metadata"]["filename data processing rules"])
@@ -252,6 +256,47 @@ class Config:
             config.setdefault(key, {})
         
         return config
+
+    # --------------------------------------------------------------
+    def _get_expected_columns_in_files(  self,
+                                        add_filename: dict[str,str],
+                                        filename_data_format: dict[str,str]) -> dict[str,set[str]]:
+        """Get expected columns in files based on add_filename and filename_data_format.	
+        
+        Args:
+            add_filename (dict[str,str]): Dictionary with table names (keys) and column names (values) to be added to the metadata.
+            filename_data_format (dict[str,str]): Dictionary with table names (keys) and regex patterns (values) to extract data from filenames.
+            
+        Returns:
+            dict[str, set[str]]: Dictionary with table names (keys) and sets of expected columns (values).
+        """
+        
+        new_columns: dict[str, set[str]] = {}
+        
+        # Start with columns from add_filename values
+        for table in add_filename.keys():
+            new_columns[table] = set(add_filename.values())
+        
+        # Extract named capture groups from regex patterns
+        pattern = re.compile(r'<(.*?)>')
+        for table, format_string in filename_data_format.items():
+            # Find all matches and add them to the set for this table
+            matches = pattern.findall(format_string)
+            if table not in new_columns:
+                new_columns[table] = set(matches)
+            else:
+                new_columns[table].add(matches)
+        
+        all_tables = set(self.required_columns.keys()) | set(self.key_columns.keys())
+
+        expected_columns = {
+            table: (self.required_columns.get(table, set()) | 
+                self.key_columns.get(table, set())).discard(new_columns.get(table, set()))
+            for table in all_tables
+        }
+        
+        return expected_columns
+
 
     # --------------------------------------------------------------
     def _remove_empty_keys(self, config: Dict[str, Any]) -> Dict[str, Any]:
