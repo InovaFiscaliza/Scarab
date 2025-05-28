@@ -16,6 +16,7 @@ import os
 import pandas as pd
 from typing import Any, Dict, TypedDict
 import re
+import copy
 
 # --------------------------------------------------------------
 # Control Constants
@@ -74,7 +75,7 @@ class Config:
         self.config_file = filename
         """Configuration file name."""
         config: Dict[str, Any] = self._load_into_config(filename)
-        self.raw: Dict[str, Any] = config
+        self.raw: Dict[str, Any] = copy.deepcopy(config)
         """Raw configuration values."""
         # Ensure mandatory keys exist in config
         config = self._ensure_mandatory_structure(config)

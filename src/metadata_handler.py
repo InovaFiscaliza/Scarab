@@ -58,6 +58,8 @@ class DataHandler:
         self.post_order_column : str = f"{POST_ORDER_COLUMN_PREFIX}{self.unique_id}"
         """Post order column name. Used to keep ordering of the rows in the DataFrame."""
         self._replace_empty_sorting_value()
+        self.ordering_index : dict[str, int] = {}
+        """Index used for sequentially ordering rows in the various tables if no ordering column is defined. """        
         
         df, col = self.read_reference_df()
         
@@ -66,8 +68,6 @@ class DataHandler:
         self.ref_cols : dict[str,list[str]] = col
         """Dictionary with list of columns in in each reference DataFrame."""
 
-        self.ordering_index : dict[str, int] = {key: 0 for key in self.ref_df.keys()}
-        """Index used for sequentially ordering rows in the various tables if no ordering column is defined. """        
         self.next_pk_counter : dict[str, int] = self._initialize_next_pk_counter()
         """ Dictionary with initial number to be used as primary keys in each table. The key is the table name and the value is the number of free primary keys. """
         self.pk_mod_table : dict[str,dict[str,str]] = {}
@@ -235,9 +235,9 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
-        index_value = self.ordering_index[table_name]
+        index_value = self.ordering_index.get(table_name,0)
         df[self.post_order_column] = range(index_value, index_value + len(df))
-        self.ordering_index[table_name] += len(df)
+        self.ordering_index[table_name] = index_value + len(df)
         
         try:
             # sort the DataFrame by the columns defined in the config file
@@ -449,7 +449,7 @@ class DataHandler:
                         sheet_names_copy = sheet_names.copy()
                         
                         # Process each worksheet separately.
-                        for sheet_name in sheet_names_copy:
+                        for sheet_name in sheet_names:
                             if sheet_name in new_data_df.keys():
                                 # Read the worksheet into a DataFrame
                                 new_df = excel_file.parse(sheet_name, dtype="string")
@@ -470,10 +470,10 @@ class DataHandler:
                                 new_data_columns[table_name] = columns
                                 
                                 # remove the processed sheet name from the list of new_data_df
-                                sheet_names.remove(sheet_name)
+                                sheet_names_copy.remove(sheet_name)
                         
-                    if len(sheet_names) == 1 and default_table_not_loaded:
-                        new_df = excel_file.parse(sheet_names[0], dtype="string")                        
+                    if len(sheet_names_copy) == 1 and default_table_not_loaded:
+                        new_df = excel_file.parse(sheet_names_copy[0], dtype="string")                        
                     else:
                         self.log.warning("Multiple worksheets in file {file}. Check configuration to include table names to all worksheets.")
                                             
@@ -926,7 +926,7 @@ class DataHandler:
         if latest_file:
             self.log.info(f"Reference data loaded from file: {latest_file}")
             ref_df, ref_cols = self.read_metadata(  file=latest_file,
-                                                    filetype=self.config.catalog_extension)
+                                                    table=self.config.default_worksheet_key)
             
             if not ref_df:
                 raise ValueError(f"Reference data file {latest_file} is empty or not valid.")
@@ -960,20 +960,20 @@ class DataHandler:
                     files_to_move_to_store.append(file)
                 elif self.config.discard_invalid_data_files:
                     self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
-                    
-                continue
-            
-            # Compute the new column order for the reference DataFrame
-            self.ref_cols = self.merge_dicts(new_dict=column_in, legacy_dict=self.ref_cols)
-                        
-            # Update reference data with new data from the file
-            self.update_reference_data(new_data_df=new_data_df, file=file)
+                    continue
 
-        if self.persist_reference():
-            self.file.move_to_store(files_to_move_to_store)
-            
-            # Reset set of data files to ignore, since the reference data has been updated
-            self.data_files_to_ignore = set()
+                # Compute the new column order for the reference DataFrame
+                self.ref_cols = self.merge_dicts(new_dict=column_in, legacy_dict=self.ref_cols)
+                            
+                # Update reference data with new data from the file
+                self.update_reference_data(new_data_df=new_data_df, file=file)
+
+        if files_to_move_to_store:
+            if self.persist_reference():
+                self.file.move_to_store(files_to_move_to_store)
+
+                # Reset set of data files to ignore, since the reference data has been updated
+                self.data_files_to_ignore = set()
 
     # --------------------------------------------------------------
     def process_data_files(self, files_to_process: set[str]) -> None:

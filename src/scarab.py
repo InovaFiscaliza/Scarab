@@ -97,8 +97,9 @@ def main(config_path: str) -> None:
             if metadata_to_process:
                 dh.process_metadata_files(metadata_to_process)
 
-            # remove files to ignore from the set of files to process.
-            data_files_to_process = data_files_to_process - dh.data_files_to_ignore
+            # remove files to ignore from the sets of files to process.
+            for table in data_files_to_process.keys():
+                data_files_to_process[table] = data_files_to_process[table].difference_update(dh.data_files_to_ignore)
                     
             if data_files_to_process:
                 dh.process_data_files(data_files_to_process)
