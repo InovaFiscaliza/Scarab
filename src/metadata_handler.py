@@ -309,51 +309,45 @@ class DataHandler:
 
         df_columns = set(df.columns.tolist())
 
-        distance = {}
+        distance = {k: float('inf') for k in self.config.expected_columns_in_files.keys()}
         
         if assigned_table == self.config.default_multiple_object_key:
             assigned_table = None
         
-        for table, required_columns in required_columns_dict.items():
+        for table, required_columns in self.config.expected_columns_in_files.items():
             # compute the distance between the DataFrame columns and the required columns.
             # Required columns must be a subset of the DataFrame columns.
-            # Smaller distance correspond to the dataframe that is the smaller superset of the required columns. 
-            
+            # Smaller distance correspond to the dataframe that is the smaller superset of the required columns.
+            # An empty column list will be a subset to all tables and the table with smallest number of columns will be returned.
             if required_columns.issubset(df_columns):
                 distance[table] = len(df_columns - required_columns)
-            else:
-                distance[table] = float('inf')
         
         # Find the table with minimum distance value
-        if distance:
-            min_distance_value = min(distance.values())
-            
-            # Find all tables with this minimum distance
-            tables_with_min_distance = [table for table, dist in distance.items() if dist == min_distance_value]
-            
-            # If there's only one table with minimum distance, use it
-            if len(tables_with_min_distance) == 1:
-                assigned_table = tables_with_min_distance[0]
-            # If there are multiple tables with same minimum distance (tie)
-            elif len(tables_with_min_distance) > 1:
-                # If assigned_table is already set and is among the minimum distance tables, keep it
-                if assigned_table and assigned_table in tables_with_min_distance:
-                    # Keep the current assigned_table value (no change needed)
-                    pass
-                else:
-                    # Raise error if no predefined table is available for tie-breaking
-                    self.log.error(f"Multiple tables ({tables_with_min_distance}) match the data equally well in file {file}")
-                    raise ValueError(f"Ambiguous table assignment in file {file}: {tables_with_min_distance}")
-            
-            # Check if the assigned table has an infinite distance (no match)
-            if distance[assigned_table] == float('inf'):
-                self.log.warning(f"No valid table found in file {file}. Columns do not match any table.")
-                return False, assigned_table
-            
-            return True, assigned_table
-        else:
-            self.log.warning(f"No column structure defined. Can't process file {file}. Check your configuration.")
+        min_distance_value = min(distance.values())
+        
+        # Find all tables with this minimum distance
+        tables_with_min_distance = [table for table, dist in distance.items() if dist == min_distance_value]
+        
+        # If there's only one table with minimum distance, use it
+        if len(tables_with_min_distance) == 1:
+            assigned_table = tables_with_min_distance[0]
+        # If there are multiple tables with same minimum distance (tie)
+        elif len(tables_with_min_distance) > 1:
+            # If assigned_table is already set and is among the minimum distance tables, keep it
+            if assigned_table and assigned_table in tables_with_min_distance:
+                # Keep the current assigned_table value (no change needed)
+                pass
+            else:
+                # Raise error if no predefined table is available for tie-breaking
+                self.log.error(f"Multiple tables ({tables_with_min_distance}) match the data equally well in file {file}")
+                raise ValueError(f"Ambiguous table assignment in file {file}: {tables_with_min_distance}")
+        
+        # Check if the assigned table has an infinite distance (no match)
+        if distance[assigned_table] == float('inf'):
+            self.log.warning(f"No valid table found in file {file}. Columns do not match any table.")
             return False, assigned_table
+        
+        return True, assigned_table
     
     # --------------------------------------------------------------
     def process_table(self, df: pd.DataFrame, table_name: str, file: str) -> tuple[pd.DataFrame, list, str]:
@@ -521,7 +515,7 @@ class DataHandler:
                 new_data_df[table_name] = new_df
                 new_data_columns[table_name] = columns
             
-            if not new_data_df.keys().issubset(self.config.required_tables):
+            if not self.config.required_tables.issubset(set(new_data_df.keys())):
                 self.log.warning(f"File {file} does not contain all required tables: {self.config.required_tables}. No data will be processed from it.")
                 return {}, {}
             
@@ -661,7 +655,7 @@ class DataHandler:
         """
         # Add column with combined data filenames string column
         for table in new_data_df.keys():
-            if len(self.config.columns_data_filenames[table]) > 1:
+            if len(self.config.columns_data_filenames.get(table,[])) > 1:
                 self.ref_cols[table].append(self.config.columns_data_filenames[table])
             
             # Update the reference data with the new data where index matches
@@ -769,6 +763,10 @@ class DataHandler:
                     # if primary_table exist in pk_int_offset dictionary, it means that the PK is an int
                     if primary_table in self.pk_int_offset.keys():
                         offset = self.pk_int_offset[primary_table]
+                        
+                        # test if type of df[foreign_table][association_fk[primary_table]] is int, if not, convert to int
+                        if not pd.api.types.is_integer_dtype(df[foreign_table][association_fk[primary_table]]):
+                            df[foreign_table][association_fk[primary_table]] = df[foreign_table][association_fk[primary_table]].astype(int)
                         
                         # add offset to the foreign key column in the source table
                         df[foreign_table][fk_column] = df[foreign_table][fk_column] + offset
@@ -966,7 +964,7 @@ class DataHandler:
                 continue
             
             # Compute the new column order for the reference DataFrame
-            self.ref_cols = self.merge_dicts(new_list=column_in, legacy_dict=self.ref_cols)
+            self.ref_cols = self.merge_dicts(new_dict=column_in, legacy_dict=self.ref_cols)
                         
             # Update reference data with new data from the file
             self.update_reference_data(new_data_df=new_data_df, file=file)
@@ -1039,9 +1037,10 @@ class DataHandler:
         save_at_least_one = False
         for catalog_file in self.config.catalog_files:
             try:
-                for table in self.ref_df.keys():
-                    # if the table is empty, remove it from the reference DataFrame
-                    self.ref_df[table].to_excel(catalog_file, sheet_name=table, index=False)
+                with pd.ExcelWriter(catalog_file, engine='openpyxl') as writer:
+                    # Write each table to a separate sheet in the Excel file
+                    for table in self.ref_df.keys():
+                        self.ref_df[table].to_excel(writer, sheet_name=table, index=False)
 
                 self.log.info(f"Reference data file updated: {catalog_file}")
                 save_at_least_one = True

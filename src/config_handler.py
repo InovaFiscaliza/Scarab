@@ -271,29 +271,23 @@ class Config:
             dict[str, set[str]]: Dictionary with table names (keys) and sets of expected columns (values).
         """
         
-        new_columns: dict[str, set[str]] = {}
-        
         # Start with columns from add_filename values
-        for table in add_filename.keys():
-            new_columns[table] = set(add_filename.values())
+        new_columns: dict[str, set[str]] = {table: {col} for table, col in add_filename.items()}
         
         # Extract named capture groups from regex patterns
-        pattern = re.compile(r'<(.*?)>')
+        pattern: re.Pattern = re.compile(r'<(.*?)>')
         for table, format_string in filename_data_format.items():
             # Find all matches and add them to the set for this table
-            matches = pattern.findall(format_string)
-            if table not in new_columns:
-                new_columns[table] = set(matches)
-            else:
-                new_columns[table].add(matches)
+            matches: list = pattern.findall(format_string)
+            new_columns.setdefault(table, set()).update(matches)
         
-        all_tables = set(self.required_columns.keys()) | set(self.key_columns.keys())
+        all_tables: set = set(self.required_columns.keys()) | set(self.key_columns.keys())
 
-        expected_columns = {
-            table: (self.required_columns.get(table, set()) | 
-                self.key_columns.get(table, set())).discard(new_columns.get(table, set()))
-            for table in all_tables
-        }
+        expected_columns: dict[str, set[str]] = {table: set() for table in all_tables}
+        for table in all_tables:
+            expected_columns[table] = (self.required_columns.get(table, set())
+                                        .union(self.key_columns.get(table, set()))
+                                        .difference(new_columns.get(table, set())))
         
         return expected_columns
 
