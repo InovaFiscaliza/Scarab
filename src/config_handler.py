@@ -337,6 +337,7 @@ class Config:
         """
         
         associations = self.limit_character_scope(associations)
+        fk_required_keys = {NAME_KEY, INT_TYPE_KEY, RELATIVE_VALUE_KEY}
         
         for table, assoc in associations.items():
             
@@ -346,8 +347,7 @@ class Config:
                     print(f"Error in config file. Invalid primary key data type in table {table}: Used {assoc[PK_KEY]}, expected a dictionary.")
                     exit(1)
                     
-                required_keys = {NAME_KEY, INT_TYPE_KEY, RELATIVE_VALUE_KEY}
-                if not required_keys.issubset(assoc[PK_KEY].keys()):
+                if not fk_required_keys.issubset(assoc[PK_KEY].keys()):
                     print(f"Error in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {required_keys}.")
                     exit(1)
                     
