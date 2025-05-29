@@ -171,6 +171,8 @@ class Config:
 
             self.table_names: Dict[str,str] = self._set_default_table_name(config["files"].pop("table names", default_conf["files"]["table names"]))
             """ Table names to be used. {"json_root_table_name": "worksheet_name", ...]"""
+            self.sheet_names: Dict[str,str] = { v: k for k, v in self.table_names.items() }
+            """ Sheet names to be used. {"worksheet_name": "json_root_table_name", ...]"""
 
             self.required_tables: set[str] = set(self.limit_character_scope(
                 self._ensure_list(

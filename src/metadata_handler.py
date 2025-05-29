@@ -454,16 +454,15 @@ class DataHandler:
                                 # Read the worksheet into a DataFrame
                                 new_df = excel_file.parse(sheet_name, dtype="string")
                                 
-                                if sheet_name == self.config.name:
-                                    key = self.config.default_worksheet_key
+                                table_name = self.config.sheet_names.get(sheet_name, sheet_name)
+
+                                if table_name == self.config.default_worksheet_key:
                                     default_table_not_loaded = False
-                                else:
-                                    key = sheet_name
                                 
                                 # Process the worksheet data
                                 new_df,  columns, table_name = self.process_table(
                                     df=new_df,
-                                    table_name=sheet_name,
+                                    table_name=table_name,
                                     file=file
                                 )
                                 new_data_df[table_name] = new_df
@@ -1034,13 +1033,14 @@ class DataHandler:
         
         # loop through the target catalog files and save the reference data, 
         # ensuring that at least one file is saved successfully before returning True
+        # TODO TRANSLATE SHEET NAMES FOR SAVING TO EXCEL
         save_at_least_one = False
         for catalog_file in self.config.catalog_files:
             try:
                 with pd.ExcelWriter(catalog_file, engine='openpyxl') as writer:
                     # Write each table to a separate sheet in the Excel file
                     for table in self.ref_df.keys():
-                        self.ref_df[table].to_excel(writer, sheet_name=table, index=False)
+                        self.ref_df[table].to_excel(writer, sheet_name=self.config.table_names[table], index=False)
 
                 self.log.info(f"Reference data file updated: {catalog_file}")
                 save_at_least_one = True
