@@ -30,6 +30,11 @@ PK_KEY:str = "PK"
 """Key to identify primary key values in table association dictionaries."""
 NAME_KEY:str = "name"
 """Key to identify table name values in table association dictionaries."""
+INT_TYPE_KEY:str = "int type"
+"""Key to indicate that the primary key is a numerical sequence in table association dictionaries."""
+RELATIVE_VALUE_KEY:str = "relative value"
+"""Key to indicate that the primary key is relative within the file in table association dictionaries."""
+REFERENCED_BY_KEY:str = "referenced by"
 REPLACE_KEY:str = "replace"
 """Key to identify replacement rules in filename data replacement dictionaries."""
 OLD_KEY:str = "old"
@@ -42,21 +47,30 @@ ADD_PREFIX_KEY:str = "add prefix"
 """Key to identify prefix to be added in filename data replacement dictionaries."""
 
 # --------------------------------------------------------------
-# Define the structure of complex objects
-class PKInfo(TypedDict):
-    """Structure of the primary key in the table association."""
+# Define the structure of complex types
+class PKInfoBase(TypedDict):
+    """Base structure of the primary key in the table association."""
     name: str
+    """Name of the primary key column."""
     int_type: bool
+    """Flag to indicate that key is a numerical sequence. Alternative is the use of UID, either numeric or strings."""
     relative_value: bool
+    """Flag to indicate that key is relative within the file. Alternative is absolute, unique to any file that may be loaded."""
 
-class TableAssociation(TypedDict):
+class PKInfo(PKInfoBase, total=False):
+    """Extended structure of the primary key with reference tracking."""
+    referenced_by: set[str]  # List of tables that reference this primary key
+    """List of tables that reference this primary key."""
+
+class TableAssociation(TypedDict, total=False):
     """Structure of the table association."""
     PK: PKInfo
     FK: Dict[str, str]  # Foreign key mapping: table name -> column name
 
 # --------------------------------------------------------------
 class Config:
-    """Class to load and store the configuration values from a JSON file."""
+    """Class to load and store the configuration values from a JSON file.
+    Can you please propose changes to this method to use the following algorithm. For each dataframe, stored in the new_data_df dictionary, with table as keys, identify which rows in the ref_df[table] have matching index, and before performing the update operation, """
 
     def __init__(self, filename: str) -> None:
         """Load the configuration values from a JSON file encoded with UTF-8.
@@ -181,8 +195,7 @@ class Config:
             self.key_columns: Dict[str,set[str]] = {
                 k: set(self.limit_character_scope(v)) for k, v in config["metadata"].pop("key", default_conf["metadata"]["key"]).items()}
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.tables_associations: Dict[str, TableAssociation] = self.limit_character_scope(
-                config["metadata"].pop("association", default_conf["metadata"]["association"]))
+            self.table_associations: Dict[str, TableAssociation] = self._validate_table_associations(config["metadata"].pop("association", default_conf["metadata"]["association"]))
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
             self.required_columns: Dict[str,set[str]] = {
                 k: set(self.limit_character_scope(v)) for k, v in config["metadata"].pop("in columns", default_conf["metadata"]["in columns"]).items()}
@@ -309,6 +322,54 @@ class Config:
         """
         
         return {k: v for k, v in config.items() if v not in [None, {}, []]}
+
+    # --------------------------------------------------------------
+    def _validate_table_associations(self, associations: Dict[str, Any]) -> Dict[str, TableAssociation]:
+        """Validate table associations and create back references to link the primary keys to tables that reference them.
+        
+        Args:
+            associations (Dict[str, Any]): Table associations from the configuration file.
+        
+        Returns:
+            Dict[str, TableAssociation]: Expanded table associations.
+        
+        Raises: None
+        """
+        
+        associations = self.limit_character_scope(associations)
+        
+        for table, assoc in associations.items():
+            
+            if assoc.get(PK_KEY,False):
+                if not isinstance(assoc[PK_KEY], dict):
+                    # test if assoc[PK_KEY] is an instance of the class PKInfoBase
+                    print(f"Error in config file. Invalid primary key data type in table {table}: Used {assoc[PK_KEY]}, expected a dictionary.")
+                    exit(1)
+                    
+                required_keys = {NAME_KEY, INT_TYPE_KEY, RELATIVE_VALUE_KEY}
+                if not required_keys.issubset(assoc[PK_KEY].keys()):
+                    print(f"Error in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {required_keys}.")
+                    exit(1)
+                    
+            if assoc.get(FK_KEY, False):
+                if not isinstance(assoc[FK_KEY], dict):
+                    print(f"Error in config file. Invalid foreign key structure in table {table}: Used {assoc[FK_KEY]}, expected a dictionary with table names as keys and column names as values.")
+                    exit(1)
+            
+                for fk_table, fk_column in assoc[FK_KEY].items():
+                    if not isinstance(fk_table, str) or not isinstance(fk_column, str):
+                        print(f"Error in config file. Invalid foreign key structure in table {table}: Used {fk_table}:{fk_column}, expected a string for table name and column name.")
+                        exit(1)
+                    
+                    # test if fk_table is defined in the associations
+                    if fk_table not in associations:
+                        print(f"Error in config file. Foreign key table {fk_table} in table {table} points to non defined table.")
+                        exit(1)
+
+                    associations[fk_table][PK_KEY].setdefault(REFERENCED_BY_KEY, set())
+                    associations[fk_table][PK_KEY][REFERENCED_BY_KEY].add(table)
+        
+        return associations
 
     # --------------------------------------------------------------
     def _load_into_config(self, filename: str) -> Dict[str, Any]:
