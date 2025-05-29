@@ -518,8 +518,6 @@ class DataHandler:
                 self.log.warning(f"File {file} does not contain all required tables: {self.config.required_tables}. No data will be processed from it.")
                 return {}, {}
             
-            new_data_df = self.update_table_associations(new_data_df, file)
-            
             return new_data_df, new_data_columns
             
         except Exception as e:
@@ -642,8 +640,8 @@ class DataHandler:
         return new_dict
 
     # --------------------------------------------------------------
-    def update_reference_data(self, new_data_df: dict[str,pd.DataFrame], file: str) -> None:
-        """Update reference data with new data from a processed metadata file.
+    def update_reference_data(self, new_data_df: dict[str, pd.DataFrame], file: str) -> None:
+        """Update reference data with new data from a processed metadata file, maintaining PK/FK integrity.
         
         Args:
             new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
@@ -652,16 +650,151 @@ class DataHandler:
         Returns:
             None
         """
-        # Add column with combined data filenames string column
-        for table in new_data_df.keys():
-            if len(self.config.columns_data_filenames.get(table,[])) > 1:
+        pk_mappings, update_dfs, add_dfs = self._identify_rows_and_build_mappings(new_data_df)
+        
+        self._update_foreign_keys_for_existing_rows(pk_mappings, update_dfs)
+        
+        add_dfs = self._update_keys_for_new_rows(add_dfs, file)
+        
+        self._apply_updates_to_reference_data(update_dfs, add_dfs, file)
+
+    # --------------------------------------------------------------
+    def _identify_rows_and_build_mappings(self, new_data_df: dict[str, pd.DataFrame]) -> tuple[dict, dict, dict]:
+        """Identify existing/new rows and build primary key mappings.
+        
+        Args:
+            new_data_df: Dictionary with DataFrames containing various tables.
+            
+        Returns:
+            tuple: (pk_mappings, update_dfs, add_dfs)
+                - pk_mappings: Dictionary mapping old PKs to new PKs by table
+                - update_dfs: Dictionary of DataFrames with rows to update
+                - add_dfs: Dictionary of DataFrames with rows to add
+        """
+        pk_mappings = {}  # table -> {old_pk -> new_pk}
+        update_dfs = {}   # table -> DataFrame with rows to update
+        add_dfs = {}      # table -> DataFrame with rows to add
+        
+        for table, df in new_data_df.items():
+            # Skip empty tables
+            if df.empty or table not in self.ref_df:
+                continue
+                
+            # Find common indexes between new data and reference data
+            common_indexes = df.index.intersection(self.ref_df[table].index)
+            
+            if not common_indexes.empty:
+                # Rows to update (existing in both dataframes)
+                update_df = df.loc[common_indexes].copy()
+                # Rows to add (only in new data)
+                add_df = df.drop(common_indexes).copy()
+                
+                # Store split dataframes
+                update_dfs[table] = update_df
+                if not add_df.empty:
+                    add_dfs[table] = add_df
+                    
+                # Check if this table has primary key definition
+                if table in self.config.table_associations and cm.PK_KEY in self.config.table_associations[table]:
+                    pk_info = self.config.table_associations[table][cm.PK_KEY]
+                    pk_column = pk_info["name"]
+                    
+                    # Create mapping for primary keys that need to be updated
+                    pk_mappings[table] = {}
+                    
+                    for idx in common_indexes:
+                        old_pk = df.loc[idx, pk_column]
+                        new_pk = self.ref_df[table].loc[idx, pk_column]
+                        
+                        if old_pk != new_pk:
+                            pk_mappings[table][old_pk] = str(new_pk)
+                            # Update the PK in the update dataframe
+                            update_dfs[table].loc[idx, pk_column] = str(new_pk)
+            else:
+                # All rows are new
+                add_dfs[table] = df.copy()
+        
+        return pk_mappings, update_dfs, add_dfs
+
+    # --------------------------------------------------------------
+    def _update_foreign_keys_for_existing_rows(self, pk_mappings: dict, update_dfs: dict) -> None:
+        """Update foreign keys in existing rows based on primary key mappings.
+        
+        Args:
+            pk_mappings: Dictionary mapping old PKs to new PKs by table
+            update_dfs: Dictionary of DataFrames with rows to update
+            
+        Returns:
+            None
+        """
+        for table, mappings in pk_mappings.items():
+            if not mappings:  # Skip if no mappings for this table
+                continue
+                
+            # Get the list of tables that reference this table
+            pk_info = self.config.table_associations[table][cm.PK_KEY]
+            if "referenced_by" not in pk_info:
+                continue
+                
+            referenced_by = pk_info["referenced_by"]
+            
+            # Update foreign keys in all referencing tables (update set)
+            for ref_table in referenced_by:
+                if ref_table not in update_dfs:
+                    continue
+                    
+                fk_column = self.config.table_associations[ref_table][cm.FK_KEY][table]
+                
+                # Update foreign keys using the mapping
+                update_dfs[ref_table][fk_column] = update_dfs[ref_table][fk_column].map(
+                    lambda x: mappings.get(x, x)
+                )
+
+    # --------------------------------------------------------------
+    def _update_keys_for_new_rows(self, add_dfs: dict, file: str) -> dict:
+        """Process new rows to be added with their own PK/FK handling.
+        
+        Args:
+            add_dfs: Dictionary of DataFrames with rows to add
+            file: The metadata file being processed
+            
+        Returns:
+            dict: Updated DataFrames with processed primary and foreign keys
+        """
+        if add_dfs:
+            
+            add_dfs = self.update_pk(df=add_dfs, file=file)
+                    
+            add_dfs = self.update_fk(df=add_dfs, file=file)
+            
+        return add_dfs
+
+    # --------------------------------------------------------------
+    def _apply_updates_to_reference_data(self, update_dfs: dict, add_dfs: dict, file: str) -> None:
+        """Apply updates to reference data from both updated and new rows.
+        
+        Args:
+            update_dfs: Dictionary of DataFrames with rows to update
+            add_dfs: Dictionary of DataFrames with rows to add
+            file: The metadata file being processed
+            
+        Returns:
+            None
+        """
+        tables_processed = set(update_dfs.keys()) | set(add_dfs.keys())
+        
+        for table in tables_processed:
+            if table in update_dfs:
+                # Update existing rows
+                self.ref_df[table].update(update_dfs[table])
+            
+            if table in add_dfs:
+                # Add new rows
+                self.ref_df[table] = pd.concat([self.ref_df[table], add_dfs[table]])
+            
+            # Update column tracking for data filenames
+            if len(self.config.columns_data_filenames.get(table, [])) > 1:
                 self.ref_cols[table].append(self.config.columns_data_filenames[table])
-            
-            # Update the reference data with the new data where index matches
-            self.ref_df[table].update(new_data_df[table])
-            
-            # Add new_data_df rows where index does not match
-            self.ref_df[table] = self.ref_df[table].combine_first(new_data_df[table])
             
             self.log.info(f"Reference data updated for table {table} with data from file: {file}")
 
@@ -781,23 +914,6 @@ class DataHandler:
                 self.log.debug(f"Key error in table {foreign_table}, file {file}. {e}.")
                 continue
             
-        return df
-    # --------------------------------------------------------------
-    def update_table_associations(self, df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
-        """Update the table associations in the reference DataFrame with the new data from a processed metadata file.
-        
-        Args:
-            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
-            file (str): The metadata file being processed.
-            
-        Returns:
-            dict[str,pd.DataFrame]: Updated DataFrame with the new data.
-        """
-        
-        df = self.update_pk(df=df, file=file)
-                
-        df = self.update_fk(df=df, file=file)
-        
         return df
 
     # --------------------------------------------------------------

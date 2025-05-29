@@ -69,8 +69,7 @@ class TableAssociation(TypedDict, total=False):
 
 # --------------------------------------------------------------
 class Config:
-    """Class to load and store the configuration values from a JSON file.
-    Can you please propose changes to this method to use the following algorithm. For each dataframe, stored in the new_data_df dictionary, with table as keys, identify which rows in the ref_df[table] have matching index, and before performing the update operation, """
+    """Class to load and store the configuration values from a JSON file."""
 
     def __init__(self, filename: str) -> None:
         """Load the configuration values from a JSON file encoded with UTF-8.
