@@ -348,7 +348,7 @@ class Config:
                     exit(1)
                     
                 if not fk_required_keys.issubset(assoc[PK_KEY].keys()):
-                    print(f"Error in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {required_keys}.")
+                    print(f"Error in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {fk_required_keys}.")
                     exit(1)
                     
             if assoc.get(FK_KEY, False):
