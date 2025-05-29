@@ -105,7 +105,7 @@ class DataHandler:
         for table in self.ref_df.keys():
             # get the maximum value of the primary key column in the reference DataFrame
             try:
-                pk_column = self.config.tables_associations[table][cm.PK_KEY][cm.NAME_KEY]                
+                pk_column = self.config.table_associations[table][cm.PK_KEY][cm.NAME_KEY]                
             except KeyError:
                 self.log.debug(f"Table {table} does not have a primary key column defined in the config file.")
             
@@ -676,17 +676,17 @@ class DataHandler:
         Returns:
             None
         """
-        for primary_table, association in self.config.tables_associations.items():
+        for primary_table, association in self.config.table_associations.items():
 
             try:
                 # if PK is int, get the minimum value of the PK column as offset to be discounted
                 # and add the corresponding next_pk_counter value
                 association_pk = association[cm.PK_KEY]
                 
-                if not association_pk["relative_value"]:
+                if not association_pk[cm.RELATIVE_VALUE_KEY]:
                     continue
                 
-                if association_pk["int_type"]:
+                if association_pk[cm.INT_TYPE_KEY]:
                     
                     # test if type of df[primary_table][association_pk[cm.NAME_KEY]] is int, if not, convert to int
                     if not pd.api.types.is_integer_dtype(df[primary_table][association_pk[cm.NAME_KEY]]):
@@ -750,7 +750,7 @@ class DataHandler:
             None
         """
         
-        for foreign_table, association in self.config.tables_associations.items():
+        for foreign_table, association in self.config.table_associations.items():
 
             try:
                 # if PK is int, get the minimum value of the PK column as offset to be discounted
