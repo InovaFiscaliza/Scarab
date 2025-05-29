@@ -223,6 +223,34 @@ class DataHandler:
         return df
 
     # --------------------------------------------------------------
+    def set_types(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
+        """Set the types of the columns in the DataFrame based on the config file.
+        The types are set according to the config file for table association
+
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+            table_name (str): Name of the table to be used as defined in the config file.
+            file (str): File name to be used in the log message.
+
+        Returns:
+            pd.DataFrame: DataFrame with the types set.
+        """
+        
+        assoc = self.config.table_associations.get(table_name, None)
+        if assoc:
+            pk_info = assoc.get(cm.PK_KEY, None)
+            if pk_info:
+                pk_column = pk_info.get(cm.NAME_KEY, None)
+                if pk_column and pk_column in df.columns and pk_info.get(cm.INT_TYPE_KEY, False):
+                    df[pk_column] = df[pk_column].astype(int)
+            fk_info = assoc.get(cm.FK_KEY, None)
+            if fk_info:
+                for fk_table, fk_column in fk_info.items():
+                    if self.config.table_associations[fk_table][cm.PK_KEY].get(cm.INT_TYPE_KEY, False):
+                        df[fk_column] = df[fk_column].astype(int)
+        
+        return df
+    # --------------------------------------------------------------
     def sort_dataframe(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
         """Sort the DataFrame by the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
 
@@ -378,6 +406,7 @@ class DataHandler:
             lambda df: self.add_filename_data(df, table_name, file),
             lambda df: self.create_data_file_control_column(df, table_name),
             lambda df: self.create_index(df, table_name, file),
+            lambda df: self.set_types(df, table_name, file),
             lambda df: self.sort_dataframe(df, table_name, file)
         ]
         
@@ -652,7 +681,7 @@ class DataHandler:
         """
         pk_mappings, update_dfs, add_dfs = self._identify_rows_and_build_mappings(new_data_df)
         
-        self._update_foreign_keys_for_existing_rows(pk_mappings, update_dfs)
+        self._update_foreign_keys_for_existing_rows(pk_mappings, update_dfs, add_dfs)
         
         add_dfs = self._update_keys_for_new_rows(add_dfs, file)
         
@@ -697,7 +726,7 @@ class DataHandler:
                 # Check if this table has primary key definition
                 if table in self.config.table_associations and cm.PK_KEY in self.config.table_associations[table]:
                     pk_info = self.config.table_associations[table][cm.PK_KEY]
-                    pk_column = pk_info["name"]
+                    pk_column = pk_info[cm.NAME_KEY]
                     
                     # Create mapping for primary keys that need to be updated
                     pk_mappings[table] = {}
@@ -707,9 +736,9 @@ class DataHandler:
                         new_pk = self.ref_df[table].loc[idx, pk_column]
                         
                         if old_pk != new_pk:
-                            pk_mappings[table][old_pk] = str(new_pk)
+                            pk_mappings[table][old_pk] = new_pk
                             # Update the PK in the update dataframe
-                            update_dfs[table].loc[idx, pk_column] = str(new_pk)
+                            update_dfs[table].loc[idx, pk_column] = new_pk
             else:
                 # All rows are new
                 add_dfs[table] = df.copy()
@@ -717,12 +746,13 @@ class DataHandler:
         return pk_mappings, update_dfs, add_dfs
 
     # --------------------------------------------------------------
-    def _update_foreign_keys_for_existing_rows(self, pk_mappings: dict, update_dfs: dict) -> None:
+    def _update_foreign_keys_for_existing_rows(self, pk_mappings: dict, update_dfs: dict, add_dfs: dict) -> None:
         """Update foreign keys in existing rows based on primary key mappings.
         
         Args:
             pk_mappings: Dictionary mapping old PKs to new PKs by table
             update_dfs: Dictionary of DataFrames with rows to update
+            add_dfs: Dictionary of DataFrames with rows to add
             
         Returns:
             None
@@ -733,22 +763,22 @@ class DataHandler:
                 
             # Get the list of tables that reference this table
             pk_info = self.config.table_associations[table][cm.PK_KEY]
-            if "referenced_by" not in pk_info:
+            if cm.REFERENCED_BY_KEY not in pk_info:
                 continue
                 
-            referenced_by = pk_info["referenced_by"]
+            referenced_by = pk_info[cm.REFERENCED_BY_KEY]
             
             # Update foreign keys in all referencing tables (update set)
             for ref_table in referenced_by:
-                if ref_table not in update_dfs:
-                    continue
-                    
                 fk_column = self.config.table_associations[ref_table][cm.FK_KEY][table]
-                
-                # Update foreign keys using the mapping
-                update_dfs[ref_table][fk_column] = update_dfs[ref_table][fk_column].map(
+                if ref_table in update_dfs:
+                    update_dfs[ref_table][fk_column] = update_dfs[ref_table][fk_column].map(
                     lambda x: mappings.get(x, x)
-                )
+                    )
+                elif ref_table in add_dfs:
+                    add_dfs[ref_table][fk_column] = add_dfs[ref_table][fk_column].map(
+                    lambda x: mappings.get(x, x)
+                    )
 
     # --------------------------------------------------------------
     def _update_keys_for_new_rows(self, add_dfs: dict, file: str) -> dict:
