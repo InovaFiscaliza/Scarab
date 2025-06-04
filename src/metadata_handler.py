@@ -679,17 +679,17 @@ class DataHandler:
         Returns:
             None
         """
-        pk_mappings, update_dfs, add_dfs = self._identify_rows_and_build_mappings(new_data_df)
+        pk_mappings, update_dfs, add_dfs = self.df_split_update(new_data_df, file)
         
-        self._update_foreign_keys_for_existing_rows(pk_mappings, update_dfs, add_dfs)
+        self._update_primary_keys_for_new_rows(pk_mappings, add_dfs, file)
         
-        add_dfs = self._update_keys_for_new_rows(add_dfs, file)
+        self._update_foreign_keys(pk_mappings, update_dfs, add_dfs)
         
         self._apply_updates_to_reference_data(update_dfs, add_dfs, file)
 
     # --------------------------------------------------------------
-    def _identify_rows_and_build_mappings(self, new_data_df: dict[str, pd.DataFrame]) -> tuple[dict, dict, dict]:
-        """Identify existing/new rows and build primary key mappings.
+    def df_split_update(self, new_data_df: dict[str, pd.DataFrame], file: str) -> tuple[dict, dict, dict]:
+        """Identify existing/new rows, build primary key mappings and update primary keys of existing rows.
         
         Args:
             new_data_df: Dictionary with DataFrames containing various tables.
@@ -715,18 +715,19 @@ class DataHandler:
             if not common_indexes.empty:
                 # Rows to update (existing in both dataframes)
                 update_df = df.loc[common_indexes].copy()
+                
                 # Rows to add (only in new data)
                 add_df = df.drop(common_indexes).copy()
                 
-                # Store split dataframes
+                # Store split dataframes into the corresponding dictionaries
                 update_dfs[table] = update_df
                 if not add_df.empty:
                     add_dfs[table] = add_df
                     
-                # Check if this table has primary key definition
+                # Check if this table has primary key definition in the association dictionary
                 if table in self.config.table_associations and cm.PK_KEY in self.config.table_associations[table]:
-                    pk_info = self.config.table_associations[table][cm.PK_KEY]
-                    pk_column = pk_info[cm.NAME_KEY]
+                    
+                    pk_column = self.config.table_associations[table][cm.PK_KEY][cm.NAME_KEY]
                     
                     # Create mapping for primary keys that need to be updated
                     pk_mappings[table] = {}
@@ -736,6 +737,7 @@ class DataHandler:
                         new_pk = self.ref_df[table].loc[idx, pk_column]
                         
                         if old_pk != new_pk:
+                            logging.debug(f"Updating PK for {table} at index {idx}: {old_pk} -> {new_pk}, for data file {file}")  
                             pk_mappings[table][old_pk] = new_pk
                             # Update the PK in the update dataframe
                             update_dfs[table].loc[idx, pk_column] = new_pk
@@ -746,7 +748,86 @@ class DataHandler:
         return pk_mappings, update_dfs, add_dfs
 
     # --------------------------------------------------------------
-    def _update_foreign_keys_for_existing_rows(self, pk_mappings: dict, update_dfs: dict, add_dfs: dict) -> None:
+    def _update_primary_keys_for_new_rows(self, pk_mappings: dict[str, dict[str, str]], df: dict[str,pd.DataFrame], file: str) -> None:
+        """Update the primary key when relative association is used.
+        
+        Args:
+            pk_mappings (dict[str, dict[str, str]]): Dictionary with primary key mappings for each table.
+            df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+            file (str): The metadata file being processed.
+            
+        Returns:
+            None
+        """
+        for primary_table, association in self.config.table_associations.items():
+
+            try:
+                # if PK is int, get the minimum value of the PK column as offset to be discounted
+                # and add the corresponding next_pk_counter value
+                association_pk = association[cm.PK_KEY]
+                
+                # If keys are absolute, skip the processing
+                if not association_pk[cm.RELATIVE_VALUE_KEY]:
+                    continue
+                
+                # Initialize the primary_table entry in pk_mod_primary_table if it doesn't exist
+                if primary_table not in pk_mappings:
+                    pk_mappings[primary_table] = {}
+
+                # If PK is relative to the file and defined as a sequential int number
+                if association_pk[cm.INT_TYPE_KEY]:
+                    
+                    # test if type of df[primary_table][association_pk[cm.NAME_KEY]] is int, if not, convert to int
+                    if not pd.api.types.is_integer_dtype(df[primary_table][association_pk[cm.NAME_KEY]]):
+                        df[primary_table][association_pk[cm.NAME_KEY]] = df[primary_table][association_pk[cm.NAME_KEY]].astype(int)
+
+                    distinct_pks = df[primary_table][association_pk[cm.NAME_KEY]].drop_duplicates().tolist()
+                    min_value = df[primary_table][association_pk[cm.NAME_KEY]].min()
+                    max_value = df[primary_table][association_pk[cm.NAME_KEY]].max()
+                    
+                    offset = self.next_pk_counter[primary_table] - min_value
+                        
+                    # if the PK is relative and an int, add the next_pk_counter value to the minimum value
+                    df[primary_table][association_pk[cm.NAME_KEY]] = df[primary_table][association_pk[cm.NAME_KEY]] + offset
+                        
+                    # update the next_pk_counter value for the primary_table
+                    self.next_pk_counter[primary_table] += max_value
+                    
+                    self.pk_int_offset[primary_table] = offset
+                    
+                    # update pk_mappings dict with values from distinct_pks with added offset
+                    pk_mappings[primary_table].update({original_pk: original_pk + offset for original_pk in distinct_pks})
+                    
+                
+                # else, if PK is relative but not a sequential int, generate a new UI
+                else:
+                    # Get the primary key column name
+                    pk_column = association_pk[cm.NAME_KEY]
+                    
+                    # Extract original primary key values
+                    original_pks = df[primary_table][pk_column].tolist()
+                    
+                    # Create a list of IDs sequentially counting from self.next_pk_counter[primary_table] until self.next_pk_counter[primary_table] + len(original_pks)
+                    new_pks = list(range(self.next_pk_counter[primary_table], self.next_pk_counter[primary_table] + len(original_pks)))
+                                        
+                    # Store mapping of original to new primary keys
+                    pk_mappings[primary_table].update({original_pk: new_pk for original_pk, new_pk in zip(original_pks, new_pks)})
+                    
+                    # Replace the primary key column values with the new keys
+                    df[primary_table][pk_column] = df[primary_table][pk_column].map(pk_mappings[primary_table])
+                    
+                    # update self.next_pk_counter[primary_table]
+                    self.next_pk_counter[primary_table] += len(original_pks)
+                        
+            except KeyError as e:
+                self.log.debug(f"Key error in table {primary_table}, file {file}. {e}.")
+                continue
+            except TypeError as e:
+                self.log.debug(f"Type error in table {primary_table}, file {file}. {e}.")
+                continue
+
+    # --------------------------------------------------------------
+    def _update_foreign_keys(self, pk_mappings: dict, update_dfs: dict, add_dfs: dict) -> None:
         """Update foreign keys in existing rows based on primary key mappings.
         
         Args:
@@ -781,25 +862,6 @@ class DataHandler:
                     )
 
     # --------------------------------------------------------------
-    def _update_keys_for_new_rows(self, add_dfs: dict, file: str) -> dict:
-        """Process new rows to be added with their own PK/FK handling.
-        
-        Args:
-            add_dfs: Dictionary of DataFrames with rows to add
-            file: The metadata file being processed
-            
-        Returns:
-            dict: Updated DataFrames with processed primary and foreign keys
-        """
-        if add_dfs:
-            
-            add_dfs = self.update_pk(df=add_dfs, file=file)
-                    
-            add_dfs = self.update_fk(df=add_dfs, file=file)
-            
-        return add_dfs
-
-    # --------------------------------------------------------------
     def _apply_updates_to_reference_data(self, update_dfs: dict, add_dfs: dict, file: str) -> None:
         """Apply updates to reference data from both updated and new rows.
         
@@ -828,82 +890,10 @@ class DataHandler:
             
             self.log.info(f"Reference data updated for table {table} with data from file: {file}")
 
-    # --------------------------------------------------------------
-    def update_pk(self, df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
-        """Update the primary key when relative association is used.
-        
-        Args:
-            df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
-            file (str): The metadata file being processed.
-            
-        Returns:
-            None
-        """
-        for primary_table, association in self.config.table_associations.items():
-
-            try:
-                # if PK is int, get the minimum value of the PK column as offset to be discounted
-                # and add the corresponding next_pk_counter value
-                association_pk = association[cm.PK_KEY]
-                
-                if not association_pk[cm.RELATIVE_VALUE_KEY]:
-                    continue
-                
-                if association_pk[cm.INT_TYPE_KEY]:
-                    
-                    # test if type of df[primary_table][association_pk[cm.NAME_KEY]] is int, if not, convert to int
-                    if not pd.api.types.is_integer_dtype(df[primary_table][association_pk[cm.NAME_KEY]]):
-                        df[primary_table][association_pk[cm.NAME_KEY]] = df[primary_table][association_pk[cm.NAME_KEY]].astype(int)
-
-                    min_value = df[primary_table][association_pk[cm.NAME_KEY]].min()
-                    max_value = df[primary_table][association_pk[cm.NAME_KEY]].max()
-                    
-                    offset = self.next_pk_counter[primary_table] - min_value
-                        
-                    # if the PK is relative and an int, add the next_pk_counter value to the minimum value
-                    df[primary_table][association_pk[cm.NAME_KEY]] = df[primary_table][association_pk[cm.NAME_KEY]] + offset
-                        
-                    # update the next_pk_counter value for the primary_table
-                    self.next_pk_counter[primary_table] += max_value
-                    
-                    self.pk_int_offset[primary_table] = offset
-                
-                # else, if PK is relative but not an int, generate a new UI
-                else:
-                    # Get the primary key column name
-                    pk_column = association_pk[cm.NAME_KEY]
-                    
-                    # Extract original primary key values
-                    original_pks = df[primary_table][pk_column].tolist()
-                    
-                    # Create a list of IDs sequentially counting from self.next_pk_counter[primary_table] until self.next_pk_counter[primary_table] + len(original_pks)
-                    new_pks = list(range(self.next_pk_counter[primary_table], self.next_pk_counter[primary_table] + len(original_pks)))
-                    
-                    # Initialize the primary_table entry in pk_mod_primary_table if it doesn't exist
-                    if primary_table not in self.pk_mod_table:
-                        self.pk_mod_table[primary_table] = {}
-                    
-                    # Store mapping of original to new primary keys
-                    self.pk_mod_table[primary_table].update({original_pk: new_pk for original_pk, new_pk in zip(original_pks, new_pks)})
-                    
-                    # Replace the primary key column values with the new keys
-                    df[primary_table][pk_column] = df[primary_table][pk_column].map(self.pk_mod_table[primary_table])
-                    
-                    # update self.next_pk_counter[primary_table]
-                    self.next_pk_counter[primary_table] += len(original_pks)
-                        
-            except KeyError as e:
-                self.log.debug(f"Key error in table {primary_table}, file {file}. {e}.")
-                continue
-            except TypeError as e:
-                self.log.debug(f"Type error in table {primary_table}, file {file}. {e}.")
-                continue
-            
-        return df
-    
+    """
     # --------------------------------------------------------------
     def update_fk(self, df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
-        """Update the foreign key when relative association is used.
+        Update the foreign key when relative association is used.
         
         Args:
             new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
@@ -911,7 +901,7 @@ class DataHandler:
             
         Returns:
             None
-        """
+        
         
         for foreign_table, association in self.config.table_associations.items():
 
@@ -945,7 +935,7 @@ class DataHandler:
                 continue
             
         return df
-
+    """
     # --------------------------------------------------------------
     def add_filename_column(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Complement the data in the reference DataFrame with metadata extracted from the filename and the file itself.
