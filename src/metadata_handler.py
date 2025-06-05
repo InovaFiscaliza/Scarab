@@ -471,12 +471,12 @@ class DataHandler:
                     excel_file = pd.ExcelFile(file)
                     sheet_names = excel_file.sheet_names
                     
+                    # create a copy of sheet_names to avoid modifying the original list with the for loop
+                    sheet_names_copy = sheet_names.copy()
+                    
                     # If there are multiple worksheets
                     if len(sheet_names) > 1:
                         self.log.info(f"XLSX file {file} contains multiple worksheets: {sheet_names}")
-                        
-                        # create a copy of sheet_names to avoid modifying the original list with the for loop
-                        sheet_names_copy = sheet_names.copy()
                         
                         # Process each worksheet separately.
                         for sheet_name in sheet_names:
@@ -1019,7 +1019,7 @@ class DataHandler:
         
         basename = os.path.basename(file)
         
-        try:
+        if table in self.config.filename_data_format.keys():
             # Get regex pattern for this table (already a compiled re.Pattern)
             re_formatting = self.config.filename_data_format[table]
             
@@ -1044,13 +1044,6 @@ class DataHandler:
                 df = df.assign(**processed_data)
                 
             self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
-                
-        except KeyError:
-            self.log.debug(f"Missing filename format for table '{table}'. Skipping.")
-        except AttributeError as e:
-            self.log.error(f"Error in regex pattern for table '{table}': {e}")
-        except Exception as e:
-            self.log.error(f"Error processing filename data for table '{table}': {e}")
                 
         return df
     
