@@ -16,7 +16,7 @@
     "overwrite data in trash": false,
     "discard invalid data files": false,
     "log": {
-        "level": "debug",
+        "level": "DEBUG",
         "screen output": true,
         "file output": false,
         "file path": [],

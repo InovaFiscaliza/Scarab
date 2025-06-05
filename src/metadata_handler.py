@@ -189,7 +189,7 @@ class DataHandler:
             return df
         try:
             # create a column to be used as index, merging the columns in index_column list
-            df[self.index_column] = df[columns].astype(str).agg('-'.join, axis=1)
+            df = df.assign(**{self.index_column: df[columns].astype(str).agg('-'.join, axis=1)})
             
             # drop rows in which the column with name defined in the self.index_column has value null
             df = self.drop_na(df=df, table=table_name, file=file)
@@ -300,7 +300,8 @@ class DataHandler:
         
         try:
             # create a column to be used as index, merging the columns in index_column list
-            df[self.data_file_column] = df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)
+            data = {self.data_file_column: df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)}
+            df = df.assign(**{data})
         except (ValueError, KeyError) as e:
             self.log.debug(f"No file control column in {table_name}. Error: {e}")
             return df
@@ -308,9 +309,9 @@ class DataHandler:
             self.log.error(f"Error creating data filenames column: {e}")
             return pd.DataFrame()
         
-        # if column self.config.columns_data_published is not present in the reference_df, create it with false string values
+        # if column self.config.columns_data_published is not present, create it with false string values
         if self.config.columns_data_published[table_name] not in df.columns:
-            df[self.config.columns_data_published[table_name]] = pd.Series(dtype='string')
+            df = df.assign(**{self.config.columns_data_published[table_name]: pd.Series(dtype='string')})
             
         # Replace the Null values in the self.config.columns_data_published column with the string "False"
         df[self.config.columns_data_published[table_name]] = df[self.config.columns_data_published[table_name]].fillna("False")
@@ -526,12 +527,17 @@ class DataHandler:
 
                             del data[key]
                     
-                    # add the remaining data from the json file to the default base_key table
-                    if data:
-                        new_df = self.create_dataframe(data)
-                    else:
-                    # else, if there is no remaining data, assume that default table data was already loaded and no further processing is needed
+                    # set flag if the default table was loaded
+                    if not new_data_df[self.config.default_worksheet_key].empty:
                         default_table_not_loaded = False
+                    else:
+                        # add the remaining data from the json file to the default base_key table
+                        if data:
+                            new_df = self.create_dataframe(data)
+                        else:
+                            new_df = pd.DataFrame()
+                            
+                        table = self.config.default_worksheet_key
                     
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
@@ -951,7 +957,14 @@ class DataHandler:
         
         if table in self.config.add_filename.keys():
             new_column_name = self.config.add_filename[table]
-            df[new_column_name] = os.path.basename(file)
+            basename = os.path.basename(file)
+            
+            if df.empty:
+                # Create a new DataFrame with one row for empty DataFrames
+                df = pd.DataFrame({new_column_name: [basename]})
+            else:
+                # Use assign for non-empty DataFrames
+                df = df.assign(**{new_column_name: basename})
         else:
             self.log.debug(f"Missing complement data info for table `{table}`. Skipping.")
         
@@ -1023,8 +1036,12 @@ class DataHandler:
                 return df
             
             # Assign each extracted group as a new column for all rows in the DataFrame
-            for key, value in filename_data.items():
-                df[key] = self._apply_filename_data_processing_rules(key=key, value=value)
+            # Prepare a dict with processed filename data
+            processed_data = {key: self._apply_filename_data_processing_rules(key=key, value=value) for key, value in filename_data.items()}
+            if df.empty:
+                df = pd.DataFrame([processed_data])
+            else:
+                df = df.assign(**processed_data)
                 
             self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
                 
