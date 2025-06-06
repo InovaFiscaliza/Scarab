@@ -46,7 +46,7 @@ class DataHandler:
 
         self.pending_metadata_processing : bool = True
         """Flag to indicate that there is metadata needs to be processed."""
-        self.data_files_to_ignore : set[str] = set()
+        self.data_files_to_ignore : dict[str,set[str]] = { k :set() for k in self.config.data_file_regex.keys() }
         """List of data files that were processed but not found in the reference data. To be processed only if the reference data is updated."""
         
         self.unique_id : str = base58.b58encode(uuid.uuid4().bytes).decode('utf-8')
@@ -285,6 +285,7 @@ class DataHandler:
             return pd.DataFrame()
         
         return df
+    
     # --------------------------------------------------------------
     def create_data_file_control_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
         """Create a column with the filenames of the data files to which the metadata refers to. 
@@ -299,26 +300,47 @@ class DataHandler:
         """
         
         try:
-            if df.empty or self.config.columns_data_filenames[table_name] not in df.columns:
+            if df.empty:
+                return df
+            
+            columns_in_df = [col for col in self.config.columns_data_filenames[table_name] if col in df.columns]
+            if not columns_in_df:
                 self.log.debug(f"No data filenames column in {table_name}. No data files to process.")
                 return df
+            
             # create a column to be used as index, merging the columns in index_column list
             data = {self.data_file_column: df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)}
-            df = df.assign(**{data})
+            df = df.assign(**data)
+            
         except (ValueError, KeyError) as e:
             self.log.debug(f"No file control column in {table_name}. Error: {e}")
             return df
         except Exception as e:	
             self.log.error(f"Error creating data filenames column: {e}")
             return pd.DataFrame()
+
+        return df
+    
+    # --------------------------------------------------------------
+    def fix_create_data_published_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
+        """Create a column with the filenames of the data files to which the metadata refers to.
+        The column is created by replacing the values in the column defined in the config file with "False" if the value is null or empty.
+        Args:
+            df (pd.DataFrame): DataFrame to process.
+            table_name (str): Name of the table to be used as defined in the config file.
+        Returns:
+            pd.DataFrame: DataFrame with the data published column created.
+        """
+
+        if df.empty:
+            return df
         
-        # if column self.config.columns_data_published is not present, create it with false string values
-        if self.config.columns_data_published[table_name] not in df.columns:
-            df = df.assign(**{self.config.columns_data_published[table_name]: pd.Series(dtype='string')})
-            
-        # Replace the Null values in the self.config.columns_data_published column with the string "False"
-        df[self.config.columns_data_published[table_name]] = df[self.config.columns_data_published[table_name]].fillna("False")
-                    
+        for col in self.config.columns_data_published[table_name]:
+            if col not in df.columns:
+                df[col] = "False"
+            else:
+                df[col] = df[col].fillna("False")
+                            
         df[self.config.columns_data_published[table_name]] = (
             df[self.config.columns_data_published[table_name]]
             .replace(self.config.null_string_values, "False")
@@ -409,6 +431,7 @@ class DataHandler:
             lambda df: self.add_filename_column(df, table_name, file),
             lambda df: self.add_filename_data(df, table_name, file),
             lambda df: self.create_data_file_control_column(df, table_name),
+            lambda df: self.fix_create_data_published_column(df, table_name),
             lambda df: self.create_index(df, table_name, file),
             lambda df: self.set_types(df, table_name, file),
             lambda df: self.sort_dataframe(df, table_name, file)
@@ -471,43 +494,43 @@ class DataHandler:
             match filetype:
                 case '.xlsx':
                     # Read all worksheets from Excel file
-                    excel_file = pd.ExcelFile(file)
-                    sheet_names = excel_file.sheet_names
-                    
-                    # create a copy of sheet_names to avoid modifying the original list with the for loop
-                    sheet_names_copy = sheet_names.copy()
-                    
-                    # If there are multiple worksheets
-                    if len(sheet_names) > 1:
-                        self.log.info(f"XLSX file {file} contains multiple worksheets: {sheet_names}")
+                    with pd.ExcelFile(file) as excel_file:
+                        sheet_names = excel_file.sheet_names
                         
-                        # Process each worksheet separately.
-                        for sheet_name in sheet_names:
-                            if sheet_name in new_data_df.keys():
-                                # Read the worksheet into a DataFrame
-                                new_df = excel_file.parse(sheet_name, dtype="string")
-                                
-                                table_name = self.config.sheet_names.get(sheet_name, sheet_name)
+                        # create a copy of sheet_names to avoid modifying the original list with the for loop
+                        sheet_names_copy = sheet_names.copy()
+                        
+                        # If there are multiple worksheets
+                        if len(sheet_names) > 1:
+                            self.log.info(f"XLSX file {file} contains multiple worksheets: {sheet_names}")
+                            
+                            # Process each worksheet separately.
+                            for sheet_name in sheet_names:
+                                if sheet_name in new_data_df.keys():
+                                    # Read the worksheet into a DataFrame
+                                    new_df = excel_file.parse(sheet_name, dtype="string")
+                                    
+                                    table_name = self.config.sheet_names.get(sheet_name, sheet_name)
 
-                                if table_name == self.config.default_worksheet_key:
-                                    default_table_not_loaded = False
-                                
-                                # Process the worksheet data
-                                new_df,  columns, table_name = self.process_table(
-                                    df=new_df,
-                                    table_name=table_name,
-                                    file=file
-                                )
-                                new_data_df[table_name] = new_df
-                                new_data_columns[table_name] = columns
-                                
-                                # remove the processed sheet name from the list of new_data_df
-                                sheet_names_copy.remove(sheet_name)
-                        
-                    if len(sheet_names_copy) == 1 and default_table_not_loaded:
-                        new_df = excel_file.parse(sheet_names_copy[0], dtype="string")                        
-                    else:
-                        self.log.warning("Multiple worksheets in file {file}. Check configuration to include table names to all worksheets.")
+                                    if table_name == self.config.default_worksheet_key:
+                                        default_table_not_loaded = False
+                                    
+                                    # Process the worksheet data
+                                    new_df,  columns, table_name = self.process_table(
+                                        df=new_df,
+                                        table_name=table_name,
+                                        file=file
+                                    )
+                                    new_data_df[table_name] = new_df
+                                    new_data_columns[table_name] = columns
+                                    
+                                    # remove the processed sheet name from the list of new_data_df
+                                    sheet_names_copy.remove(sheet_name)
+                            
+                        if len(sheet_names_copy) == 1 and default_table_not_loaded:
+                            new_df = excel_file.parse(sheet_names_copy[0], dtype="string")                        
+                        else:
+                            self.log.warning("Multiple worksheets in file {file}. Check configuration to include table names to all worksheets.")
                                             
                 case '.csv':
                     new_df = pd.read_csv(file, dtype="string")
@@ -1121,10 +1144,10 @@ class DataHandler:
                 self.file.move_to_store(files_to_move_to_store)
 
                 # Reset set of data files to ignore, since the reference data has been updated
-                self.data_files_to_ignore = set()
+                self.data_files_to_ignore = { k :set() for k in self.config.data_file_regex.keys() }
 
     # --------------------------------------------------------------
-    def process_data_files(self, files_to_process: set[str]) -> None:
+    def process_data_files(self, files_to_process: dict[str,set[str]]) -> None:
         """Process the set of data files and update the reference metadata file, if necessary.
 
         Args:
@@ -1134,34 +1157,38 @@ class DataHandler:
             
         Returns: None
         """
+        files_not_counted = {}
         
-        self.log.info(f"Processing {len(files_to_process)} data files")
+        for target_folder_key, file_set in files_to_process.items():
         
-        files_found_in_ref = set()
-
-        for file in files_to_process:
+            self.log.info(f"Processing {len(file_set)} data files")
             
-            for table in self.ref_df.keys():
+            files_found_in_ref = set()
+
+            for file in file_set:
                 
-                data_file_column = self.config.columns_data_filenames[table]
-                if data_file_column:
-                    # Find the row in the reference DataFrame in which the data_file_column contains filename
-                    match = self.ref_df[table][self.ref_df[table][data_file_column].str.contains(os.path.basename(file))]
+                for table in self.ref_df.keys():
                     
-                    # Set column [self.config.columns_data_published] to "Gotcha!" for any matching rows
-                    if not match.empty:
-                        self.ref_df[table].loc[match.index, data_file_column] = True
-                        files_found_in_ref.add(file)
-        
-        files_not_counted = files_to_process - files_found_in_ref
-        if files_not_counted:
-            self.data_files_to_ignore = files_not_counted
-            self.log.warning(f"Not all data files were considered. Leaving {len(files_not_counted)} in TEMP folder.")
-        
-        if files_found_in_ref:                
-            if self.persist_reference():
-                if self.file.publish_data_file(files_found_in_ref):
-                    self.file.remove_file_list(files_found_in_ref)
+                    data_file_column = self.config.columns_data_filenames[table]
+                    if data_file_column:
+                        # Find the row in the reference DataFrame in which the data_file_column contains filename
+                        for column in data_file_column:
+                            match = self.ref_df[table][self.ref_df[table][column].str.contains(os.path.basename(file))]
+                        
+                            if not match.empty:
+                                self.ref_df[table].loc[match.index, data_file_column] = True
+                                files_found_in_ref.add(file)
+            
+            files_not_counted = file_set - files_found_in_ref
+            
+            if files_not_counted:
+                self.data_files_to_ignore[target_folder_key] = files_not_counted
+                self.log.warning(f"Not all data files were considered. Leaving {len(files_not_counted)} in TEMP folder.")
+            
+            if files_found_in_ref:
+                if self.persist_reference():
+                    if self.file.publish_data_file(files_found_in_ref, target_folder_key):
+                        self.file.remove_file_list(files_found_in_ref)
 
     # --------------------------------------------------------------
     def persist_reference(self) -> bool:

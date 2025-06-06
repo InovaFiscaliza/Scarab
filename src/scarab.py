@@ -99,7 +99,8 @@ def main(config_path: str) -> None:
 
             # remove files to ignore from the sets of files to process.
             for table in data_files_to_process.keys():
-                data_files_to_process[table] = data_files_to_process[table].difference_update(dh.data_files_to_ignore)
+                for data_files_to_ignore in dh.data_files_to_ignore.values():
+                    data_files_to_process[table].difference_update(data_files_to_ignore)
                     
             if data_files_to_process:
                 dh.process_data_files(data_files_to_process)

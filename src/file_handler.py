@@ -213,19 +213,21 @@ class FileHandler:
             
             try:
                 shutil.move(file, self.config.store)
+            except FileExistsError:
+                self.trash_it(file=stored_file, overwrite=self.config.store_data_overwrite)
+                shutil.move(file, self.config.store)                
+            except PermissionError as e:
+                self.log.error(f"Permission error moving {file} to store folder: {e}")
+                return
             except Exception as e: 
-                if os.path.exists(stored_file):
-                    self.trash_it(file=stored_file, overwrite=self.config.store_data_overwrite)
-                    shutil.move(file, self.config.store)
-                else:
-                    self.log.error(f"Error moving {file} to store folder: {e}")
-                    return
+                self.log.error(f"Error moving {file} to store folder: {e}")
+                return
             finally:
                 os.utime(stored_file) # force the file timestamp to the current time to avoid being cleaned by the clean process before the clean period is over
                 self.log.info(f"Moved to {self.config.store} the file {filename}")
 
     # --------------------------------------------------------------
-    def publish_data_file(self, files_to_publish: set[str]) -> bool:
+    def publish_data_file(self, files_to_publish: set[str], target_key:str) -> bool:
         """Publish a file to the get folder.
 
         Args:
@@ -242,7 +244,7 @@ class FileHandler:
             filename = os.path.basename(file)
 
             # copy file to all publish folders
-            for publish_folder in self.config.get:
+            for publish_folder in self.config.get[target_key]:
                 try:
                     target_file = os.path.join(publish_folder, filename)
                     if os.path.exists(target_file):
