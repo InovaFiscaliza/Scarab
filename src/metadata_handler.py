@@ -299,6 +299,9 @@ class DataHandler:
         """
         
         try:
+            if df.empty or self.config.columns_data_filenames[table_name] not in df.columns:
+                self.log.debug(f"No data filenames column in {table_name}. No data files to process.")
+                return df
             # create a column to be used as index, merging the columns in index_column list
             data = {self.data_file_column: df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)}
             df = df.assign(**{data})
@@ -1061,6 +1064,8 @@ class DataHandler:
         # find the newest file in the list of catalog files
         latest_time:float = 0.0
         latest_file:str = None
+        ref_df: dict[str, pd.DataFrame] = {}
+        ref_cols: dict[str, list] = {}
         
         for file in self.config.catalog_files:
             if os.path.isfile(file):
@@ -1073,9 +1078,7 @@ class DataHandler:
             ref_df, ref_cols = self.read_metadata(  file=latest_file,
                                                     table=self.config.default_worksheet_key)
             
-            if not ref_df:
-                raise ValueError(f"Reference data file {latest_file} is empty or not valid.")
-        else:
+        if not latest_file or not ref_df:
             self.log.warning("No reference data found. Starting with a blank reference.")
             ref_df = {key: pd.DataFrame() for key in self.config.table_names}
             ref_cols = {key: [] for key in self.config.table_names}
