@@ -1161,6 +1161,9 @@ class DataHandler:
         
         for target_folder_key, file_set in files_to_process.items():
         
+            if file_set is None or not file_set:
+                continue
+            
             self.log.info(f"Processing {len(file_set)} data files")
             
             files_found_in_ref = set()
@@ -1170,13 +1173,13 @@ class DataHandler:
                 for table in self.ref_df.keys():
                     
                     data_file_column = self.config.columns_data_filenames[table]
-                    if data_file_column:
-                        # Find the row in the reference DataFrame in which the data_file_column contains filename
-                        for column in data_file_column:
-                            match = self.ref_df[table][self.ref_df[table][column].str.contains(os.path.basename(file))]
-                        
-                            if not match.empty:
-                                self.ref_df[table].loc[match.index, data_file_column] = True
+                    
+                    for column in data_file_column:
+                        match = self.ref_df[table][self.ref_df[table][column].str.contains(os.path.basename(file))]
+                    
+                        if not match.empty:
+                            for status_column in self.config.columns_data_published[table]:
+                                self.ref_df[table].loc[match.index, status_column] = "True"
                                 files_found_in_ref.add(file)
             
             files_not_counted = file_set - files_found_in_ref
