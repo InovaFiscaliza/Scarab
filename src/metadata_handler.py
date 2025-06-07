@@ -108,14 +108,15 @@ class DataHandler:
                 pk_column = self.config.table_associations[table][cm.PK_KEY][cm.NAME_KEY]                
             except KeyError:
                 self.log.debug(f"Table {table} does not have a primary key column defined in the config file.")
+                continue
             
             try:
                 if not pd.api.types.is_integer_dtype(self.ref_df[table][pk_column]):
                     self.ref_df[table][pk_column] = self.ref_df[table][pk_column].astype(int)
-                
+
                 max_pk = self.ref_df[table][pk_column].max()
             except Exception as e:
-                self.log.debug(f"Could not getting maximum primary key value for table {table}: {e}")
+                self.log.debug(f"Using 1 as starting primary key value for table {table}: {e}")
                 max_pk = np.int64(0)
             
             next_pk_counter[table] = max_pk + 1
@@ -541,17 +542,17 @@ class DataHandler:
                         data = json.load(json_file)
                     
                     # look for each defined table name in the json file and create a corresponding DataFrame
-                    for key in new_data_df.keys():
-                        if data and key in data:
-                            new_df = self.create_dataframe(data[key])
+                    for table in new_data_df.keys():
+                        if data and table in data:
+                            new_df = self.create_dataframe(data[table])
 
                             new_df, columns, table_name = self.process_table(   df=new_df,
-                                                                                table_name=key,
+                                                                                table_name=table,
                                                                                 file=file)
                             new_data_df[table_name] = new_df
                             new_data_columns[table_name] = columns
 
-                            del data[key]
+                            del data[table]
                     
                     # set flag if the default table was loaded
                     if not new_data_df[self.config.default_worksheet_key].empty:
@@ -992,7 +993,7 @@ class DataHandler:
                 # Use assign for non-empty DataFrames
                 df = df.assign(**{new_column_name: basename})
         else:
-            self.log.debug(f"Missing complement data info for table `{table}`. Skipping.")
+            self.log.debug(f"No filename column required in table `{table}`.")
         
         return df
     
