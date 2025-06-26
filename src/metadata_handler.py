@@ -171,7 +171,7 @@ class DataHandler:
                 return ', '.join(non_null_values)            
 
     # --------------------------------------------------------------
-    def create_index(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
+    def _create_index(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
         """Create an index for the DataFrame based on the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
 
         Args:
@@ -183,11 +183,16 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
-        columns = list(self.config.key_columns[table_name])
+        if self.config.key_columns is None:
+            self.log.debug("No key columns defined in config. No index will be created.")
+            return df
         
-        if not columns:
+        if table_name not in self.config.key_columns:
             self.log.debug(f"No key columns defined for table {table_name} to use for processing file {file}")
             return df
+        
+        columns = list(self.config.key_columns[table_name])
+        
         try:
             # create a column to be used as index, merging the columns in index_column list
             df = df.assign(**{self.index_column: df[columns].astype(str).agg('-'.join, axis=1)})
@@ -214,8 +219,7 @@ class DataHandler:
                 df = df.set_index(self.index_column)
                 
         except KeyError as e:
-            if not df.empty:
-                self.log.error(f"Key error in dataframe from file {file}, table {table_name}: {e}")
+            self.log.error(f"Key error in dataframe from file {file}, table {table_name}: {e}")
             return pd.DataFrame()
         except Exception as e:
             self.log.error(f"Error creating index in dataframe from file {file}, table {table_name}: {e}")
@@ -224,7 +228,7 @@ class DataHandler:
         return df
 
     # --------------------------------------------------------------
-    def set_types(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
+    def _set_types(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
         """Set the types of the columns in the DataFrame based on the config file.
         The types are set according to the config file for table association
 
@@ -249,10 +253,12 @@ class DataHandler:
                 for fk_table, fk_column in fk_info.items():
                     if self.config.table_associations[fk_table][cm.PK_KEY].get(cm.INT_TYPE_KEY, False):
                         df[fk_column] = df[fk_column].astype(int)
-        
+        else:
+            self.log.debug(f"No table association defined for table {table_name}. No types will be set.")
+            
         return df
     # --------------------------------------------------------------
-    def sort_dataframe(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
+    def _sort_dataframe(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
         """Sort the DataFrame by the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
 
         Args:
@@ -264,31 +270,25 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
+        if self.config.rows_sort_by is None:
+            self.log.debug("No sorting columns defined in config. No sorting will be applied.")
+            return df
+        
+        if table_name not in self.config.rows_sort_by:
+            self.log.debug(f"No sorting columns defined for table {table_name}. No sorting will be applied.")
+            return df
+        
         index_value = self.ordering_index.get(table_name,0)
         df[self.post_order_column] = range(index_value, index_value + len(df))
         self.ordering_index[table_name] = index_value + len(df)
         
-        try:
-            # sort the DataFrame by the columns defined in the config file
-            df = df.sort_values(by=self.config.rows_sort_by[table_name], ascending=True)
-        except AttributeError as e:
-            if df.empty:
-                self.log.info(f"No data in file {file}")
-            else:
-                self.log.error(f"Attribute error in sorting metadata from file {file}, table {table_name}: {e}")
-            return pd.DataFrame()
-        except KeyError as e:
-            if not df.empty:
-                self.log.error(f"Key error in sorting metadata from file {file}, table {table_name}: {e}")
-            return pd.DataFrame()
-        except Exception as e:
-            self.log.error(f"Error sorting metadata from file {file}, table {table_name}: {e}")
-            return pd.DataFrame()
+        # sort the DataFrame by the columns defined in the config file
+        df = df.sort_values(by=self.config.rows_sort_by[table_name], ascending=True)
         
         return df
     
     # --------------------------------------------------------------
-    def create_data_file_control_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
+    def _create_data_file_control_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
         """Create a column with the filenames of the data files to which the metadata refers to. 
         The column is created by concatenating the values of the columns defined in the config file.
 
@@ -299,31 +299,29 @@ class DataHandler:
         Returns:
             pd.DataFrame: DataFrame with the filenames column created.
         """
-        
-        try:
-            if df.empty:
-                return df
-            
-            columns_in_df = [col for col in self.config.columns_data_filenames[table_name] if col in df.columns]
-            if not columns_in_df:
-                self.log.debug(f"No data filenames column in {table_name}. No data files to process.")
-                return df
-            
-            # create a column to be used as index, merging the columns in index_column list
-            data = {self.data_file_column: df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)}
-            df = df.assign(**data)
-            
-        except (ValueError, KeyError) as e:
-            self.log.debug(f"No file control column in {table_name}. Error: {e}")
+                
+        if self.config.columns_data_filenames is None:
+            self.log.debug("No data filenames control column defined in config.")
             return df
-        except Exception as e:	
-            self.log.error(f"Error creating data filenames column: {e}")
-            return pd.DataFrame()
-
+        
+        if  table_name not in self.config.columns_data_filenames:
+            self.log.debug(f"No data filenames control column defined for table {table_name}. No data files to process.")
+            return df
+        
+        columns_in_df = [col for col in self.config.columns_data_filenames[table_name] if col in df.columns]
+        
+        if not columns_in_df:
+            self.log.debug(f"No data filenames column in {table_name}. No data files to process.")
+            return df
+        
+        # create a column to be used as index, merging the columns in index_column list
+        data = {self.data_file_column: df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)}
+        df = df.assign(**data)
+            
         return df
     
     # --------------------------------------------------------------
-    def fix_create_data_published_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
+    def _fix_create_data_published_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
         """Create a column with the filenames of the data files to which the metadata refers to.
         The column is created by replacing the values in the column defined in the config file with "False" if the value is null or empty.
         Args:
@@ -333,9 +331,14 @@ class DataHandler:
             pd.DataFrame: DataFrame with the data published column created.
         """
 
-        if df.empty:
+        if self.config.columns_data_published is None:
+            self.log.debug("No data published control column defined in config.")
             return df
         
+        if table_name not in self.config.columns_data_published:
+            self.log.debug(f"No data published control column defined for table {table_name}. No data files to process.")
+            return df
+
         for col in self.config.columns_data_published[table_name]:
             if col not in df.columns:
                 df[col] = "False"
@@ -415,32 +418,43 @@ class DataHandler:
         Returns:
             pd.DataFrame: DataFrame with the data from the Excel file.
             list: List of columns in the DataFrame.
+            str: Name of the table to be used as defined in the config file.
         """
 
-        # Remove escaped characters from column names
-        df.columns = self.config.limit_character_scope(df.columns.tolist())
+        # Add columns based ob the filename
+        transformations = [
+            lambda df: self._add_filename_column(df, table_name, file),
+            lambda df: self._add_filename_data(df, table_name, file),
+        ]
+        
+        [df := transform(df) for transform in transformations]
 
-        # Process via chaining operations
+        # If the DataFrame still empty, log a message and return an empty DataFrame
+        if df.empty:
+            self.log.debug(f"No data in DataFrame for table {table_name}. No data files to process.")
+            return pd.DataFrame(), [], table_name
+        
+        # Validate the table based on the required columns and keys defined in the config file
         valid_table, table_name = self._id_and_validate_table(df, table_name, file)
         
         if not valid_table:
             self.log.warning(f"No valid table data found in file {file}.")
-            return pd.DataFrame(), []
+            return pd.DataFrame(), [], table_name
         
-        # Define pipeline of transformations
+        # Remove escaped characters from column names
+        df.columns = self.config.limit_character_scope(df.columns.tolist())
+
+        # Performa additional table transformation considering existing data
         transformations = [
-            lambda df: self.add_filename_column(df, table_name, file),
-            lambda df: self.add_filename_data(df, table_name, file),
-            lambda df: self.create_data_file_control_column(df, table_name),
-            lambda df: self.fix_create_data_published_column(df, table_name),
-            lambda df: self.create_index(df, table_name, file),
-            lambda df: self.set_types(df, table_name, file),
-            lambda df: self.sort_dataframe(df, table_name, file)
+            lambda df: self._create_data_file_control_column(df, table_name),
+            lambda df: self._fix_create_data_published_column(df, table_name),
+            lambda df: self._create_index(df, table_name, file),
+            lambda df: self._set_types(df, table_name, file),
+            lambda df: self._sort_dataframe(df, table_name, file)
         ]
         
-        # Apply transformations in the defined sequence
         [df := transform(df) for transform in transformations]
-        
+
         # Get columns after all transformations
         columns = df.columns.tolist()
 
@@ -923,54 +937,8 @@ class DataHandler:
             
             self.log.info(f"Reference data updated for table {table} with data from file: {file}")
 
-    """
     # --------------------------------------------------------------
-    def update_fk(self, df: dict[str,pd.DataFrame], file: str) -> dict[str,pd.DataFrame]:
-        Update the foreign key when relative association is used.
-        
-        Args:
-            new_data_df (dict[str,pd.DataFrame]): Dictionary with the DataFrames containing various tables.
-            file (str): The metadata file being processed.
-            
-        Returns:
-            None
-        
-        
-        for foreign_table, association in self.config.table_associations.items():
-
-            try:
-                # if PK is int, get the minimum value of the PK column as offset to be discounted
-                # and add the corresponding next_pk_counter value
-                association_fk = association[cm.FK_KEY]
-                
-                for primary_table, fk_column in association_fk.items():
-                    
-                    # if primary_table exist in pk_int_offset dictionary, it means that the PK is an int
-                    if primary_table in self.pk_int_offset.keys():
-                        offset = self.pk_int_offset[primary_table]
-                        
-                        # test if type of df[foreign_table][association_fk[primary_table]] is int, if not, convert to int
-                        if not pd.api.types.is_integer_dtype(df[foreign_table][association_fk[primary_table]]):
-                            df[foreign_table][association_fk[primary_table]] = df[foreign_table][association_fk[primary_table]].astype(int)
-                        
-                        # add offset to the foreign key column in the source table
-                        df[foreign_table][fk_column] = df[foreign_table][fk_column] + offset
-                    # Else, if PK is not an int, use the translation table
-                    else:
-                        # get the mapping of original to new primary keys
-                        pk_mapping = self.pk_mod_table[primary_table]
-                        
-                        # replace the foreign key column values with the new unique IDs
-                        df[foreign_table][fk_column] = df[foreign_table][fk_column].map(pk_mapping)
-                                    
-            except KeyError as e:
-                self.log.debug(f"Key error in table {foreign_table}, file {file}. {e}.")
-                continue
-            
-        return df
-    """
-    # --------------------------------------------------------------
-    def add_filename_column(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
+    def _add_filename_column(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Complement the data in the reference DataFrame with metadata extracted from the filename and the file itself.
         
         Args:
@@ -981,6 +949,10 @@ class DataHandler:
         Returns:
             pd.DataFrame: Updated DataFrame with the new data.
         """
+        
+        if self.config.add_filename is None:
+            self.log.debug("No filename column required in the config file.")
+            return df
         
         if table in self.config.add_filename.keys():
             new_column_name = self.config.add_filename[table]
@@ -1032,7 +1004,7 @@ class DataHandler:
         return value
     
     # --------------------------------------------------------------
-    def add_filename_data(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
+    def _add_filename_data(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Complement the data with metadata extracted from the filename using regex groups.
         
         Args:
@@ -1043,6 +1015,10 @@ class DataHandler:
         Returns:
             pd.DataFrame: Updated DataFrame with the filename data
         """
+        
+        if self.config.filename_data_format is None:
+            self.log.debug("No filename data format defined in the config file.")
+            return df
         
         basename = os.path.basename(file)
         
@@ -1071,6 +1047,9 @@ class DataHandler:
                 df = df.assign(**processed_data)
                 
             self.log.debug(f"Added {len(filename_data)} metadata fields from filename to table '{table}'")
+        
+        else:
+            self.log.debug(f"No filename data format defined for table '{table}'. No metadata added from filename.")
                 
         return df
     
