@@ -54,7 +54,7 @@
         "association": {},
         "in columns": {"_":[]},
         "sort by": {"_":""},
-        "data filenames": {},
+        "data filenames": {"_":[]},
         "data published flag": {"_":[]},
         "add filename": {},
         "filename data format": {},

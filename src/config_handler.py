@@ -176,6 +176,7 @@ class Config:
             self.data_file_regex: Dict[str, re.Pattern] = {
                 k: re.compile(v) for k, v in config["files"].pop("data file regex", default_conf["files"]["data file regex"]).items()
             }
+            
             """ Dictionary with regex formatting to be used to select filenames to be processed as raw data files"""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
@@ -191,11 +192,11 @@ class Config:
                 self._ensure_list(
                     config["metadata"].pop("required tables", default_conf["metadata"]["required tables"]))))
             """ Columns that define the tables required in the metadata file"""
-            self.key_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("key", default_conf["metadata"]["key"]))
+            self.key_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("key", default_conf["metadata"]["key"]),"key")
             """ Columns that define the uniqueness of each row in the metadata file"""
             self.table_associations: Dict[str, TableAssociation] = self._validate_table_associations(config["metadata"].pop("association", default_conf["metadata"]["association"]))
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.required_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("in columns", default_conf["metadata"]["in columns"]))
+            self.required_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("in columns", default_conf["metadata"]["in columns"]),"in columns")
             """ Columns required in the input metadata file"""
             self.rows_sort_by: Dict[str,str] = self.limit_character_scope(
                 config["metadata"].pop("sort by", default_conf["metadata"]["sort by"]))
@@ -224,9 +225,14 @@ class Config:
             if config:
                 print(f"Configuration file contains unknown keys: {json.dumps(config)}")
                 exit(1)
+                
+            self._test_get_regex()
 
         except KeyError as e:
             print(f"Configuration files missing arguments: {e}")
+            exit(1)
+        except ValueError as e:
+            print(f"Configuration files invalid arguments: {e}")
             exit(1)
         except Exception as e:
             print(f"Unknown error occurred: {e}")
@@ -368,6 +374,41 @@ class Config:
         return associations
 
     # --------------------------------------------------------------
+    def _test_get_regex(self) -> None:
+        """Test keys in dictionaries associated with the get folders have corresponding regex patterns defined.
+        
+        Args:
+            None
+            
+        Returns:
+            None
+            
+        Raises:
+            ValueError: If a key in the get folders does not have a corresponding regex pattern defined.
+        """
+        
+        no_regex = not self.data_file_regex and not isinstance(self.data_file_regex, dict)
+        no_get = not self.get and not isinstance(self.get, dict)
+
+        if no_regex and no_get:
+            return  # Nothing to check
+        elif no_regex and not no_get:
+            raise ValueError("Config not functional. 'get' folder correctly defined but not the corresponding 'data file regex'")
+        elif not no_regex and no_get:
+            raise ValueError("Config not functional. 'data file regex' correctly defined but not the corresponding 'get' folders")
+        # else: both are present, continue with further checks
+        
+        data_file_regex_copy = self.data_file_regex.copy()
+        for keys in self.get.keys():
+            key_found = data_file_regex_copy.pop(keys, None)
+            if not key_found:
+                raise ValueError(f"Key '{keys}' in 'get' folders does not have a corresponding regex pattern defined in 'data file regex'.")
+        
+        if data_file_regex_copy:
+            raise ValueError(f"Regex patterns defined in 'data file regex' without corresponding keys in 'get' folders: {', '.join(data_file_regex_copy)}. Please check the configuration file.")
+                
+
+    # --------------------------------------------------------------
     def _load_into_config(self, filename: str) -> Dict[str, Any]:
         """Load;update the configuration values from a JSON file encoded with UTF-8.
         
@@ -474,11 +515,12 @@ class Config:
         return output_format[:-len(log_separator)]
     
     # --------------------------------------------------------------
-    def _build_set_dict(  self, data : Dict[str, Any]) -> Dict[str, set[str]]:
+    def _build_set_dict(  self, data : Dict[str, Any], name: str) -> Dict[str, set[str]]:
         """Build a dictionary with required columns for each table based on the input data.
         
         Args:
             data (Dict[str, Any]): Input data with table names as keys and lists of required columns as values.
+            name (str): Name of the data type being processed, used for error messages.
             
         Returns:
             Dict[str, set[str]]: Dictionary with table names as keys and sets of required columns as values.
@@ -486,7 +528,7 @@ class Config:
         
         # test if data is of dict type, if not, raise an error
         if not isinstance(data, dict):
-            print(f"Invalid type for required columns data: {type(data)}. Expected a dictionary.")
+            print(f"Invalid type for required columns data: {type(data)}. Expected a dictionary in config {name}.")
             exit(1)
 
         return {k: set(self.limit_character_scope(v)) for k, v in data.items()}

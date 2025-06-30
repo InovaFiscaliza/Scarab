@@ -212,10 +212,10 @@ class FileHandler:
             stored_file = os.path.join(self.config.store, filename)
             
             try:
-                shutil.move(file, self.config.store)
+                os.rename(file, stored_file)
             except FileExistsError:
                 self.trash_it(file=stored_file, overwrite=self.config.store_data_overwrite)
-                shutil.move(file, self.config.store)                
+                os.rename(file, stored_file)                
             except PermissionError as e:
                 self.log.error(f"Permission error moving {file} to store folder: {e}")
                 return
@@ -296,7 +296,8 @@ class FileHandler:
         for table, pattern in regex_rules.items():
             if pattern.match(name):
                 file_in_temp = self.move_to_temp(filename)
-                files_to_process[table].add(file_in_temp)
+                if file_in_temp:
+                    files_to_process[table].add(file_in_temp)
                 return files_to_process, True
         
         return files_to_process, False
@@ -331,13 +332,16 @@ class FileHandler:
             if os.path.isfile(item):
                 file_matched = False
 
+                # test if file contains metadata to be processed
                 metadata_to_process, file_matched = self._file_matching( filename=item,
                                                                         regex_rules=self.config.metadata_file_regex,
                                                                         files_to_process=metadata_to_process)
                 
+                # if already found, continue to the next file
                 if file_matched:
                     continue
                 
+                # test if file contains data to be arranged
                 data_files_to_process, file_matched = self._file_matching(filename=item,
                                                                          regex_rules=self.config.data_file_regex,
                                                                          files_to_process=data_files_to_process)
@@ -375,14 +379,14 @@ class FileHandler:
             folder_content = glob.glob("**", root_dir=input_folder, recursive=True)
             
             if not folder_content:
-                self.log.debug(f"POST Folder {input_folder} is empty.")
+                self.log.debug(f"Folder {input_folder} is empty.")
             else:
                 # remove files and folders to ignore from the list
                 folder_content = set(folder_content) - self.config.input_to_ignore
                 
                 # add path to filenames
                 folder_content = set(map(lambda x: os.path.join(input_folder, x), folder_content))
-                self.log.debug(f"POST Folder {input_folder} has {len(folder_content)} files/folders to process.")
+                self.log.debug(f"Folder {input_folder} has {len(folder_content)} files/folders to process.")
                 
                 metadata_to_process, data_to_process = self.sort_and_clean( folder_content,
                                                                             metadata_to_process=metadata_to_process,

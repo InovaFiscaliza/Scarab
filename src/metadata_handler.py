@@ -1107,9 +1107,14 @@ class DataHandler:
                 new_data_df, column_in = self.read_metadata(file=file, table=table)
 
                 # If data was loaded, put the file in the list to be moved to store, otherwise may move it to trash
-                if new_data_df:
-                    files_to_move_to_store.append(file)
-                elif self.config.discard_invalid_data_files:
+                trash_file = True
+                for df in new_data_df.values():
+                    if not df.empty:
+                        files_to_move_to_store.append(file)
+                        trash_file = False
+                        break
+                        
+                if self.config.discard_invalid_data_files and trash_file:
                     self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
                     continue
 
@@ -1192,7 +1197,6 @@ class DataHandler:
         
         # loop through the target catalog files and save the reference data, 
         # ensuring that at least one file is saved successfully before returning True
-        # TODO TRANSLATE SHEET NAMES FOR SAVING TO EXCEL
         save_at_least_one = False
         for catalog_file in self.config.catalog_files:
             try:
