@@ -1080,11 +1080,18 @@ class DataHandler:
             self.log.info(f"Reference data loaded from file: {latest_file}")
             ref_df, ref_cols = self.read_metadata(  file=latest_file,
                                                     table=self.config.default_worksheet_key)
-            
-        if not latest_file or not ref_df:
-            self.log.warning("No reference data found. Starting with a blank reference.")
+        
+        if not latest_file:
+            self.log.warning("No reference data file found. Starting with a blank reference.")
             ref_df = {key: pd.DataFrame() for key in self.config.table_names}
             ref_cols = {key: [] for key in self.config.table_names}
+        else:
+            for table, df in ref_df.items():
+                if df.empty:
+                    self.log.warning(f"Table '{table}' in file '{latest_file}' does not contain valid data. A new table will be created.")
+                    for file in self.config.catalog_files:
+                        self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
+                        self.log.warning(f"File '{file}' moved to trash as it contains no valid data.")
 
         return ref_df, ref_cols
 
@@ -1157,7 +1164,7 @@ class DataHandler:
                 
                 for table in self.ref_df.keys():
                     
-                    if table.empty():
+                    if self.ref_df[table].empty:
                         continue
                     
                     data_file_column = self.config.columns_data_filenames[table]
