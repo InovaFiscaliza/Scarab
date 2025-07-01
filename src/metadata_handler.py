@@ -1157,9 +1157,17 @@ class DataHandler:
                 
                 for table in self.ref_df.keys():
                     
+                    if table.empty():
+                        continue
+                    
                     data_file_column = self.config.columns_data_filenames[table]
                     
                     for column in data_file_column:
+                        
+                        if column not in self.ref_df[table].columns:
+                            self.log.warning(f"Column '{column}' not found in table '{table}'. Skipping file '{file}'.")
+                            continue
+                        
                         match = self.ref_df[table][self.ref_df[table][column].str.contains(os.path.basename(file))]
                     
                         if not match.empty:
