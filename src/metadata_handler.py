@@ -434,6 +434,9 @@ class DataHandler:
             self.log.debug(f"No data in DataFrame for table {table_name}. No data files to process.")
             return pd.DataFrame(), [], table_name
         
+        # Remove escaped characters from column names
+        df.columns = self.config.limit_character_scope(df.columns.tolist())
+
         # Validate the table based on the required columns and keys defined in the config file
         valid_table, table_name = self._id_and_validate_table(df, table_name, file)
         
@@ -441,9 +444,6 @@ class DataHandler:
             self.log.warning(f"No valid table data found in file {file}.")
             return pd.DataFrame(), [], table_name
         
-        # Remove escaped characters from column names
-        df.columns = self.config.limit_character_scope(df.columns.tolist())
-
         # Performa additional table transformation considering existing data
         transformations = [
             lambda df: self._create_data_file_control_column(df, table_name),

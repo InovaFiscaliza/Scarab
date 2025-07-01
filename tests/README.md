@@ -231,7 +231,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 
 Its expected that all metadata files to be moved to trash. Messages should point that the column with all characters allowed is not present in the metadata file. Check if the name is correct.
 
-If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters should be renamed, removing this characters.
+If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters (11th column with name `caracterí\xadsticas` in new data files) should be renamed, removing the characters `\xad`.
 
 <div>
     < a href="https://github.com/InovaFiscaliza/Scarab">
