@@ -1097,7 +1097,7 @@ class DataHandler:
 
     # --------------------------------------------------------------
     def process_metadata_files(self,  metadata_files: dict[str,set[str]]) -> None:
-        """Process a set of xlsx files and update the reference data file.
+        """Process a set of metadata files and update the reference data file.
 
         Args:
             metadata_files (dict[str,set[str]]): Dictionary of xlsx files to process, keyed by table name.
