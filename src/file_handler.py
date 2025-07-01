@@ -306,7 +306,7 @@ class FileHandler:
     def sort_and_clean(self, 
                     folder_content: set[str],
                     metadata_to_process: dict[str, set[str]],
-                    data_files_to_process: dict[str, set[str]]) -> tuple[dict[str,set[str]], dict[str,set[str]]]:
+                    data_files_to_process: dict[str, set[str]]) -> tuple[dict[str,set[str]], dict[str,set[str]], bool, bool]:
         """ Move files listed according to regex patterns to the temp folder and return the list of files to process
             If files are already in the temp folder, they are not moved.
             Remove files with unrecognized patterns if discard_invalid_data_files is set to True
@@ -319,13 +319,18 @@ class FileHandler:
             files_to_process (dict[str, set[str]]): Existing dictionary of files to process. Default is None, which will create a new dict.
 
         Returns:
-            tuple[set[str], dict[str, set[str]]]: Set of metadata files to process, Dictionary of data files by category
+            - dict[str, set[str]]: Dictionary with table names as keys and set of metadata files to process as values
+            - dict[str, set[str]]: Dictionary with data file types as keys and set of data files to process as values
+            - bool: True if metadata files were found, False otherwise.
+            - bool: True if data files were found, False otherwise.
             
         Raises: None
         """
             
         folders = set()
-            
+        
+        metadata_found = False
+        data_found = False
         for item in folder_content:
             
             # Check if the item is a file
@@ -339,15 +344,20 @@ class FileHandler:
                 
                 # if already found, continue to the next file
                 if file_matched:
+                    metadata_found = True
                     continue
                 
                 # test if file contains data to be arranged
                 data_files_to_process, file_matched = self._file_matching(filename=item,
                                                                          regex_rules=self.config.data_file_regex,
                                                                          files_to_process=data_files_to_process)
-                            
+                
+                if file_matched:
+                    data_found = True
+                    continue
+                
                 # If file doesn't match any pattern, optionally trash it
-                if not file_matched and self.config.discard_invalid_data_files:
+                if self.config.discard_invalid_data_files:
                     self.trash_it(file=item, overwrite=self.config.trash_data_overwrite)
 
             # if item is a folder, simply add it to the subfolder list to be removed later
@@ -356,22 +366,26 @@ class FileHandler:
                 
         self._remove_unused_subfolder(folders)
         
-        return metadata_to_process, data_files_to_process
+        return metadata_to_process, data_files_to_process, metadata_found, data_found
 
     # --------------------------------------------------------------
-    def get_files_to_process(self) -> tuple[dict[str,set[str]], dict[str,set[str]]]:
+    def get_files_to_process(self) -> tuple[dict[str,set[str]], dict[str,set[str]], bool, bool]:
         """Move new files from the post folder to the temp folder and return the list of files to process.
 
         Args: None
         
         Returns:
-            dict[str,set[str]]: Dictionary of metadata files to process for each table
-            dict[str,set[str]]: Dictionary of data files to process for each table
+            - dict[str, set[str]]: Dictionary with table names as keys and set of metadata files to process as values
+            - dict[str, set[str]]: Dictionary with data file types as keys and set of data files to process as values
+            - bool: True if metadata files were found, False otherwise.
+            - bool: True if data files were found, False otherwise.
 
         Raises: None
         """
         metadata_to_process = {table: set() for table in self.config.metadata_file_regex.keys()}
         data_to_process = {table: set() for table in self.config.data_file_regex.keys()}
+        metadata_found = False
+        data_found = False
         
         # Loop through all post folders and temp folder
         for input_folder in self.config.input_path_list:
@@ -388,11 +402,12 @@ class FileHandler:
                 folder_content = set(map(lambda x: os.path.join(input_folder, x), folder_content))
                 self.log.debug(f"Folder {input_folder} has {len(folder_content)} files/folders to process.")
                 
-                metadata_to_process, data_to_process = self.sort_and_clean( folder_content,
+                metadata_to_process, data_to_process, metadata_found, data_found = self.sort_and_clean(
+                                                                            folder_content,
                                                                             metadata_to_process=metadata_to_process,
                                                                             data_files_to_process=data_to_process)
                         
-        return metadata_to_process, data_to_process
+        return metadata_to_process, data_to_process, metadata_found, data_found
 
     # --------------------------------------------------------------
     def _clean_old_in_folder(self, folder: str) -> None:
