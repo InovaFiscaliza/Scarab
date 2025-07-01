@@ -92,17 +92,16 @@ def main(config_path: str) -> None:
     while keep_watching:
         
         try:
-            metadata_to_process, data_files_to_process = fh.get_files_to_process()
+            metadata_to_process, data_files_to_process, metadata_found, data_found = fh.get_files_to_process()
             
-            if metadata_to_process:
+            if metadata_found:
                 dh.process_metadata_files(metadata_to_process)
 
-            # remove files to ignore from the sets of files to process.
-            for table in data_files_to_process.keys():
-                for data_files_to_ignore in dh.data_files_to_ignore.values():
-                    data_files_to_process[table].difference_update(data_files_to_ignore)
-                    
-            if data_files_to_process:
+            if data_found:
+                # remove files to ignore from the sets of files to process.
+                for file_type, data_file_set in data_files_to_process.items():
+                    data_file_set.difference_update(dh.data_files_to_ignore.get(file_type, set()))
+                        
                 dh.process_data_files(data_files_to_process)
             
             fh.clean_folders()
