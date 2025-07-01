@@ -10,6 +10,7 @@
     "null string values": ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"],
     "default worksheet key": "_",
     "default multiple object key": "*",
+    "default unlimited characters scope": "*",
     "default worksheet name": "<name>",
     "overwrite data in store": false,
     "overwrite data in get": true,
