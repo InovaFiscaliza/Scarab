@@ -302,3 +302,45 @@ The file `.file_to_ignore` and folder `folder_to_ignore` should be ignored in th
     </a>
     <br><br>
 </div>
+
+## Multi-table json input
+
+Use `Ctest_multitable_json.bat` to set the sandbox folder structure for the test
+
+This test takes as input json files containing multiple tables associated as in a relational database, with Primary Keys and Foreign Keys.
+
+An additional table is created extracting data from the filenames.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+
+A single xlsx file will be produced in the get folder, with multiple worksheets, one for each input table.
+
+<div>
+    < a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multiple input and single output test
+
+Use `Dtest_multitable_input_single_output.bat` to set the sandbox folder structure for the test
+
+This test uses the same data as the 9th test, but joining inputs from json and xlsx files into a single output xlsx file, using worksheets to separate content from different sources.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+
+A single xlsx file will be produced in the get folder, with two worksheets, one for each input file type related to measurement data files and metadata of the files that were processed.
+
+<div>
+    < a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
