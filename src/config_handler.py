@@ -167,19 +167,14 @@ class Config:
             """ Trash folder path used for files posted using wrong format. [! Mandatory]"""
             self.store: str = default_conf["folders"].get("store", config["folders"].pop("store"))
             """ Store folder path used to store processed files. [! Mandatory]"""
-            self.get: Dict[str:list[str]] = config["folders"].pop("get", default_conf["folders"]["get"])
+            self.get: Dict[str:list[str]] = self._build_list_dict(config["folders"].pop("get", default_conf["folders"]["get"]),"folders/get")
             """ For each key associated with a matching pattern defined in the "data file regex", a list of target folders is defined, to which matching files should be moved."""
             
             self.catalog_files: list[str] = self._ensure_list(config["files"].pop("catalog names", default_conf["files"]["catalog names"]))
             """ Full path to the catalog file, where metadata is stored"""
-            self.metadata_file_regex: Dict[str, re.Pattern] = {
-                k: re.compile(v) for k, v in config["files"].pop("metadata file regex", default_conf["files"]["metadata file regex"]).items()
-            }
+            self.metadata_file_regex: Dict[str, re.Pattern] = self._build_re_dict(config["files"].pop("metadata file regex", default_conf["files"]["metadata file regex"]),"metadata file regex")
             """ Regex pattern to be used to select files that may contain metadata."""
-            self.data_file_regex: Dict[str, re.Pattern] = {
-                k: re.compile(v) for k, v in config["files"].pop("data file regex", default_conf["files"]["data file regex"]).items()
-            }
-            
+            self.data_file_regex: Dict[str, re.Pattern] = self._build_re_dict(config["files"].pop("data file regex", default_conf["files"]["data file regex"]),"data file regex")
             """ Dictionary with regex formatting to be used to select filenames to be processed as raw data files"""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
@@ -195,11 +190,11 @@ class Config:
                 self._ensure_list(
                     config["metadata"].pop("required tables", default_conf["metadata"]["required tables"]))))
             """ Columns that define the tables required in the metadata file"""
-            self.key_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("key", default_conf["metadata"]["key"]),"key")
-            """ Columns that define the uniqueness of each row in the metadata file"""
             self.table_associations: Dict[str, TableAssociation] = self._validate_table_associations(config["metadata"].pop("association", default_conf["metadata"]["association"]))
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.required_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("in columns", default_conf["metadata"]["in columns"]),"in columns")
+            self.key_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("key", default_conf["metadata"]["key"]),"key")
+            """ Columns that define the uniqueness of each row in the metadata file"""
+            self.required_columns = self._merge_dict_set(config["metadata"].pop("in columns", default_conf["metadata"]["in columns"]), self.key_columns, "in columns")
             """ Columns required in the input metadata file"""
             self.rows_sort_by: Dict[str,str] = self.limit_character_scope(
                 config["metadata"].pop("sort by", default_conf["metadata"]["sort by"]))
@@ -216,8 +211,7 @@ class Config:
             """ Dictionary with table names (keys) and set of new columns to be created from the filename data format and add filename rules."""
             self.add_filename: Dict[str,str] = config["metadata"].pop("add filename", default_conf["metadata"]["add filename"])
             """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
-            self.filename_data_format: Dict[str, re.Pattern] = self._build_filename_data_format(
-                config["metadata"].pop("filename data format", default_conf["metadata"]["filename data format"]))
+            self.filename_data_format: Dict[str, re.Pattern] = self._build_re_dict(config["metadata"].pop("filename data format", default_conf["metadata"]["filename data format"]),"filename data format")
             """ Dictionary with table names (keys) and regex patterns (values) to extract data from the filename. Use re.match.groupdict() syntax."""
             self.filename_data_processing_rules: Dict[str, Dict[str, Any]] = config["metadata"].pop("filename data processing rules",
                                                                                         default_conf["metadata"]["filename data processing rules"])
@@ -256,8 +250,11 @@ class Config:
         
         if isinstance(item, str):
             return [item]
-        else:
+        elif isinstance(item, list):
             return item
+        else:
+            print(f"Invalid type for item: {type(item)}. Expected a string or a list.")
+            exit(1)
 
     # --------------------------------------------------------------
     def _ensure_mandatory_structure(self, config: Dict) -> Dict[str, Any]:
@@ -313,6 +310,33 @@ class Config:
         return expected_columns
 
     # --------------------------------------------------------------
+    def _merge_dict_set(self, 
+                            new_data: Dict[str, Any],
+                            existing_set : Dict[str, set[str]],
+                            name: str) -> Dict[str, set[str]]:
+        """Merge a dictionary of sets with the key columns to create a unified dictionary of required columns.
+        
+        Args:
+            new_data (Dict[str, Any]): Dictionary with table names as keys and sets of required columns as values.
+            existing_set (Dict[str, set[str]]): Existing dictionary with table names as keys and sets of required columns as values.
+            name (str): Name of the configuration section for logging purposes.
+            
+        Returns:
+            Dict[str, set[str]]: Merged dictionary with table names as keys and sets of required columns as values.
+        """
+        
+        data = self._build_set_dict(new_data, name)
+        
+        self.key_columns  # Already built above
+
+        merged_dict: Dict[str, set[str]] = {}
+        all_keys = set(data.keys()) | set(existing_set.keys())
+        for k in all_keys:
+            merged_dict[k] = data.get(k, set()).union(existing_set.get(k, set()))
+        
+        return merged_dict
+    
+    # --------------------------------------------------------------
     def _build_last_clean_time(self, last_clean: str, delay_clean: bool) -> pd.Timestamp:
         """Build the last clean time from the configuration value.
         
@@ -326,8 +350,6 @@ class Config:
             ValueError: If the last clean time is not in a valid format.
         """
         
-        
-            
         try:
             timestamp = pd.to_datetime(last_clean, format="%Y-%m-%d %H:%M:%S")
         except ValueError:
@@ -545,26 +567,46 @@ class Config:
         return output_format[:-len(log_separator)]
     
     # --------------------------------------------------------------
-    def _build_set_dict(  self, data : Dict[str, Any], name: str) -> Dict[str, set[str]]:
-        """Build a dictionary with required columns for each table based on the input data.
+    def _build_list_dict(  self, data : Dict[str, Any], name: str) -> Dict[str, list[str]]:
+        """Validate serialized input and build a dictionary with set values
         
         Args:
-            data (Dict[str, Any]): Input data with table names as keys and lists of required columns as values.
+            data (Dict[str, Any]): Input data from serialized json file.
             name (str): Name of the data type being processed, used for error messages.
             
         Returns:
-            Dict[str, set[str]]: Dictionary with table names as keys and sets of required columns as values.
+            Dict[str, list[str]]: Dictionary with table names as keys and list of strings as values.
         """
         
         # test if data is of dict type, if not, raise an error
         if not isinstance(data, dict):
-            print(f"Invalid type for required columns data: {type(data)}. Expected a dictionary in config {name}.")
+            print(f"Invalid data '{type(data)}'. Expected a dictionary in config {name} for list creation.")
             exit(1)
+            
+        return {k: self._ensure_list(v) for k, v in data.items()}
 
-        return {k: set(self.limit_character_scope(v)) for k, v in data.items()}
+    # --------------------------------------------------------------
+    def _build_set_dict(  self, data : Dict[str, Any], name: str) -> Dict[str, set[str]]:
+        """Validate serialized input and build a dictionary with set values
+        
+        Args:
+            data (Dict[str, Any]): Input data from serialized json file.
+            name (str): Name of the data type being processed, used for error messages.
+            
+        Returns:
+            Dict[str, set[str]]: Dictionary with table names as keys and sets of strings as values.
+        """
+        
+        # test if data is of dict type, if not, raise an error
+        if not isinstance(data, dict):
+            print(f"Invalid data: '{type(data)}'. Expected a dictionary in config {name} for set creation.")
+            exit(1)
+        
+        # Use a dictionary comprehension to convert each list to a set directly
+        return {k: set(self._ensure_list(v)) for k, v in data.items()}
     
     # --------------------------------------------------------------
-    def _build_filename_data_format(self, data: Dict[str, str]) -> Dict[str, re.Pattern]:
+    def _build_re_dict(self, data: Dict[str, str], name) -> Dict[str, re.Pattern]:
         """Build a dictionary with regex patterns for extracting data from filenames.
         
         Args:
@@ -576,7 +618,7 @@ class Config:
         
         # test if data is of dict type, if not, raise an error
         if not isinstance(data, dict):
-            print(f"Invalid type for filename data format: {type(data)}. Expected a dictionary.")
+            print(f"Invalid type for filename data format: {type(data)} in config '{name}'. Expected a dictionary.")
             exit(1)
 
         return {k: re.compile(v) for k, v in data.items()}
