@@ -7,7 +7,7 @@
     "last clean": "none",
     "maximum errors before exit" : 5,
     "maximum file variations" : 100,
-    "character scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><\"-_ ]+",
+    "character scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈìÌòÒùÙâÂêÊîÎôÔûÛäÄëËïÏöÖüÜÿŒœÆæ%|?!.,><°\"-_ ]+",
     "null string values": ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"],
     "default worksheet key": "_",
     "default multiple object key": "*",
