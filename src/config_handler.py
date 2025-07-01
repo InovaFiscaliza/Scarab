@@ -107,7 +107,8 @@ class Config:
             """ Period to check input folders in seconds """
             self.clean_period: pd.Timedelta = pd.Timedelta(hours=config.pop("clean period in hours", default_conf["clean period in hours"]))
             """ Period to clean temp folders in hours"""
-            self.last_clean: pd.Timestamp = pd.to_datetime(config.pop("last clean", default_conf["last clean"]), format="%Y-%m-%d %H:%M:%S")
+            self.last_clean: pd.Timestamp = self._build_last_clean_time(config.pop("last clean", default_conf["last clean"]),
+                                                                        config.pop("delay first clean", default_conf["delay first clean"]))
             """ Timestamp of the last clean operation"""
             self.maximum_errors_before_exit: int = config.pop("maximum errors before exit", default_conf["maximum errors before exit"])
             """ Maximum number of errors before exiting with raised error"""
@@ -311,6 +312,33 @@ class Config:
         
         return expected_columns
 
+    # --------------------------------------------------------------
+    def _build_last_clean_time(self, last_clean: str, delay_clean: bool) -> pd.Timestamp:
+        """Build the last clean time from the configuration value.
+        
+        Args:
+            last_clean (Any): Last clean time from the configuration file.
+            
+        Returns:
+            pd.Timestamp: Last clean time as a pandas Timestamp.
+        
+        Raises:
+            ValueError: If the last clean time is not in a valid format.
+        """
+        
+        
+            
+        try:
+            timestamp = pd.to_datetime(last_clean, format="%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            timestamp = pd.Timestamp.now()
+            if last_clean != "none":
+                print(f"Invalid 'last clean' time format: {last_clean}. Expected format: YYYY-MM-DD HH:MM:SS")
+        
+        if delay_clean:
+            timestamp += self.clean_period
+        
+        return timestamp
 
     # --------------------------------------------------------------
     def _remove_empty_keys(self, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -554,7 +582,7 @@ class Config:
         return {k: re.compile(v) for k, v in data.items()}
     
     # Define a recursive function to clean strings at all levels
-    def _clean_recursive(self, data: Any) -> Any:
+    def _str_clean_recursive(self, data: Any) -> Any:
         """Recursively clean strings in a nested structure by removing characters not in the character_scope.
         Args:
             data (Any): Input data which can be a string, list, or dictionary.
@@ -565,9 +593,9 @@ class Config:
         if isinstance(data, str):
             return re.sub(self.character_scope, '', data)
         elif isinstance(data, list):
-            return [self._clean_recursive(item) for item in data]
+            return [self._str_clean_recursive(item) for item in data]
         elif isinstance(data, dict):
-            return {k: self._clean_recursive(v) for k, v in data.items()}
+            return {k: self._str_clean_recursive(v) for k, v in data.items()}
         else:
             return data
     
@@ -585,29 +613,7 @@ class Config:
         if self.character_scope == self.default_unlimited_characters_scope:
             return data
         
-        return self._clean_recursive(data)
-    
-    """
-    # --------------------------------------------------------------
-    def limit_character_scope(self, string_list: List[str]) -> List[str]:
-        Remove characters that are not in the character_scope from the string.
-        
-        Args:
-            string_list (List[str]): Input string set to be cleaned.
-            
-        Returns:
-            List[str]: Output string set, in which only characters in the character_scope are kept.
-        
-        if self.character_scope == "all":
-            return string_list
-        else:
-            output_list = string_list.copy()
-            for index, string in enumerate(output_list):
-                output_list[index] = re.sub(self.character_scope, '', string)
-                
-            return output_list
-    """
-    
+        return self._str_clean_recursive(data)
     
     # --------------------------------------------------------------
     def set_last_clean(self) -> None:
