@@ -121,6 +121,8 @@ class Config:
             """Default key to be used for the worksheet that will retain single table values or non mapped values in the json root."""
             self.default_multiple_object_key:str = config.pop("default multiple object key", default_conf["default multiple object key"])
             """Default key to be used to designate operations that are applicable to multiple tables/worksheets."""
+            self.default_unlimited_characters_scope: str = config.pop("default unlimited characters scope", default_conf["default unlimited characters scope"])
+            """Default value for the unlimited characters scope. If the character scope uses this character, no restriction to the characters in the column names will be applied."""
             self.default_worksheet_name:str = config.pop("default worksheet name", default_conf["default worksheet name"])
             """Default value for the worksheet name. If value of assigned to the default key is equal to this value, will use the name of the config.pop(uration."""
             self.store_data_overwrite: bool = config.pop("overwrite data in store", default_conf["overwrite data in store"])
@@ -551,6 +553,24 @@ class Config:
 
         return {k: re.compile(v) for k, v in data.items()}
     
+    # Define a recursive function to clean strings at all levels
+    def _clean_recursive(self, data: Any) -> Any:
+        """Recursively clean strings in a nested structure by removing characters not in the character_scope.
+        Args:
+            data (Any): Input data which can be a string, list, or dictionary.
+        Returns:
+            Any: Cleaned data with only characters in the character_scope kept.
+        """
+        
+        if isinstance(data, str):
+            return re.sub(self.character_scope, '', data)
+        elif isinstance(data, list):
+            return [self._clean_recursive(item) for item in data]
+        elif isinstance(data, dict):
+            return {k: self._clean_recursive(v) for k, v in data.items()}
+        else:
+            return data
+    
     # --------------------------------------------------------------
     def limit_character_scope(self, data: Any) -> Any:
         """
@@ -562,19 +582,32 @@ class Config:
         Returns:
             list[str] | dict: Output with only characters in the character_scope kept.
         """
+        if self.character_scope == self.default_unlimited_characters_scope:
+            return data
+        
+        return self._clean_recursive(data)
+    
+    """
+    # --------------------------------------------------------------
+    def limit_character_scope(self, string_list: List[str]) -> List[str]:
+        Remove characters that are not in the character_scope from the string.
+        
+        Args:
+            string_list (List[str]): Input string set to be cleaned.
+            
+        Returns:
+            List[str]: Output string set, in which only characters in the character_scope are kept.
+        
         if self.character_scope == "all":
-            return data
-
-        # Serialize input to JSON string
-        json_data = json.dumps(data)
-        # Remove unwanted characters using re.sub
-        cleaned_json = re.sub(self.character_scope, '', json_data)
-        # Deserialize back to original structure
-        try:
-            return json.loads(cleaned_json)
-        except Exception:
-            # If deserialization fails, return original data
-            return data
+            return string_list
+        else:
+            output_list = string_list.copy()
+            for index, string in enumerate(output_list):
+                output_list[index] = re.sub(self.character_scope, '', string)
+                
+            return output_list
+    """
+    
     
     # --------------------------------------------------------------
     def set_last_clean(self) -> None:
