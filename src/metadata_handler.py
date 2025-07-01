@@ -430,8 +430,8 @@ class DataHandler:
         [df := transform(df) for transform in transformations]
 
         # If the DataFrame still empty, log a message and return an empty DataFrame
-        if df.empty:
-            self.log.debug(f"No data in DataFrame for table {table_name}. No data files to process.")
+        if len(df.columns) == 0:
+            self.log.debug(f"No data in DataFrame for table {table_name} in file '{file}'. Returning empty DataFrame.")
             return pd.DataFrame(), [], table_name
         
         # Remove escaped characters from column names
@@ -1087,7 +1087,7 @@ class DataHandler:
             ref_cols = {key: [] for key in self.config.table_names}
         else:
             for table, df in ref_df.items():
-                if df.empty:
+                if len(df.columns) == 0:
                     self.log.warning(f"Table '{table}' in file '{latest_file}' does not contain valid data. A new table will be created.")
                     for file in self.config.catalog_files:
                         self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
