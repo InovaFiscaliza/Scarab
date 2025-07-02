@@ -90,8 +90,10 @@ class DataHandler:
         empty_keys = {k for k, v in self.config.rows_sort_by.items() if not v}
         
         # Bulk update only the keys that need changing
+        default_value = {cm.SORT_BY_KEY: [self.post_order_column], cm.ASCENDING_SORT_KEY: True}
+        
         if empty_keys:
-            self.config.rows_sort_by.update({k: self.post_order_column for k in empty_keys})
+            self.config.rows_sort_by.update({k: default_value for k in empty_keys})
     
     # --------------------------------------------------------------
     def _initialize_next_pk_counter(self) -> dict[str, int]:
@@ -270,20 +272,14 @@ class DataHandler:
             pd.DataFrame: DataFrame with the index column created.
         """
         
-        if self.config.rows_sort_by is None:
-            self.log.debug("No sorting columns defined in config. No sorting will be applied.")
-            return df
-        
-        if table_name not in self.config.rows_sort_by:
-            self.log.debug(f"No sorting columns defined for table {table_name}. No sorting will be applied.")
-            return df
-        
         index_value = self.ordering_index.get(table_name,0)
         df[self.post_order_column] = range(index_value, index_value + len(df))
         self.ordering_index[table_name] = index_value + len(df)
         
         # sort the DataFrame by the columns defined in the config file
-        df = df.sort_values(by=self.config.rows_sort_by[table_name], ascending=True)
+        df = df.sort_values(by=self.config.rows_sort_by[table_name][cm.SORT_BY_KEY], 
+                            ascending=self.config.rows_sort_by[table_name][cm.ASCENDING_SORT_KEY],
+                            ignore_index=True)
         
         return df
     
@@ -501,7 +497,7 @@ class DataHandler:
 
         new_data_df = {key: pd.DataFrame() for key in self.config.table_names}
         new_data_columns = {key: [] for key in self.config.table_names}
-        default_table_not_loaded =  True
+        add_remaining_data = False
         
         filetype = os.path.splitext(file)[1]
         
@@ -521,14 +517,12 @@ class DataHandler:
                             
                             # Process each worksheet separately.
                             for sheet_name in sheet_names:
-                                if sheet_name in new_data_df.keys():
+                                
+                                table_name = self.config.sheet_names.get(sheet_name, sheet_name)
+                                
+                                if table_name in new_data_df.keys():
                                     # Read the worksheet into a DataFrame
                                     new_df = excel_file.parse(sheet_name, dtype="string")
-                                    
-                                    table_name = self.config.sheet_names.get(sheet_name, sheet_name)
-
-                                    if table_name == self.config.default_worksheet_key:
-                                        default_table_not_loaded = False
                                     
                                     # Process the worksheet data
                                     new_df,  columns, table_name = self.process_table(
@@ -541,11 +535,13 @@ class DataHandler:
                                     
                                     # remove the processed sheet name from the list of new_data_df
                                     sheet_names_copy.remove(sheet_name)
-                            
-                        if len(sheet_names_copy) == 1 and default_table_not_loaded:
-                            new_df = excel_file.parse(sheet_names_copy[0], dtype="string")                        
-                        else:
-                            self.log.warning("Multiple worksheets in file {file}. Check configuration to include table names to all worksheets.")
+                        
+                        if sheet_names_copy:
+                            if len(sheet_names_copy) == 1:
+                                new_df = excel_file.parse(sheet_names_copy[0], dtype="string")
+                                add_remaining_data = True
+                            else:
+                                self.log.warning("Multiple worksheets in file {file}. Check configuration to include table names to all worksheets.")
                                             
                 case '.csv':
                     new_df = pd.read_csv(file, dtype="string")
@@ -556,34 +552,27 @@ class DataHandler:
                         data = json.load(json_file)
                     
                     # look for each defined table name in the json file and create a corresponding DataFrame
-                    for table in new_data_df.keys():
-                        if data and table in data:
+                    for table_name in new_data_df.keys():
+                        if data and table_name in data:
                             new_df = self.create_dataframe(data[table])
 
                             new_df, columns, table_name = self.process_table(   df=new_df,
-                                                                                table_name=table,
+                                                                                table_name=table_name,
                                                                                 file=file)
                             new_data_df[table_name] = new_df
                             new_data_columns[table_name] = columns
 
-                            del data[table]
+                            del data[table_name]
                     
-                    # set flag if the default table was loaded
-                    if not new_data_df[self.config.default_worksheet_key].empty:
-                        default_table_not_loaded = False
-                    else:
-                        # add the remaining data from the json file to the default base_key table
-                        if data:
-                            new_df = self.create_dataframe(data)
-                        else:
-                            new_df = pd.DataFrame()
-                            
-                        table = self.config.default_worksheet_key
+                    # add the remaining data from the json file to the default base_key table
+                    if data:
+                        new_df = self.create_dataframe(data)
+                        add_remaining_data = True
                     
                 case _:
                     self.log.error(f"Unsupported metadata file type: {filetype}")
                     
-            if default_table_not_loaded:
+            if add_remaining_data:
                 new_df, columns, table_name = self.process_table(   df=new_df,
                                                                     table_name=table,
                                                                     file=file)
@@ -1205,7 +1194,10 @@ class DataHandler:
 
         for table in self.ref_df.keys():
             # sort the reference DataFrame by the columns defined in the config file
-            self.ref_df[table] = self.ref_df[table].sort_values(by=self.config.rows_sort_by[table], ascending=True)
+            self.ref_df[table] = self.ref_df[table].sort_values(
+                            by=self.config.rows_sort_by[table][cm.SORT_BY_KEY], 
+                            ascending=self.config.rows_sort_by[table][cm.ASCENDING_SORT_KEY],
+                            ignore_index=True)
         
             # get selected columns in the defined order
             self.ref_df[table] = self.ref_df[table][self.ref_cols[table]]
