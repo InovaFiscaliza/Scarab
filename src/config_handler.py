@@ -45,6 +45,9 @@ ADD_SUFFIX_KEY:str = "add suffix"
 """Key to identify suffix to be added in filename data replacement dictionaries."""
 ADD_PREFIX_KEY:str = "add prefix"
 """Key to identify prefix to be added in filename data replacement dictionaries."""
+SORT_BY_KEY:str = "by"
+"""Key to identify sorting columns in the metadata file."""
+ASCENDING_SORT_KEY:str = "ascending"
 
 # --------------------------------------------------------------
 # Define the structure of complex types
@@ -196,8 +199,7 @@ class Config:
             """ Columns that define the uniqueness of each row in the metadata file"""
             self.required_columns = self._merge_dict_set(config["metadata"].pop("in columns", default_conf["metadata"]["in columns"]), self.key_columns, "in columns")
             """ Columns required in the input metadata file"""
-            self.rows_sort_by: Dict[str,str] = self.limit_character_scope(
-                config["metadata"].pop("sort by", default_conf["metadata"]["sort by"]))
+            self.rows_sort_by: Dict[str,Dict[str, list]] = self._build_row_sorting_dict(config["metadata"].pop("sort by", default_conf["metadata"]["sort by"]))
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
             self.columns_data_filenames: Dict[str,list[str]] = self.limit_character_scope(
                 config["metadata"].pop("data filenames", default_conf["metadata"]["data filenames"]))
@@ -623,7 +625,52 @@ class Config:
 
         return {k: re.compile(v) for k, v in data.items()}
     
-    # Define a recursive function to clean strings at all levels
+    # --------------------------------------------------------------
+    def _build_row_sorting_dict(self, data: Dict[str,Dict[str, list]]) -> Dict[str,Dict[str, list]]:
+        """Build a dictionary with columns to sort rows in the metadata file.
+        
+        Args:
+            data (Dict[str, str]): Input data with table names as keys and column names as values.
+            
+        Returns:
+            Dict[str, str]: Dictionary with table names as keys and column names as values.
+        """
+        
+        # test if data is of dict type, if not, raise an error
+        if not isinstance(data, dict):
+            print(f"Invalid type for row sorting: {type(data)}. Expected a dictionary.")
+            exit(1)
+        
+        for key in self.key_columns.keys():
+            if key not in data:
+                data[key] = None
+            elif isinstance(data[key], dict):
+                if SORT_BY_KEY in data[key]:
+                    data[key][SORT_BY_KEY] = self._ensure_list(self.limit_character_scope(data[key]))
+                else:
+                    print(f"Invalid row sorting value for table '{key}': {data[key]}. Expected a dict with '{SORT_BY_KEY}' key.")
+                    exit(1)
+                if ASCENDING_SORT_KEY in data[key]:
+                    if isinstance(data[key][ASCENDING_SORT_KEY], list):
+                        if not all(isinstance(x, bool) for x in data[key][ASCENDING_SORT_KEY]):
+                            print(f"Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a list of boolean.")
+                            exit(1)
+                        if len(data[key][ASCENDING_SORT_KEY]) != len(data[key][SORT_BY_KEY]):
+                            print(f"Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a list of boolean with the same length as the sort by list.")
+                            exit(1)
+                    elif not isinstance(data[key][ASCENDING_SORT_KEY], bool):
+                        print(f"Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a boolean or list of booleans.")
+                        exit(1)
+                else:
+                    print(f"Invalid row sorting value for table '{key}': {data[key]}. Expected a dict with '{ASCENDING_SORT_KEY}' key.")
+                    exit(1)
+            else:
+                print(f"Invalid row sorting value for table '{key}': {data[key]}. Expected a dict or none.")
+                exit(1)
+                
+        return data
+    
+    # --------------------------------------------------------------
     def _str_clean_recursive(self, data: Any) -> Any:
         """Recursively clean strings in a nested structure by removing characters not in the character_scope.
         Args:
@@ -742,7 +789,7 @@ class Config:
     
     # --------------------------------------------------------------
     def _set_default_table_name(self, tables: dict) -> dict:
-        """Replace default name tag by the config name.
+        """Set the default worksheet name to the config name if the default worksheet key is present in the tables dictionary.
 
         Args:
             tables (list[str]): List of tables to be used in the data files.
@@ -751,8 +798,11 @@ class Config:
             list[dict]: List of dictionaries with the tables.
         """
         
-        if tables[self.default_worksheet_key] == self.default_worksheet_name:
+        # Use get to simplify logic and avoid double lookup
+        if tables.get(self.default_worksheet_key) == self.default_worksheet_name:
             tables[self.default_worksheet_key] = self.name
+        else:
+            print(f"Debug: default_worksheet_key '{self.default_worksheet_key}' not found in tables. No default table name set.")
         
         return tables
 
