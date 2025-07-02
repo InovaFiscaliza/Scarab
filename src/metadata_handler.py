@@ -260,13 +260,12 @@ class DataHandler:
             
         return df
     # --------------------------------------------------------------
-    def _sort_dataframe(self, df: pd.DataFrame, table_name: str, file: str) -> pd.DataFrame:
+    def _sort_dataframe(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
         """Sort the DataFrame by the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
             table_name (str): Name of the table to be used as defined in the config file.
-            file (str): File name to be used in the log message.
 
         Returns:
             pd.DataFrame: DataFrame with the index column created.
@@ -277,9 +276,8 @@ class DataHandler:
         self.ordering_index[table_name] = index_value + len(df)
         
         # sort the DataFrame by the columns defined in the config file
-        df = df.sort_values(by=self.config.rows_sort_by[table_name][cm.SORT_BY_KEY], 
-                            ascending=self.config.rows_sort_by[table_name][cm.ASCENDING_SORT_KEY],
-                            ignore_index=True)
+        # df = df.sort_values(by=self.config.rows_sort_by[table_name][cm.SORT_BY_KEY], 
+        #                    ascending=self.config.rows_sort_by[table_name][cm.ASCENDING_SORT_KEY])
         
         return df
     
@@ -446,7 +444,7 @@ class DataHandler:
             lambda df: self._fix_create_data_published_column(df, table_name),
             lambda df: self._create_index(df, table_name, file),
             lambda df: self._set_types(df, table_name, file),
-            lambda df: self._sort_dataframe(df, table_name, file)
+            lambda df: self._sort_dataframe(df, table_name)
         ]
         
         [df := transform(df) for transform in transformations]
@@ -898,6 +896,27 @@ class DataHandler:
                     )
 
     # --------------------------------------------------------------
+    def _add_missing_columns_from_df(self, target_df: pd.DataFrame, source_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Add columns to target_df that are present in source_df but missing from target_df,
+        preserving column names and data types from the source_df
+
+        Args:
+            target_df (pd.DataFrame): The DataFrame to add columns to.
+            source_df (pd.DataFrame): The DataFrame to take columns and dtypes from.
+
+        Returns:
+            pd.DataFrame: The updated target_df with added columns.
+        """
+        new_columns = set(source_df.columns) - set(target_df.columns)
+        if new_columns:
+            dtype_dict = {col: source_df[col].dtype for col in new_columns}
+            temp_df = pd.DataFrame(columns=list(new_columns)).astype(dtype_dict)
+            target_df = pd.concat([target_df, temp_df], axis=1)
+            
+        return target_df
+
+    # --------------------------------------------------------------
     def _apply_updates_to_reference_data(self, update_dfs: dict, add_dfs: dict, file: str) -> None:
         """Apply updates to reference data from both updated and new rows.
         
@@ -913,11 +932,15 @@ class DataHandler:
         
         for table in tables_processed:
             if table in update_dfs:
-                # Update existing rows
+
+                self.ref_df[table] = self._add_missing_columns_from_df(self.ref_df[table], update_dfs[table])
+                
                 self.ref_df[table].update(update_dfs[table])
             
             if table in add_dfs:
-                # Add new rows
+                
+                self.ref_df[table] = self._add_missing_columns_from_df(self.ref_df[table], add_dfs[table])
+                
                 self.ref_df[table] = pd.concat([self.ref_df[table], add_dfs[table]])
             
             # Update column tracking for data filenames
