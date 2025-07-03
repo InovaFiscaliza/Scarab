@@ -1,0 +1,61 @@
+{
+    "name": "MonitorRNI",
+    "check period in seconds": 10,
+    "clean period in hours": 1,
+    "maximum errors before exit": 5,
+    "discard invalid data files": false,
+    "log": {
+        "level": "INFO",
+        "file output": true,
+        "file path": [
+            "Z:/sp/GET/monitorRNI/log_files.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/log_files.txt"
+        ]
+    },
+    "folders": {
+        "post": [
+            "Z:/sp/POST/monitorRNI",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/monitorRNI"
+        ],
+        "get": {"txt":[
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/raw",
+            "Z:/sp/GET/monitorRNI/raw"
+        ]},
+        "temp": "C:/ProgramData/Anatel/scarab/temp/monitorRNI",
+        "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/monitorRNI",
+        "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/monitorRNI"
+    },
+    "files": {
+        "metadata file regex": {
+            "files": ".*\\.json$",
+            "measures": ".*\\.xlsx$"
+        },
+        "data file regex": {
+            "txt": ".*\\.txt$"
+        },
+        "catalog names": [
+            "Z:/sp/GET/monitorRNI/monitorRNI_files.xlsx",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/monitorRNI_files.xlsx"
+        ],
+        "table names": {
+            "files": "Arquivos Monitoramento RNI",
+            "measures": "Dados Monitoramento RNI"
+        },
+        "input to ignore": ["Z:/sp/POST/monitorRNI/.monitorrni_post"]
+    },
+    "metadata": {
+        "in columns": { "files":[],
+                        "measures":[
+                                "Qtd. Medidas",
+                                "Emax (V/m)"]},
+        "required tables": ["files", "measures"],
+        "key": {"files":["Filename"],
+                "measures":["Fistel",
+                            "Estação",
+                            "Emax - Latitude",
+                            "Emax - Longitude",
+                            "Emax - Data da Medição"]},
+        "data filenames": {"files":["Filename"]},
+        "data published flag": {"files":["File Published"]}
+    }
+}

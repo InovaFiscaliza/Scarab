@@ -1,0 +1,161 @@
+{
+    "name": "appAnalise",
+    "check period in seconds": 10,
+    "clean period in hours": 4,
+    "maximum errors before exit": 5,
+    "log": {
+        "level": "INFO",
+        "file output": true,
+        "file path": [
+            "Z:/sp/GET/appAnalise/log_files.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/log_files.txt"
+        ]
+    },
+    "folders": {
+        "post": [
+            "Z:/sp/POST/appAnalise",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/appAnalise"
+        ],
+        "temp": "C:/ProgramData/Anatel/scarab/temp/appAnalise",
+        "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/appAnalise",
+        "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/appAnalise"
+    },
+    "files": {
+        "metadata file regex": {
+            "*": ".*\\.json$"
+        },
+        "catalog names": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.xlsx",
+            "Z:/sp/GET/appAnalise/appAnalise.xlsx"
+        ],
+        "table names": {
+            "ReferenceData1": "1. Equipamentos e Locais",
+            "ReferenceData2": "2. Métodos de Medição",
+            "ReferenceData3": "3. Métodos de Detecção",
+            "ReferenceData4": "4. Métodos de Identificação",
+            "MeasurementData": "5. Resumo de Medições",
+            "_": "6. Arquivos Considerados"
+        },
+        "input to ignore": ["Z:/sp/POST/monitorRNI/.appanalise_post"]
+    },
+    "metadata": {
+        "required tables": [
+            "ReferenceData1",
+            "MeasurementData"
+        ],
+        "key": {
+            "ReferenceData1": [
+                "Node",
+                "Latitude",
+                "Longitude",
+                "FreqStart",
+                "FreqStop",
+                "BeginTime",
+                "EndTime",
+                "RelatedFiles"
+            ],
+            "ReferenceData2": [
+                "occMethod"
+            ],
+            "ReferenceData3": [
+                "Detection"
+            ],
+            "ReferenceData4": [
+                "Classification"
+            ],
+            "MeasurementData": [
+                "FK1",
+                "Frequency",
+                "Truncated",
+                "BW"
+            ],
+            "_": [
+                "JsonFileName"
+            ]
+        },
+        "association": {
+            "ReferenceData1": {
+                "PK": {
+                    "name": "PK1",
+                    "int type": true,
+                    "relative value": true
+                },
+                "FK": {}
+            },
+            "ReferenceData2": {
+                "PK": {
+                    "name": "PK2",
+                    "int type": true,
+                    "relative value": true
+                },
+                "FK": {}
+            },
+            "ReferenceData3": {
+                "PK": {
+                    "name": "PK3",
+                    "int type": true,
+                    "relative value": true
+                },
+                "FK": {}
+            },
+            "ReferenceData4": {
+                "PK": {
+                    "name": "PK4",
+                    "int type": true,
+                    "relative value": true
+                },
+                "FK": {}
+            },
+            "MeasurementData": {
+                "PK": {},
+                "FK": {
+                    "ReferenceData1": "FK1",
+                    "ReferenceData2": "FK2",
+                    "ReferenceData3": "FK3",
+                    "ReferenceData4": "FK4"
+                }
+            }
+        },
+        "sort by": {
+            "ReferenceData1": {"by":["PK1"],"ascending":true},
+            "ReferenceData2": {"by":["PK2"],"ascending":true},
+            "ReferenceData3": {"by":["PK3"],"ascending":true},
+            "ReferenceData4": {"by":["PK4"],"ascending":true}
+        },
+        "add filename": {
+            "_": "JsonFileName"
+        },
+        "filename data format": {
+            "_": "(?P<name>\\w+)_(?P<date>\\d{4}\\.\\d{2}\\.\\d{2})_T(?P<time>\\d{2}\\.\\d{2}\\.\\d{2})_(?P<Inspection>\\d+)"
+        },
+        "filename data processing rules": {
+            "name": {
+                "replace": [
+                    {
+                        "old": "_",
+                        "new": " "
+                    }
+                ]
+            },
+            "date": {
+                "replace": [
+                    {
+                        "old": ".",
+                        "new": "-"
+                    }
+                ]
+            },
+            "time": {
+                "replace": [
+                    {
+                        "old": ".",
+                        "new": ":"
+                    }
+                ]
+            },
+            "Inspection": {
+                "add prefix": "#"
+            }
+        }
+    }
+}
