@@ -222,19 +222,19 @@ class Config:
             # Pop empty objects within the config in the dict
             config = self._remove_empty_keys(config)
             if config:
-                print(f"Configuration file contains unknown keys: {json.dumps(config)}")
+                print(f"\n\nError: Configuration file contains unknown keys: {json.dumps(config)}")
                 exit(1)
                 
             self._test_get_regex()
 
         except KeyError as e:
-            print(f"Configuration files missing arguments: {e}")
+            print(f"\n\nError: Configuration files missing arguments: {e}")
             exit(1)
         except ValueError as e:
-            print(f"Configuration files invalid arguments: {e}")
+            print(f"\n\nError: Configuration files invalid arguments: {e}")
             exit(1)
         except Exception as e:
-            print(f"Unknown error occurred: {e}")
+            print(f"\n\nError: Unknown error occurred when loading '{filename}': {e}")
             exit(1)
 
     # --------------------------------------------------------------
@@ -255,7 +255,7 @@ class Config:
         elif isinstance(item, list):
             return item
         else:
-            print(f"Invalid type for item: {type(item)}. Expected a string or a list.")
+            print(f"\n\nError: Invalid type for item: {type(item)}. Expected a string or a list.")
             exit(1)
 
     # --------------------------------------------------------------
@@ -357,7 +357,7 @@ class Config:
         except ValueError:
             timestamp = pd.Timestamp.now()
             if last_clean != "none":
-                print(f"Invalid 'last clean' time format: {last_clean}. Expected format: YYYY-MM-DD HH:MM:SS")
+                print(f"\n\nError: Invalid 'last clean' time format: {last_clean}. Expected format: YYYY-MM-DD HH:MM:SS")
         
         if delay_clean:
             timestamp += self.clean_period
@@ -400,26 +400,26 @@ class Config:
             if assoc.get(PK_KEY,False):
                 if not isinstance(assoc[PK_KEY], dict):
                     # test if assoc[PK_KEY] is an instance of the class PKInfoBase
-                    print(f"Error in config file. Invalid primary key data type in table {table}: Used {assoc[PK_KEY]}, expected a dictionary.")
+                    print(f"\n\nError in config file. Invalid primary key data type in table {table}: Used {assoc[PK_KEY]}, expected a dictionary.")
                     exit(1)
                     
                 if not fk_required_keys.issubset(assoc[PK_KEY].keys()):
-                    print(f"Error in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {fk_required_keys}.")
+                    print(f"\n\nError in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {fk_required_keys}.")
                     exit(1)
                     
             if assoc.get(FK_KEY, False):
                 if not isinstance(assoc[FK_KEY], dict):
-                    print(f"Error in config file. Invalid foreign key structure in table {table}: Used {assoc[FK_KEY]}, expected a dictionary with table names as keys and column names as values.")
+                    print(f"\n\nError in config file. Invalid foreign key structure in table {table}: Used {assoc[FK_KEY]}, expected a dictionary with table names as keys and column names as values.")
                     exit(1)
             
                 for fk_table, fk_column in assoc[FK_KEY].items():
                     if not isinstance(fk_table, str) or not isinstance(fk_column, str):
-                        print(f"Error in config file. Invalid foreign key structure in table {table}: Used {fk_table}:{fk_column}, expected a string for table name and column name.")
+                        print(f"\n\nError in config file. Invalid foreign key structure in table {table}: Used {fk_table}:{fk_column}, expected a string for table name and column name.")
                         exit(1)
                     
                     # test if fk_table is defined in the associations
                     if fk_table not in associations:
-                        print(f"Error in config file. Foreign key table {fk_table} in table {table} points to non defined table.")
+                        print(f"\n\nError in config file. Foreign key table {fk_table} in table {table} points to non defined table.")
                         exit(1)
 
                     associations[fk_table][PK_KEY].setdefault(REFERENCED_BY_KEY, set())
@@ -479,13 +479,13 @@ class Config:
             with open(filename, 'r', encoding='utf-8') as json_file:
                 return json.load(json_file)
             # If we reach this point, the file was empty or not valid JSON
-            print(f"Config file is empty or invalid JSON: {filename}")
+            print(f"\n\nError: Config file is empty or invalid JSON: {filename}")
             exit(1)
         except FileNotFoundError:
-            print(f"Config file not found in path: {filename}")
+            print(f"\n\nError: Config file not found in path: {filename}")
             exit(1)
         except Exception as e:
-            print(f"Error reading config file: {e}")
+            print(f"\n\nError: When attempting to read file: {e}")
             exit(1)
 
     # --------------------------------------------------------------
@@ -582,7 +582,7 @@ class Config:
         
         # test if data is of dict type, if not, raise an error
         if not isinstance(data, dict):
-            print(f"Invalid data '{type(data)}'. Expected a dictionary in config {name} for list creation.")
+            print(f"\n\nError: Invalid data '{type(data)}'. Expected a dictionary in config {name} for list creation.")
             exit(1)
             
         return {k: self._ensure_list(v) for k, v in data.items()}
@@ -601,7 +601,7 @@ class Config:
         
         # test if data is of dict type, if not, raise an error
         if not isinstance(data, dict):
-            print(f"Invalid data: '{type(data)}'. Expected a dictionary in config {name} for set creation.")
+            print(f"\n\nError: Invalid data: '{type(data)}'. Expected a dictionary in config {name} for set creation.")
             exit(1)
         
         # Use a dictionary comprehension to convert each list to a set directly
@@ -620,7 +620,7 @@ class Config:
         
         # test if data is of dict type, if not, raise an error
         if not isinstance(data, dict):
-            print(f"Invalid type for filename data format: {type(data)} in config '{name}'. Expected a dictionary.")
+            print(f"\n\nError: Invalid type for filename data format: {type(data)} in config '{name}'. Expected a dictionary.")
             exit(1)
 
         return {k: re.compile(v) for k, v in data.items()}
@@ -638,7 +638,7 @@ class Config:
         
         # test if data is of dict type, if not, raise an error
         if not isinstance(data, dict):
-            print(f"Invalid type for row sorting: {type(data)}. Expected a dictionary.")
+            print(f"\n\nError: Invalid type for row sorting: {type(data)}. Expected a dictionary.")
             exit(1)
         
         for key in self.key_columns.keys():
@@ -646,26 +646,26 @@ class Config:
                 data[key] = None
             elif isinstance(data[key], dict):
                 if SORT_BY_KEY in data[key]:
-                    data[key][SORT_BY_KEY] = self._ensure_list(self.limit_character_scope(data[key]))
+                    data[key][SORT_BY_KEY] = self._ensure_list(self.limit_character_scope(data[key][SORT_BY_KEY]))
                 else:
-                    print(f"Invalid row sorting value for table '{key}': {data[key]}. Expected a dict with '{SORT_BY_KEY}' key.")
+                    print(f"\n\nError: Invalid row sorting value for table '{key}': {data[key]}. Expected a dict with '{SORT_BY_KEY}' key.")
                     exit(1)
                 if ASCENDING_SORT_KEY in data[key]:
                     if isinstance(data[key][ASCENDING_SORT_KEY], list):
                         if not all(isinstance(x, bool) for x in data[key][ASCENDING_SORT_KEY]):
-                            print(f"Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a list of boolean.")
+                            print(f"\n\nError: Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a list of boolean.")
                             exit(1)
                         if len(data[key][ASCENDING_SORT_KEY]) != len(data[key][SORT_BY_KEY]):
-                            print(f"Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a list of boolean with the same length as the sort by list.")
+                            print(f"\n\nError: Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a list of boolean with the same length as the sort by list.")
                             exit(1)
                     elif not isinstance(data[key][ASCENDING_SORT_KEY], bool):
-                        print(f"Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a boolean or list of booleans.")
+                        print(f"\n\nError: Invalid ascending sort value for table '{key}': {data[key][ASCENDING_SORT_KEY]}. Expected a boolean or list of booleans.")
                         exit(1)
                 else:
-                    print(f"Invalid row sorting value for table '{key}': {data[key]}. Expected a dict with '{ASCENDING_SORT_KEY}' key.")
+                    print(f"\n\nError: Invalid row sorting value for table '{key}': {data[key]}. Expected a dict with '{ASCENDING_SORT_KEY}' key.")
                     exit(1)
             else:
-                print(f"Invalid row sorting value for table '{key}': {data[key]}. Expected a dict or none.")
+                print(f"\n\nError: Invalid row sorting value for table '{key}': {data[key]}. Expected a dict. For default post order ordering, remove key.")
                 exit(1)
                 
         return data
@@ -802,7 +802,7 @@ class Config:
             tables[self.default_worksheet_key] = self.name
         else:
             if self.log_level == "DEBUG":
-                print(f"Debug: default_worksheet_key '{self.default_worksheet_key}' not found in tables. No default table name set. This may cause errors.")
+                print(f"\n\nDebug: default_worksheet_key '{self.default_worksheet_key}' not found in tables. No default table name set. This may cause errors.")
         
         return tables
 
@@ -820,7 +820,7 @@ class Config:
         """
 
         test_result = True
-        msg = f"\nError in {self.config_file}:"
+        msg = f"\nError: In {self.config_file}:"
                 
         for folder in self.post:
             test_result, msg = self._test_folder(folder, "Post", msg)
