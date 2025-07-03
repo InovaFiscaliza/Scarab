@@ -20,6 +20,7 @@ import numpy as np
 import uuid
 import base58
 import json
+import chardet
 
 # ---------------------------------------------------------------
 # Constants used only in this module and not affected by the config file
@@ -542,8 +543,18 @@ class DataHandler:
                     
                 case '.json':
                     # get data from the json file
-                    with open(file, 'r', encoding='utf-8') as json_file:
-                        data = json.load(json_file)
+                    # Detect encoding first
+                    with open(file, 'rb') as raw_file:
+                        raw_data = raw_file.read(4096)
+                        result = chardet.detect(raw_data)
+                        encoding = result['encoding'] or 'utf-8'
+                    try:
+                        with open(file, 'r', encoding=encoding) as json_file:
+                            data = json.load(json_file)
+                    except UnicodeDecodeError as e:
+                        self.log.warning(f"UnicodeDecodeError reading {file} with detected encoding '{encoding}': {e}. Retrying with utf-8.")
+                        with open(file, 'r', encoding='utf-8') as json_file:
+                            data = json.load(json_file)
                     
                     # look for each defined table name in the json file and create a corresponding DataFrame
                     for table in new_data_df.keys():
