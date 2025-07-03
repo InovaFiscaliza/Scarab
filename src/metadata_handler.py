@@ -308,7 +308,7 @@ class DataHandler:
             self.log.debug(f"No data filenames column in {table_name}. No data files to process.")
             return df
         
-        # create a column to be used as index, merging the columns in index_column list
+        # create a column to be used to seach filenames in rows, merging the columns in list of filename columns
         data = {self.data_file_column: df[self.config.columns_data_filenames[table_name]].astype(str).agg('-'.join, axis=1)}
         df = df.assign(**data)
             
@@ -316,8 +316,8 @@ class DataHandler:
     
     # --------------------------------------------------------------
     def _fix_create_data_published_column(self, df: pd.DataFrame, table_name: str) -> pd.DataFrame:
-        """Create a column with the filenames of the data files to which the metadata refers to.
-        The column is created by replacing the values in the column defined in the config file with "False" if the value is null or empty.
+        """Create or update the column assigned to indicate if the data files are present.
+        If column already exists, replace null or empty row values with "False".
         Args:
             df (pd.DataFrame): DataFrame to process.
             table_name (str): Name of the table to be used as defined in the config file.
@@ -415,10 +415,11 @@ class DataHandler:
             str: Name of the table to be used as defined in the config file.
         """
 
-        # Add columns based ob the filename
+        # Add columns based on the filename
         transformations = [
             lambda df: self._add_filename_column(df, table_name, file),
             lambda df: self._add_filename_data(df, table_name, file),
+            lambda df: self._fix_create_data_published_column(df, table_name),
         ]
         
         [df := transform(df) for transform in transformations]
@@ -438,19 +439,18 @@ class DataHandler:
             self.log.warning(f"No valid table data found in file {file}.")
             return pd.DataFrame(), [], table_name
         
+        # Get columns before final transformations that add control columns
+        columns = df.columns.tolist()
+        
         # Performa additional table transformation considering existing data
         transformations = [
             lambda df: self._create_data_file_control_column(df, table_name),
-            lambda df: self._fix_create_data_published_column(df, table_name),
             lambda df: self._create_index(df, table_name, file),
             lambda df: self._set_types(df, table_name, file),
             lambda df: self._sort_dataframe(df, table_name)
         ]
         
         [df := transform(df) for transform in transformations]
-
-        # Get columns after all transformations
-        columns = df.columns.tolist()
 
         return df, columns, table_name
 
@@ -1138,7 +1138,8 @@ class DataHandler:
                     continue
 
                 # Compute the new column order for the reference DataFrame
-                self.ref_cols = self.merge_dicts(new_dict=column_in, legacy_dict=self.ref_cols)
+                self.ref_cols[table] = self.merge_lists(new_list=column_in.get(table,[]), legacy_list=self.ref_cols.get(table,[]))
+                #self.ref_cols = self.merge_dicts(new_dict=column_in, legacy_dict=self.ref_cols)
                             
                 # Update reference data with new data from the file
                 self.update_reference_data(new_data_df=new_data_df, file=file)
@@ -1179,7 +1180,7 @@ class DataHandler:
                     if self.ref_df[table].empty:
                         continue
                     
-                    data_file_column = self.config.columns_data_filenames[table]
+                    data_file_column = self.config.columns_data_filenames.get(table, [])
                     
                     for column in data_file_column:
                         
@@ -1215,6 +1216,7 @@ class DataHandler:
             bool: True if the reference data is saved successfully
         """
 
+        df = {}
         for table in self.ref_df.keys():
             # sort the reference DataFrame by the columns defined in the config file
             self.ref_df[table] = self.ref_df[table].sort_values(
@@ -1223,17 +1225,18 @@ class DataHandler:
                             ignore_index=True)
         
             # get selected columns in the defined order
-            self.ref_df[table] = self.ref_df[table][self.ref_cols[table]]
+            df[table] = self.ref_df[table][self.ref_cols[table]]
         
         # loop through the target catalog files and save the reference data, 
         # ensuring that at least one file is saved successfully before returning True
         save_at_least_one = False
+        # TODO: #19 Instead of saving multiple files from the df, save one and copy to the remaining folders. 
         for catalog_file in self.config.catalog_files:
             try:
                 with pd.ExcelWriter(catalog_file, engine='openpyxl') as writer:
                     # Write each table to a separate sheet in the Excel file
-                    for table in self.ref_df.keys():
-                        self.ref_df[table].to_excel(writer, sheet_name=self.config.table_names[table], index=False)
+                    for table in df.keys():
+                        df[table].to_excel(writer, sheet_name=self.config.table_names[table], index=False)
 
                 self.log.info(f"Reference data file updated: {catalog_file}")
                 save_at_least_one = True
