@@ -15,6 +15,8 @@
         <li><a href="#Mixed_metadata_formats">Mixed metadata formats</a></li>
         <li><a href="#Null_Data_Filename_Test">Null Data Filename Test</a></li>
         <li><a href="#Input_files_and_folders_to_ignore">Input files and folders to ignore</a></li>
+        <li><a href="#Multi-table_json_input">Multi-table json input</a></li>
+        <li><a href="#Multiple_input_and_single_output_test">Multiple input and single output test</a></li>
     </ol>
 </details>
 
