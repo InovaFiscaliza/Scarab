@@ -798,11 +798,11 @@ class Config:
             list[dict]: List of dictionaries with the tables.
         """
         
-        # Use get to simplify logic and avoid double lookup
         if tables.get(self.default_worksheet_key) == self.default_worksheet_name:
             tables[self.default_worksheet_key] = self.name
         else:
-            print(f"Debug: default_worksheet_key '{self.default_worksheet_key}' not found in tables. No default table name set.")
+            if self.log_level == "DEBUG":
+                print(f"Debug: default_worksheet_key '{self.default_worksheet_key}' not found in tables. No default table name set. This may cause errors.")
         
         return tables
 
