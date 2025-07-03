@@ -314,9 +314,8 @@ class FileHandler:
             
         Args:
             folder_content (set[str]): Set of files to sort.
-            catalog_to_process (set[str]): Existing set of metadata files to process. Default is None, which will create a new set.
+            metadata_to_process (dict[str, set[str]]): Existing dictionary of metadata files by category. Default is None, which will create a new dict.
             data_files_to_process (dict[str, set[str]]): Existing dictionary of data files by category. Default is None, which will create a new dict.
-            files_to_process (dict[str, set[str]]): Existing dictionary of files to process. Default is None, which will create a new dict.
 
         Returns:
             - dict[str, set[str]]: Dictionary with table names as keys and set of metadata files to process as values
@@ -384,8 +383,10 @@ class FileHandler:
         """
         metadata_to_process = {table: set() for table in self.config.metadata_file_regex.keys()}
         data_to_process = {table: set() for table in self.config.data_file_regex.keys()}
-        metadata_found = False
-        data_found = False
+        metadata_found_any_folder = False
+        metadata_found_now = False
+        data_found_any_folder = False
+        data_found_now = False
         
         # Loop through all post folders and temp folder
         for input_folder in self.config.input_path_list:
@@ -402,12 +403,15 @@ class FileHandler:
                 folder_content = set(map(lambda x: os.path.join(input_folder, x), folder_content))
                 self.log.debug(f"Folder {input_folder} has {len(folder_content)} files/folders to process.")
                 
-                metadata_to_process, data_to_process, metadata_found, data_found = self.sort_and_clean(
+                metadata_to_process, data_to_process, metadata_found_now, data_found_now = self.sort_and_clean(
                                                                             folder_content,
                                                                             metadata_to_process=metadata_to_process,
                                                                             data_files_to_process=data_to_process)
-                        
-        return metadata_to_process, data_to_process, metadata_found, data_found
+                
+                metadata_found_any_folder |= metadata_found_now
+                data_found_any_folder |= data_found_now
+                
+        return metadata_to_process, data_to_process, metadata_found_any_folder, data_found_any_folder
 
     # --------------------------------------------------------------
     def _clean_old_in_folder(self, folder: str) -> None:
