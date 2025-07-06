@@ -1,8 +1,12 @@
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/badge-maker?url=https%3A%2F%2Fdeepwiki.com%2FInovaFiscaliza%2FScarab)
+
 <details>
     <summary>Table of Contents</summary>
     <ol>
         <li><a href="#About-Scarab">About Scarab</a></li>
         <li><a href="#Scripts_and_Files">Scripts and Files</a></li>
+        <li><a href="#How-it-works">How it works</a></li>
         <li><a href="#Tests">Tests</a></li>
         <li><a href="#setup">Setup</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
@@ -17,9 +21,11 @@
 <div>
 <img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> This app is intended to run as a service and perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation and logging.
 
-Metadata files are expected to be tables in XLSX or CSV format, with the first row as the column headers, or JSON dictionaries. XLSX and JSON files may contain multiple tables defined in sheets or dictionaries entries in the first level, respectively. Association between the tables is defined by "Primary Key" and "Foreign Key" columns, and may be defined with absolute (UI) or relative values (specific to the file). Metadata may also be extracted from the filenames using regex patterns and the filename itself may be stored in the metadata file.
+Metadata files are expected to be tables in XLSX or CSV format, with the first row as the column headers, or JSON arrays and dictionaries.
 
-Application is written in Python and uses the UV package for environment management and intended to run as a service.
+XLSX and JSON files may contain multiple tables defined in sheets or dictionaries entries in the first level, respectively. Association between the tables is defined by "Primary Key" and "Foreign Key" columns, and may be defined with absolute (UI) or relative values (specific to each file). Metadata may also be extracted from the filenames using regex patterns and the filename itself may be stored in the metadata file.
+
+Application is written in Python and uses the UV package for environment management and intended to run as a service. Exemples of service configuration files for the Windows Task Manager are provided in the [data/examples](./data/examples/) folder.
 </div>
 
 <div>
@@ -49,24 +55,48 @@ Please check Scarab [documentation](./docs/README.md) for more details on the co
 
 Examples of configuration files can be found in the defined [tests](./tests/README.md).
 
-Script is made to run as a windows tasks, looking for files at input folders (post folders) at regular intervals.
+<div>
+    <a href="#about-scarab">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
-As they are detected, data files (that are not processed) are moved to the output folder and metadata files are moved to a temp folder.
+<!-- How it works -->
 
-Metadata files are expected to be tables (XLSX or CSV format), with the first row as the header or dictionaries in JSON format.
+Script is made to run as a windows service reading for the task definition in a configuration file that uses JSON format.
 
-One or several columns might be used as key columns to update the metadata file with new data.
+The script can monitor multiple folders. As soon as any content is changed, the script sort the content into 3 groups, corresponding to data files to be moved, metadata files to be processed and other files or folders that may be deleted or ignored.
 
-The script will concatenate the tables and update the rows based on the key columns, producing the final metadata file that is published along with the raw data files.
+Identification of the files is based on their names using a regex pattern defined in the configuration file. Metadata files are further evaluated by their content, which is expected to contain a minimum set of data columns, otherwise the file will be considered invalid and treated as an unknown file.
 
-Any rows that do not have value within the assigned key columns are discarded and an error message is logged.
+Metadata files are expected to be tables (XLSX or CSV format), with the first row as the header, arrays and dictionaries in JSON format.
 
-During updates, columns with `null` values are ignored. To entirely remove data, the service must be stopped and the consolidated metadata file manually edited.
+One or several columns might be used as key columns to uniquely identify each row.
+
+The script will concatenate tables and update the rows based on the key columns. During updates, columns with `null` values are ignored. To entirely remove data, the service must be stopped and the consolidated metadata file manually edited.
 
 Column order in the consolidated metadata file is the same as the last metadata file processed. Columns existing in previous metadata files but not in the new one are kept with minimal order changes, as close as possible to the original neighborhood, otherwise, they are appended to the end of the table.
 
+Additional columns may be added to the consolidated metadata file, including the filename itself and parsed information from the filename using regex groupby.
+
+Rows may be ordered by any indicated column, by default they will be sorted following the order by which they were created when processing the input files.
+
+For XLSX files with multiple sheets, JSPN files with multiple dictionaries in the root, or CSV files with significantly different column set or respecting different regex rules, the script can create a multi table consolidated result, including relational association between tables using Primary Key (PK) and Foreign Key (FK) relationships. Such relationships may be relative, within a single file, or absolute, across multiple files.
+
+The consolidated metadata file is stored in multiple output folder. 
+
+Data files may be of any type and may be moved to multiple output folders. Different output folders may be set for different file regex.
+
+References to the data files within the consolidated metadata file may be used to add additional metadata information, indicating that the data file was moved to the output folder.
+
+Data files without the corresponding metadata may be hold in temp folders and eventually moved to trash.
+
+Input folder cleaning policies may be defined in the configuration file, including moving files to a trash folder or deleting them, thus handling unidentified files.
+
+Exception to the cleaning policies may be defined to allow the use of specific input folder structure or permanence of files that may not be processed.
+
 A log is used to keep track of the script execution, being possible to have the log presented in the terminal and/or saved to a file.
-Information in the metadata files are consolidated  and cleaning the input and temp folders regularly.
 
 To stop, the script monitor the occurrence of kill signal from the system or ctrl+c if running in the terminal.
 

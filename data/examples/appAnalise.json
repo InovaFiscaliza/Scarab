@@ -70,7 +70,7 @@
                 "BW"
             ],
             "_": [
-                "JsonFileName"
+                "Filename"
             ]
         },
         "association": {
@@ -79,35 +79,30 @@
                     "name": "PK1",
                     "int type": true,
                     "relative value": true
-                },
-                "FK": {}
+                }
             },
             "ReferenceData2": {
                 "PK": {
                     "name": "PK2",
                     "int type": true,
                     "relative value": true
-                },
-                "FK": {}
+                }
             },
             "ReferenceData3": {
                 "PK": {
                     "name": "PK3",
                     "int type": true,
                     "relative value": true
-                },
-                "FK": {}
+                }
             },
             "ReferenceData4": {
                 "PK": {
                     "name": "PK4",
                     "int type": true,
                     "relative value": true
-                },
-                "FK": {}
+                }
             },
             "MeasurementData": {
-                "PK": {},
                 "FK": {
                     "ReferenceData1": "FK1",
                     "ReferenceData2": "FK2",
@@ -123,7 +118,7 @@
             "ReferenceData4": {"by":["PK4"],"ascending":true}
         },
         "add filename": {
-            "_": "JsonFileName"
+            "_": "Filename"
         },
         "filename data format": {
             "_": "(?P<name>\\w+)_(?P<date>\\d{4}\\.\\d{2}\\.\\d{2})_T(?P<time>\\d{2}\\.\\d{2}\\.\\d{2})_(?P<Inspection>\\d+)"
