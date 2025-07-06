@@ -15,6 +15,8 @@
         <li><a href="#Mixed_metadata_formats">Mixed metadata formats</a></li>
         <li><a href="#Null_Data_Filename_Test">Null Data Filename Test</a></li>
         <li><a href="#Input_files_and_folders_to_ignore">Input files and folders to ignore</a></li>
+        <li><a href="#Multi-table_json_input">Multi-table json input</a></li>
+        <li><a href="#Multiple_input_and_single_output_test">Multiple input and single output test</a></li>
     </ol>
 </details>
 
@@ -231,7 +233,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 
 Its expected that all metadata files to be moved to trash. Messages should point that the column with all characters allowed is not present in the metadata file. Check if the name is correct.
 
-If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters should be renamed, removing this characters.
+If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters (11th column with name `caracterí\xadsticas` in new data files) should be renamed, removing the characters `\xad`.
 
 <div>
     < a href="https://github.com/InovaFiscaliza/Scarab">
@@ -292,6 +294,48 @@ This test the same performed in the initial test, adding a folder and a file to 
 After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 
 The file `.file_to_ignore` and folder `folder_to_ignore` should be ignored in the input folders.
+
+<div>
+    < a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multi-table json input
+
+Use `Ctest_multitable_json.bat` to set the sandbox folder structure for the test
+
+This test takes as input json files containing multiple tables associated as in a relational database, with Primary Keys and Foreign Keys.
+
+An additional table is created extracting data from the filenames.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+
+A single xlsx file will be produced in the get folder, with multiple worksheets, one for each input table.
+
+<div>
+    < a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multiple input and single output test
+
+Use `Dtest_multitable_input_single_output.bat` to set the sandbox folder structure for the test
+
+This test uses the same data as the 9th test, but joining inputs from json and xlsx files into a single output xlsx file, using worksheets to separate content from different sources.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+
+A single xlsx file will be produced in the get folder, with two worksheets, one for each input file type related to measurement data files and metadata of the files that were processed.
 
 <div>
     < a href="https://github.com/InovaFiscaliza/Scarab">

@@ -19,7 +19,6 @@ echo Test null filename column.
 echo.
 echo Run the script using two terminals or sequentially using:
 echo     uv run ..\src\scarab.py .\sandbox\config.json
-echo     uv run ..\src\scarab.py .\sandbox\config_alt.json
 echo.
 echo Check if the output is as described in README.md.
 echo.

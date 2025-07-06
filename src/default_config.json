@@ -1,17 +1,24 @@
 {
     "name": "unnamed",
-    "scarab version": "1.1.0",
+    "scarab version": "2.0.0",
     "check period in seconds": 10,
     "clean period in hours": 1,
-    "last clean": "2025-02-21 12:00:00",
+    "delay first clean": true,
+    "last clean": "none",
     "maximum errors before exit" : 5,
-    "character scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈêùÙÊôÔîÎôÔûÛëËïÏüÜÿŒœÆæ%|?!.,><\"-_ ]+",
+    "maximum file variations" : 100,
+    "character scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈìÌòÒùÙâÂêÊîÎôÔûÛäÄëËïÏöÖüÜÿŒœÆæ%|?!.,><°\"-_ ]+",
+    "null string values": ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"],
+    "default worksheet key": "_",
+    "default multiple object key": "*",
+    "default unlimited characters scope": "*",
+    "default worksheet name": "<name>",
     "overwrite data in store": false,
     "overwrite data in get": true,
     "overwrite data in trash": false,
     "discard invalid data files": false,
     "log": {
-        "level": "debug",
+        "level": "DEBUG",
         "screen output": true,
         "file output": false,
         "file path": [],
@@ -34,19 +41,25 @@
     },
     "folders": {
         "post": [],
-        "get" : []
+        "get" : {}
     },
     "files" : {
-        "metadata extension": "",
-        "data extension": "",
+        "metadata file regex": {},
+        "data file regex": {},
         "catalog names":[],
+        "table names": {"_":"<name>"},
         "input to ignore": []
     },
     "metadata": {
-        "in columns": [],
-        "key": [],
-        "sort by": [],
-        "data filenames": [],
-        "data published flag": ""
+        "required tables": ["_"],
+        "key": {"_":[]},
+        "association": {},
+        "in columns": {"_":[]},
+        "sort by": {},
+        "data filenames": {"_":[]},
+        "data published flag": {"_":[]},
+        "add filename": {},
+        "filename data format": {},
+        "filename data processing rules" : {}
     }
 }

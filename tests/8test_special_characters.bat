@@ -17,7 +17,14 @@ echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo.
 echo Test with special characters in columns name.
 echo.
-echo Run the script using: uv run ..\src\scarab.py .\sandbox\config.json
+echo First run will give warnings and not upload the data. 
+echo In the second run, will update the output and remove invalid characters
+echo    from column names
+echo.
+echo echo Run the script twice, either using two terminals or sequentially using:
+echo     uv run ..\src\scarab.py .\sandbox\config.json
+echo     move .\sandbox\trash\Anuncios.xlsx .\sandbox\get\Anuncios.xlsx
+echo     uv run ..\src\scarab.py .\sandbox\config_alt.json
 echo.
 echo Check if the output is as described in README.md.
 echo.
