@@ -4,10 +4,10 @@
 <details>
     <summary>Table of Contents</summary>
     <ol>
-        <li><a href="#About-Scarab">About Scarab</a></li>
-        <li><a href="#Scripts_and_Files">Scripts and Files</a></li>
-        <li><a href="#How-it-works">How it works</a></li>
-        <li><a href="#Tests">Tests</a></li>
+        <li><a href="#about-scarab">About Scarab</a></li>
+        <li><a href="#scripts-and-files">Scripts and Files</a></li>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#tests">Tests</a></li>
         <li><a href="#setup">Setup</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
         <li><a href="#contributing">Contributing</a></li>
@@ -63,6 +63,7 @@ Examples of configuration files can be found in the defined [tests](./tests/READ
 </div>
 
 <!-- How it works -->
+# How it works
 
 Script is made to run as a windows service reading for the task definition in a configuration file that uses JSON format.
 
