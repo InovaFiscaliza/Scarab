@@ -979,6 +979,11 @@ class DataHandler:
             return df
         
         if table in self.config.add_filename.keys():
+
+            if self.config.add_filename[table] in df.columns:
+                self.log.warning(f"Column `{self.config.add_filename[table]}` already exists in table `{table}` from file `{file}`. No filename column will be added.")
+                return df
+            
             new_column_name = self.config.add_filename[table]
             basename = os.path.basename(file)
             
