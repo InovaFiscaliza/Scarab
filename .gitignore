@@ -12,6 +12,7 @@ wheels/
 # Test areas
 tests/sandbox
 tests/bkp
+test_regulatron_full.tgz
 
 # Related files
 scarab_release.tgz
