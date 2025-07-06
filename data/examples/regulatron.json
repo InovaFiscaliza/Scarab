@@ -28,7 +28,7 @@
             "*": ".*\\.xlsx$"
         },
         "data file regex": {
-            "txt": ".*\\.pdf$"
+            "pdf": ".*\\.pdf$"
         },
         "catalog names": [
             "Z:/sp/GET/Regulatron/Anuncios.xlsx",
