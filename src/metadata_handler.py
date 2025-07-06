@@ -1188,8 +1188,11 @@ class DataHandler:
             self.log.info(f"Processing {len(file_set)} data files")
             
             files_found_in_ref = set()
+            files_to_move_only = set()
 
             for file in file_set:
+                
+                table_not_found = True
                 
                 for table in self.ref_df.keys():
                     
@@ -1199,6 +1202,8 @@ class DataHandler:
                     data_file_column = self.config.columns_data_filenames.get(table, [])
                     
                     for column in data_file_column:
+                        
+                        table_not_found = False
                         
                         if column not in self.ref_df[table].columns:
                             self.log.warning(f"Column '{column}' not found in table '{table}'. Skipping file '{file}'.")
@@ -1210,6 +1215,11 @@ class DataHandler:
                             for status_column in self.config.columns_data_published[table]:
                                 self.ref_df[table].loc[match.index, status_column] = "True"
                                 files_found_in_ref.add(file)
+                
+                if table_not_found:
+                    self.log.debug(f"File '{file}' nota associated with metadata.")
+                    files_to_move_only.add(file)
+                    continue
             
             files_not_counted = file_set - files_found_in_ref
             
@@ -1221,7 +1231,11 @@ class DataHandler:
                 if self.persist_reference():
                     if self.file.publish_data_file(files_found_in_ref, target_folder_key):
                         self.file.remove_file_list(files_found_in_ref)
-
+            
+            if files_to_move_only:
+                if self.file.publish_data_file(files_to_move_only, target_folder_key):
+                    self.file.remove_file_list(files_to_move_only)
+                    
     # --------------------------------------------------------------
     def persist_reference(self) -> bool:
         """Persist the reference DataFrame to the catalog file.
