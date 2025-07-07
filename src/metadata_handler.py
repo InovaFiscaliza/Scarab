@@ -1141,7 +1141,9 @@ class DataHandler:
         for table_associated_file, files in metadata_files.items():
             for file in files:
                 new_data_df, column_in = self.read_metadata(file=file, suggested_table=table_associated_file)
-
+                
+                self.log.debug(f"Processing metadata file: {file}")
+                
                 # If data was loaded, put the file in the list to be moved to store, otherwise may move it to trash
                 trash_file = True
                 for df in new_data_df.values():
@@ -1191,6 +1193,8 @@ class DataHandler:
             files_to_move_only = set()
 
             for file in file_set:
+                
+                self.log.debug(f"Processing data file: {file}")
                 
                 table_not_found = True
                 
