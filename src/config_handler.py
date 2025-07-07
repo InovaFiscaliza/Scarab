@@ -17,6 +17,7 @@ import pandas as pd
 from typing import Any, Dict, TypedDict
 import re
 import copy
+import traceback
 
 # --------------------------------------------------------------
 # Control Constants
@@ -857,3 +858,24 @@ class Config:
         
         return test_result
 
+    # --------------------------------------------------------------
+    def exception_message_handling(self, msg:str) -> str:
+        """Handle exceptions by logging the error message and traceback.
+
+        Args:
+            e (Exception): The exception to handle.
+            frame (FrameType): The frame where the exception occurred.
+
+        Returns:
+            None
+
+        Raises: None
+        """
+        
+        tb = traceback.format_exc()
+        msg += "\nFull traceback:"
+        tb_lines = tb.splitlines()
+        for line in tb_lines:
+            msg += f"\n{line}"
+            
+        return msg
