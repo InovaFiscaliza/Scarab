@@ -929,7 +929,7 @@ class DataHandler:
         return target_df
 
     # --------------------------------------------------------------
-    def _apply_updates_to_reference_data(self, update_dfs: dict, add_dfs: dict, file: str) -> None:
+    def _apply_updates_to_reference_data(self, update_dfs: dict[str, pd.DataFrame], add_dfs: dict[str, pd.DataFrame], file: str) -> None:
         """Apply updates to reference data from both updated and new rows.
         
         Args:
@@ -940,26 +940,46 @@ class DataHandler:
         Returns:
             None
         """
-        tables_processed = set(update_dfs.keys()) | set(add_dfs.keys())
         
-        for table in tables_processed:
-            if table in update_dfs:
+        for table in update_dfs.keys():
+            
+            try:
 
                 self.ref_df[table] = self._add_missing_columns_from_df(self.ref_df[table], update_dfs[table])
-                
-                self.ref_df[table].update(update_dfs[table])
             
-            if table in add_dfs:
+                self.ref_df[table] = update_dfs[table].combine_first(self.ref_df[table])
                 
+                self.log.info(
+                    f"Reference data updated for table {table} with data from file: {file}")
+            
+            except Exception as e:
+                self.log.error(self.config.exception_message_handling(
+                    f"Error updating data from \nFile: {file}\nTable: {table}: Error: {e}"))
+            
+        for table in add_dfs.keys():
+            
+            try:
+            
                 self.ref_df[table] = self._add_missing_columns_from_df(self.ref_df[table], add_dfs[table])
                 
                 self.ref_df[table] = pd.concat([self.ref_df[table], add_dfs[table]])
+                
+                self.log.info(
+                    f"Reference data updated for table {table} with data from file: {file}")
             
+            except Exception as e:
+                self.log.error(self.config.exception_message_handling(
+                    f"Error adding data from \nFile: {file}\nTable: {table}: Error: {e}"))
+        
+        tables_processed = set(update_dfs.keys()) | set(add_dfs.keys())
+        
+        for table in tables_processed:
             # Update column tracking for data filenames
             if len(self.config.columns_data_filenames.get(table, [])) > 1:
                 self.ref_cols[table].append(self.config.columns_data_filenames[table])
             
-            self.log.info(f"Reference data updated for table {table} with data from file: {file}")
+        self.log.info(
+            f"Reference data had {len(update_dfs)} tables updated and {len(add_dfs)} tables added from file {file}.")
 
     # --------------------------------------------------------------
     def _add_filename_column(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
