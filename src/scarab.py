@@ -22,6 +22,7 @@ import signal
 import inspect
 import sys
 import logging
+import traceback
 from types import FrameType
 
 import time
@@ -116,7 +117,13 @@ def main(config_path: str) -> None:
             count_errors(threshold=config.maximum_errors_before_exit)
                     
         except Exception as e:
-            log.exception(f"Error in main loop: {e}")
+            tb = traceback.format_exc()
+            msg = "Error location (last call in traceback):"
+            tb_lines = tb.splitlines()
+            for line in tb_lines[-4:]:  # Show last few lines of traceback
+                msg += f"\n{line}"
+            log.exception(f"Error in main loop: {e}\n{msg}")
+
             
             count_errors(threshold=config.maximum_errors_before_exit)
 
