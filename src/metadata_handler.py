@@ -945,12 +945,13 @@ class DataHandler:
             
             try:
 
+                self.log.debug(
+                    f"Updating {update_dfs[table].shape[0]} rows in table {table}")
+
                 self.ref_df[table] = self._add_missing_columns_from_df(self.ref_df[table], update_dfs[table])
             
                 self.ref_df[table] = update_dfs[table].combine_first(self.ref_df[table])
                 
-                self.log.info(
-                    f"Reference data updated for table {table} with data from file: {file}")
             
             except Exception as e:
                 self.log.error(self.config.exception_message_handling(
@@ -960,13 +961,13 @@ class DataHandler:
             
             try:
             
+                self.log.debug(
+                    f"Adding {add_dfs[table].shape[0]} new rows to table {table}")
+                
                 self.ref_df[table] = self._add_missing_columns_from_df(self.ref_df[table], add_dfs[table])
                 
                 self.ref_df[table] = pd.concat([self.ref_df[table], add_dfs[table]])
-                
-                self.log.info(
-                    f"Reference data updated for table {table} with data from file: {file}")
-            
+                            
             except Exception as e:
                 self.log.error(self.config.exception_message_handling(
                     f"Error adding data from \nFile: {file}\nTable: {table}: Error: {e}"))
@@ -978,9 +979,6 @@ class DataHandler:
             if len(self.config.columns_data_filenames.get(table, [])) > 1:
                 self.ref_cols[table].append(self.config.columns_data_filenames[table])
             
-        self.log.info(
-            f"Reference data had {len(update_dfs)} tables updated and {len(add_dfs)} tables added from file {file}.")
-
     # --------------------------------------------------------------
     def _add_filename_column(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
         """Complement the data in the reference DataFrame with metadata extracted from the filename and the file itself.
@@ -1162,7 +1160,7 @@ class DataHandler:
             for file in files:
                 new_data_df, column_in = self.read_metadata(file=file, suggested_table=table_associated_file)
                 
-                self.log.debug(f"Processing metadata file: {file}")
+                self.log.info(f"Processing metadata file: {file}")
                 
                 # If data was loaded, put the file in the list to be moved to store, otherwise may move it to trash
                 trash_file = True
