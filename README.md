@@ -1,5 +1,4 @@
-
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/badge-maker?url=https%3A%2F%2Fdeepwiki.com%2FInovaFiscaliza%2FScarab)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/InovaFiscaliza/Scarab)
 
 <details>
     <summary>Table of Contents</summary>
