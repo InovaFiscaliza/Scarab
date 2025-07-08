@@ -38,7 +38,7 @@
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH/Annotation.xlsx"
         ],
         "table names": {
-            "_": "Anotações SCH"
+            "_": "Anota\u00e7\u00f5es SCH"
         },
         "input to ignore": [
             "Z:/sp/POST/SCH/.sch_post",
@@ -46,9 +46,16 @@
         ]
     },
     "metadata": {
-        "in columns": {"_":[
-            "Homologa\u00e7\u00e3o"
-        ]},
-        "key": {"_":["ID"]}
-    }
+        "in columns": {
+            "_": [
+                "Homologa\u00e7\u00e3o"
+            ]
+        },
+        "key": {
+            "_": [
+                "ID"
+            ]
+        }
+    },
+    "last clean": "2025-07-07 14:25:37"
 }

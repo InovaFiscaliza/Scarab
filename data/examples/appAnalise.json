@@ -7,8 +7,8 @@
         "level": "INFO",
         "file output": true,
         "file path": [
-            "Z:/sp/GET/appAnalise/log_files.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/log_files.txt"
+            "Z:/sp/GET/appAnalise/log.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/log.txt"
         ]
     },
     "folders": {

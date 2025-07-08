@@ -2,6 +2,7 @@
     "name": "Regulatron",
     "check period in seconds": 10,
     "clean period in hours": 4,
+    "maximum errors before exit": 1000,
     "log": {
         "level": "INFO",
         "file output": true,
