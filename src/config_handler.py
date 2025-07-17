@@ -52,24 +52,22 @@ ASCENDING_SORT_KEY:str = "ascending"
 
 # --------------------------------------------------------------
 # Define the structure of complex types
-class PKInfoBase(TypedDict):
-    """Base structure of the primary key in the table association."""
-    name: str
-    """Name of the primary key column."""
-    int_type: bool
-    """Flag to indicate that key is a numerical sequence. Alternative is the use of UID, either numeric or strings."""
-    relative_value: bool
-    """Flag to indicate that key is relative within the file. Alternative is absolute, unique to any file that may be loaded."""
+# Define schema with types
+PK_BASE_SCHEMA: dict[str, type] = {
+    NAME_KEY: str,
+    INT_TYPE_KEY: bool,
+    RELATIVE_VALUE_KEY: bool
+}
 
-class PKInfo(PKInfoBase, total=False):
-    """Extended structure of the primary key with reference tracking."""
-    referenced_by: set[str]  # List of tables that reference this primary key
-    """List of tables that reference this primary key."""
+PK_EXT_SCHEMA: dict[str, type] = {
+    **PK_BASE_SCHEMA,
+    REFERENCED_BY_KEY: set[str]  # List of tables that reference this primary key
+}
 
-class TableAssociation(TypedDict, total=False):
-    """Structure of the table association."""
-    PK: PKInfo
-    FK: Dict[str, str]  # Foreign key mapping: table name -> column name
+TABLE_ASSOCIATION_SCHEMA: dict[str, type] = {
+    PK_KEY: PK_EXT_SCHEMA,
+    FK_KEY: Dict[str, str]  # Foreign key mapping: table name -> column name
+}
 
 # --------------------------------------------------------------
 class Config:
@@ -194,7 +192,7 @@ class Config:
                 self._ensure_list(
                     config["metadata"].pop("required tables", default_conf["metadata"]["required tables"]))))
             """ Columns that define the tables required in the metadata file"""
-            self.table_associations: Dict[str, TableAssociation] = self._validate_table_associations(config["metadata"].pop("association", default_conf["metadata"]["association"]))
+            self.table_associations: Dict[str, Any] = self._validate_table_associations(config["metadata"].pop("association", default_conf["metadata"]["association"]))
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
             self.key_columns: Dict[str,set[str]] = self._build_set_dict(config["metadata"].pop("key", default_conf["metadata"]["key"]),"key")
             """ Columns that define the uniqueness of each row in the metadata file"""
@@ -381,36 +379,40 @@ class Config:
         return {k: v for k, v in config.items() if v not in [None, {}, []]}
 
     # --------------------------------------------------------------
-    def _validate_table_associations(self, associations: Dict[str, Any]) -> Dict[str, TableAssociation]:
+    def _validate_table_associations(self, associations: Dict[str, Any]) -> Dict[str, any]:
         """Validate table associations and create back references to link the primary keys to tables that reference them.
         
         Args:
             associations (Dict[str, Any]): Table associations from the configuration file.
         
         Returns:
-            Dict[str, TableAssociation]: Expanded table associations.
+            Dict[str, TABLE_ASSOCIATIOM_SCHEMA]: Expanded table associations.
         
         Raises: None
         """
         
         associations = self.limit_character_scope(associations)
-        fk_required_keys = {NAME_KEY, INT_TYPE_KEY, RELATIVE_VALUE_KEY}
+        # Dynamically get required keys from PKInfoBase TypedDict
+        fk_required_keys = set(PK_BASE_SCHEMA.keys())
         
         for table, assoc in associations.items():
             
             if assoc.get(PK_KEY,False):
-                if not isinstance(assoc[PK_KEY], dict):
+                if isinstance(assoc[PK_KEY], dict):
                     # test if assoc[PK_KEY] is an instance of the class PKInfoBase
+                    if not fk_required_keys.issubset(set(assoc[PK_KEY].keys())):
+                        print(f"\n\nError in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {fk_required_keys}.")
+                        exit(1)
+                else:
                     print(f"\n\nError in config file. Invalid primary key data type in table {table}: Used {assoc[PK_KEY]}, expected a dictionary.")
                     exit(1)
-                    
-                if not fk_required_keys.issubset(assoc[PK_KEY].keys()):
-                    print(f"\n\nError in config file. Invalid primary key structure in table {table}: Used {assoc[PK_KEY]}, expected a dictionary with keys: {fk_required_keys}.")
-                    exit(1)
-                    
+
             if assoc.get(FK_KEY, False):
                 if not isinstance(assoc[FK_KEY], dict):
                     print(f"\n\nError in config file. Invalid foreign key structure in table {table}: Used {assoc[FK_KEY]}, expected a dictionary with table names as keys and column names as values.")
+                    exit(1)
+                elif assoc[FK_KEY] == {}:
+                    print(f"\n\nError in config file. Foreign key structure in table {table} is empty: Used {assoc[FK_KEY]}, expected a dictionary with table names as keys and column names as values.")
                     exit(1)
             
                 for fk_table, fk_column in assoc[FK_KEY].items():
