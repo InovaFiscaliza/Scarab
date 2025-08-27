@@ -6,7 +6,7 @@ readme = "https://github.com/InovaFiscaliza/Scarab/blob/main/README.md"
 requires-python = ">=3.13"
 dependencies = [
     "base58>=2.1.1",
-    "chardet>=5.2.0",
+    "charset-normalizer>=3.4.3",
     "coloredlogs>=15.0.1",
     "logging>=0.4.9.6",
     "openpyxl>=3.1.5",
