@@ -600,7 +600,7 @@ class Config:
                         )
                         exit(1)
 
-                    # Create REFERENCED_BY_KEY key with the table back reference
+                    # Create REFERENCED_BY_KEY key with the table back reference along with the primary key info
                     associations[fk_table][PK_KEY].setdefault(REFERENCED_BY_KEY, set())
                     associations[fk_table][PK_KEY][REFERENCED_BY_KEY].add(table)
 

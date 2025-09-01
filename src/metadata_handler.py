@@ -21,11 +21,13 @@ import uuid
 import base58
 import json
 
+
 # ---------------------------------------------------------------
 # Constants used only in this module and not affected by the config file
 POST_ORDER_COLUMN_PREFIX = "post_order-"
 INDEX_COLUMN_PREFIX = "index-"
 DATA_FILE_COLUMN_PREFIX = "file-"
+AGGREGATION_SEPARATOR = ", "
 
 
 # --------------------------------------------------------------
@@ -62,6 +64,9 @@ class DataHandler:
         self._replace_empty_sorting_value()
         self.ordering_index: dict[str, int] = {}
         """Index used for sequentially ordering rows in the various tables if no ordering column is defined. """
+
+        self.pk_unmerge_map: dict[str, dict[str, list[str]]] = {}
+        """ Dictionary mapping old and new primary keys to be used when for fixing merged PK rows. """
 
         df, col = self.read_reference_df()
 
@@ -185,15 +190,70 @@ class DataHandler:
             case 1:
                 return non_null_values[0]
             case _:
-                return ", ".join(non_null_values)
+                return AGGREGATION_SEPARATOR.join(non_null_values)
+
+    # --------------------------------------------------------------
+    """Fix aggregated primary key values to ensure uniqueness and consistency after merging duplicate rows.
+    
+    Args:
+        df (pd.DataFrame): DataFrame with aggregated rows.
+        table (str): Name of the table that contains rows with aggregated pk.
+        file (str): File name to be used in the log message.
+    Returns:
+        pd.DataFrame: DataFrame with fixed primary key values.
+    """
+
+    def _map_aggregated_pk(
+        self, df: pd.DataFrame, table: str, file: str
+    ) -> pd.DataFrame:
+        # Test if self.config.table_associations has the table defined
+        if table not in self.config.table_associations:
+            self.log.debug(
+                f"Table {table} does not have a table association defined in the config file. No primary key fix will be applied."
+            )
+            return df
+
+        # get the primary key column name
+        pk_info = self.config.table_associations.get(table, {}).get(cm.PK_KEY, None)
+        pk_column = pk_info.get(cm.NAME_KEY, None) if pk_info else None
+
+        # get rows in which the string defined in AGGREGATION_SEPARATOR appears in the primary key column
+        if pk_column and pk_column in df.columns:
+            aggregated_pk_rows = df[
+                df[pk_column].astype(str).str.contains(AGGREGATION_SEPARATOR, na=False)
+            ]
+
+            if not aggregated_pk_rows.empty:
+                self.log.debug(
+                    f"Detected {len(aggregated_pk_rows)} aggregated primary key values in table {table}, file {file}"
+                )
+
+                for idx in aggregated_pk_rows.index:
+                    # split the PK value by the AGGREGATION_SEPARATOR string
+                    pk_values = str(aggregated_pk_rows.at[idx, pk_column]).split(
+                        AGGREGATION_SEPARATOR
+                    )
+
+                    # Create a map for later processing of the merged keys.
+                    # Need to wait until all tables are loaded to perform the correction since the tables that use the pk may not be loaded yet
+                    self.pk_unmerge_map.setdefault(table, {})[pk_values[0]] = pk_values[
+                        1:
+                    ]
+
+                    # replace the value of the row by the pk_values[0]
+                    df.at[idx, pk_column] = pk_values[0]
+
+        return df
 
     # --------------------------------------------------------------
     def _create_index(self, df: pd.DataFrame, table: str, file: str) -> pd.DataFrame:
-        """Create an index for the DataFrame based on the columns defined in the config file. The index is created by concatenating the values of the columns defined in the config file.
+        """Create an index for the DataFrame based on the columns defined in the config file.
+        The index is created by concatenating the values of the columns defined in the config file.
+        If rows with duplicate index values are found, they are merged using a custom aggregation function.
 
         Args:
             df (pd.DataFrame): DataFrame to process.
-            table (str): Name of the table to be used as defined in the config file.
+            table (str): Name of the table to be processed.
             file (str): File name to be used in the log message.
 
         Returns:
@@ -229,12 +289,15 @@ class DataHandler:
 
             if not duplicate_rows.empty:
                 self.log.warning(
-                    f"Duplicated keys in {len(duplicate_rows)} rows in {file}, table {table}. Rows will be merged"
+                    f"Duplicated keys in {len(duplicate_rows)} rows in {file}, table {table}. Rows will be merged and table will be reduced by {len(duplicate_rows) / 2} row(s)."
                 )
                 # Apply the custom aggregation function to the duplicate rows
                 aggregated_rows = duplicate_rows.groupby(self.index_column).agg(
                     self._custom_agg
                 )
+
+                # fix aggregated PK
+                aggregated_rows = self._map_aggregated_pk(aggregated_rows, table, file)
 
                 # get the rows that are not duplicated
                 unique_rows = df[~duplicate_ids]
@@ -549,6 +612,64 @@ class DataHandler:
             raise ValueError(f"Unsupported data type: {type(data)}")
 
     # --------------------------------------------------------------
+    def _fix_merged_pk_values(
+        self, new_data_df: dict[str, pd.DataFrame]
+    ) -> dict[str, pd.DataFrame]:
+        """Fix merged primary key values in the DataFrames after all tables have been loaded.
+        Args:
+            new_data_df (dict[str, pd.DataFrame]): Dictionary with the DataFrames containing various tables.
+        Returns:
+            dict[str, pd.DataFrame]: Dictionary with the DataFrames containing various tables with fixed primary key values.
+        """
+
+        # get affected table names and changed primary key values from the pk_unmerge_map, if any
+        for table_with_merged_pk, merged_pk_values in self.pk_unmerge_map.items():
+            # get names for tables that use the PK that were merged, as indicated in the pk_unmerge_map
+            pk_info = self.config.table_associations.get(table_with_merged_pk, {}).get(
+                cm.PK_KEY, None
+            )
+            fk_table_to_update = pk_info.get(cm.REFERENCED_BY_KEY, None)
+
+            # change the FK values in the tables that use the merged PK to the new PK value, as defined in the pk_unmerge_map
+            for table_using_fk in fk_table_to_update:
+                for new_key, keys_to_replace in merged_pk_values.items():
+                    fk_column = (
+                        self.config.table_associations.get(table_using_fk, {})
+                        .get(cm.FK_KEY, {})
+                        .get(table_with_merged_pk, None)
+                    )
+
+                    # Get the data type of the target column
+                    target_dtype = new_data_df[table_using_fk][fk_column].dtype
+
+                    # Convert new_key to the target column's dtype before assignment
+                    try:
+                        typed_new_key = target_dtype.type(new_key)
+
+                        # Convert each item in keys_to_replace, skipping any that fail
+                        typed_keys_to_replace = [
+                            target_dtype.type(k) for k in keys_to_replace
+                        ]
+
+                    except (ValueError, TypeError):
+                        self.log.warning(
+                            f"Could not convert keys dtype for column '{fk_column}' in table '{table_using_fk}'. Skipping."
+                        )
+                        continue
+
+                    new_data_df[table_using_fk].loc[
+                        new_data_df[table_using_fk][fk_column].isin(
+                            typed_keys_to_replace
+                        ),
+                        fk_column,
+                    ] = typed_new_key
+
+        # clear the pk_unmerge_map for next file processing
+        self.pk_unmerge_map = {}
+
+        return new_data_df
+
+    # --------------------------------------------------------------
     def read_metadata(
         self, file: str, suggested_table: str
     ) -> tuple[dict[str, pd.DataFrame], dict[str, list]]:
@@ -674,6 +795,9 @@ class DataHandler:
                     f"File {file} does not contain all required tables: {self.config.required_tables}. No data will be processed from it."
                 )
                 return {}, {}
+
+            # once finished loading all tables, fix merged PK values (if any)
+            new_data_df = self._fix_merged_pk_values(new_data_df)
 
             return new_data_df, new_data_columns
 
