@@ -277,7 +277,6 @@ class Config:
                 v: k for k, v in self.table_names.items()
             }
             """ Sheet names to be used. {"worksheet_name": "json_root_table_name", ...]"""
-
             self.required_tables: set[str] = set(
                 self.limit_character_scope(
                     self._ensure_list(
@@ -289,16 +288,16 @@ class Config:
                 )
             )
             """ Columns that define the tables required in the metadata file"""
+            self.key_columns: Dict[str, set[str]] = self._build_set_dict(
+                config["metadata"].pop("key", default_conf["metadata"]["key"]), "key"
+            )
+            """ Columns that define the uniqueness of each row in the metadata file"""
             self.table_associations: Dict[str, Any] = self._validate_table_associations(
                 config["metadata"].pop(
                     "association", default_conf["metadata"]["association"]
                 )
             )
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.key_columns: Dict[str, set[str]] = self._build_set_dict(
-                config["metadata"].pop("key", default_conf["metadata"]["key"]), "key"
-            )
-            """ Columns that define the uniqueness of each row in the metadata file"""
             self.required_columns = self._merge_dict_set(
                 config["metadata"].pop(
                     "in columns", default_conf["metadata"]["in columns"]
@@ -333,7 +332,7 @@ class Config:
                     ]
                 )[0]
             )
-            """ Columns that contain the publication status of each row"""
+            """ Columns that contain the data publication status of each row (boolean to flag if data file is present or not)"""
             self.expected_columns_in_files: Dict[str, set[str]] = (
                 self._get_expected_columns_in_files(
                     config["metadata"].get(
@@ -543,7 +542,9 @@ class Config:
     def _validate_table_associations(
         self, associations: Dict[str, Any]
     ) -> Dict[str, any]:
-        """Validate table associations and create back references to link the primary keys to tables that reference them.
+        """Validate table associations,
+        create back references to link the primary keys to tables that reference them, and
+        ensure that FK columns are listed as key columns.
 
         Args:
             associations (Dict[str, Any]): Table associations from the configuration file.
@@ -599,8 +600,13 @@ class Config:
                         )
                         exit(1)
 
+                    # Create REFERENCED_BY_KEY key with the table back reference
                     associations[fk_table][PK_KEY].setdefault(REFERENCED_BY_KEY, set())
                     associations[fk_table][PK_KEY][REFERENCED_BY_KEY].add(table)
+
+                    # Test if fk_column is an element of the set defined in self.keycolumns[fk_table], if not, add it
+                    if fk_column not in self.key_columns.get(table, set()):
+                        self.key_columns.setdefault(table, set()).add(fk_column)
 
         return associations
 
