@@ -346,3 +346,40 @@ A single xlsx file will be produced in the get folder, with two worksheets, one 
     </a>
     <br><br>
 </div>
+
+## Multiple input with CSV and single output test
+
+Use `Etest_multitable_CSV.bat` to set the sandbox folder structure for the test
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+
+This test use mixed input, including CSV and XLSX files, joining inputs some of the CSV data should be uploaded to one of the tables in the output xlsx file, using worksheets to separate content from different sources.
+
+<div>
+    < a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multiple input for update test
+
+Use `Ftest_update_data.bat` to set the sandbox folder structure for the test
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+
+This test start with a filled output with repeted data rows. These repeated rows should be removed at start. Aftwerwards, to perfor the test, files from store should be moved to the temp or post folders and no additional line should be added to the output file, only updates should be performed.
+
+
+<div>
+    < a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
