@@ -371,7 +371,9 @@ Use `Ftest_update_data.bat` to set the sandbox folder structure for the test
 
 After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 
-This test start with a filled output with repeted data rows. These repeated rows should be removed at start. Aftwerwards, to perfor the test, files from store should be moved to the temp or post folders and no additional line should be added to the output file, only updates should be performed.
+This test start with a filled output with repeated data rows. These repeated rows should be removed at start. Afterwards, to perform the test, files from store should be moved to the temp or post folders and no additional line should be added to the output file, only updates should be performed.
+
+This test also include validation of key values, including foreign keys and removing primary keys from the configured key value columns. This is essential to allow updates to be performed. Primary keys a
 
 
 <div>

@@ -574,6 +574,23 @@ class Config:
                     )
                     exit(1)
 
+                pk_column = assoc[PK_KEY].get(NAME_KEY, False)
+                if not pk_column or not isinstance(pk_column, str):
+                    print(
+                        f"\n\nError in config file. Invalid primary key name in table {table}: Used {pk_column}, expected a string."
+                    )
+                    exit(1)
+
+                relative_value = assoc[PK_KEY].get(RELATIVE_VALUE_KEY, False)
+                if not isinstance(relative_value, bool):
+                    print(
+                        f"\n\nError in config file. Invalid primary key relative value in table {table}: Used {relative_value}, expected a boolean."
+                    )
+                    exit(1)
+
+                if pk_column in self.key_columns.get(table, set()) and relative_value:
+                    self.key_columns[table].remove(pk_column)
+
             if assoc.get(FK_KEY, False):
                 if not isinstance(assoc[FK_KEY], dict):
                     print(
