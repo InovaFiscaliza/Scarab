@@ -14,7 +14,7 @@ Raises:
 import json
 import os
 import pandas as pd
-from typing import Any, Dict
+from typing import Any
 import re
 import copy
 import traceback
@@ -66,7 +66,7 @@ PK_EXT_SCHEMA: dict[str, type] = {
 
 TABLE_ASSOCIATION_SCHEMA: dict[str, type] = {
     PK_KEY: PK_EXT_SCHEMA,
-    FK_KEY: Dict[str, str],  # Foreign key mapping: table name -> column name
+    FK_KEY: dict[str, str],  # Foreign key mapping: table name -> column name
 }
 
 
@@ -90,8 +90,8 @@ class Config:
         # define default values
         self.config_file = filename
         """Configuration file name."""
-        config: Dict[str, Any] = self._load_into_config(filename)
-        self.raw: Dict[str, Any] = copy.deepcopy(config)
+        config: dict[str, Any] = self._load_into_config(filename)
+        self.raw: dict[str, Any] = copy.deepcopy(config)
         """Raw configuration values."""
         # Ensure mandatory keys exist in config
         config = self._ensure_mandatory_structure(config)
@@ -232,7 +232,7 @@ class Config:
                 default_conf["folders"].get("store", config["folders"].pop("store"))
             )
             """ Store folder path used to store processed files. [! Mandatory]"""
-            self.get: Dict[str : list[str]] = self._build_list_dict(
+            self.get: dict[str : list[str]] = self._build_list_dict(
                 config["folders"].pop("get", default_conf["folders"]["get"]),
                 "folders/get",
             )
@@ -244,14 +244,14 @@ class Config:
                 )
             )
             """ Full path to the catalog file, where metadata is stored"""
-            self.metadata_file_regex: Dict[str, re.Pattern] = self._build_re_dict(
+            self.metadata_file_regex: dict[str, re.Pattern] = self._build_re_dict(
                 config["files"].pop(
                     "metadata file regex", default_conf["files"]["metadata file regex"]
                 ),
                 "metadata file regex",
             )
             """ Regex pattern to be used to select files that may contain metadata."""
-            self.data_file_regex: Dict[str, re.Pattern] = self._build_re_dict(
+            self.data_file_regex: dict[str, re.Pattern] = self._build_re_dict(
                 config["files"].pop(
                     "data file regex", default_conf["files"]["data file regex"]
                 ),
@@ -269,11 +269,11 @@ class Config:
             )
             """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
 
-            self.table_names: Dict[str, str] = self._set_default_table_name(
+            self.table_names: dict[str, str] = self._set_default_table_name(
                 config["files"].pop("table names", default_conf["files"]["table names"])
             )
             """ Table names to be used. {"json_root_table_name": "worksheet_name", ...]"""
-            self.sheet_names: Dict[str, str] = {
+            self.sheet_names: dict[str, str] = {
                 v: k for k, v in self.table_names.items()
             }
             """ Sheet names to be used. {"worksheet_name": "json_root_table_name", ...]"""
@@ -288,16 +288,21 @@ class Config:
                 )
             )
             """ Columns that define the tables required in the metadata file"""
-            self.key_columns: Dict[str, set[str]] = self._build_set_dict(
+            self.key_columns: dict[str, set[str]] = self._build_set_dict(
                 config["metadata"].pop("key", default_conf["metadata"]["key"]), "key"
             )
             """ Columns that define the uniqueness of each row in the metadata file"""
-            self.table_associations: Dict[str, Any] = self._validate_table_associations(
+
+            associations, absolute_pk_in_used = self._validate_table_associations(
                 config["metadata"].pop(
                     "association", default_conf["metadata"]["association"]
                 )
             )
+
+            self.table_associations: dict[str, Any] = associations
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
+            self.table_association_absolute_pk: bool = absolute_pk_in_used
+
             self.required_columns = self._merge_dict_set(
                 config["metadata"].pop(
                     "in columns", default_conf["metadata"]["in columns"]
@@ -306,7 +311,7 @@ class Config:
                 "in columns",
             )
             """ Columns required in the input metadata file"""
-            self.rows_sort_by: Dict[str, Dict[str, list]] = (
+            self.rows_sort_by: dict[str, dict[str, list]] = (
                 self._build_row_sorting_dict(
                     config["metadata"].pop(
                         "sort by", default_conf["metadata"]["sort by"]
@@ -314,7 +319,7 @@ class Config:
                 )
             )
             """ Columns that define the column by which the rows in the metadata file are sorted. Default to None, will sort by the order in which the files were posted adding a column with serial number to the data"""
-            self.columns_data_filenames: Dict[str, list[str]] = (
+            self.columns_data_filenames: dict[str, list[str]] = (
                 self.limit_character_scope(
                     config["metadata"].pop(
                         "data filenames", default_conf["metadata"]["data filenames"]
@@ -322,7 +327,7 @@ class Config:
                 )
             )
             """ Columns that contain the names of data files associated with each row metadata"""
-            self.columns_data_published: Dict[str, list[str]] = (
+            self.columns_data_published: dict[str, list[str]] = (
                 self.limit_character_scope(
                     [
                         config["metadata"].pop(
@@ -333,7 +338,7 @@ class Config:
                 )[0]
             )
             """ Columns that contain the data publication status of each row (boolean to flag if data file is present or not)"""
-            self.expected_columns_in_files: Dict[str, set[str]] = (
+            self.expected_columns_in_files: dict[str, set[str]] = (
                 self._get_expected_columns_in_files(
                     config["metadata"].get(
                         "add filename", default_conf["metadata"]["add filename"]
@@ -345,11 +350,11 @@ class Config:
                 )
             )
             """ Dictionary with table names (keys) and set of new columns to be created from the filename data format and add filename rules."""
-            self.add_filename: Dict[str, str] = config["metadata"].pop(
+            self.add_filename: dict[str, str] = config["metadata"].pop(
                 "add filename", default_conf["metadata"]["add filename"]
             )
             """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
-            self.filename_data_format: Dict[str, re.Pattern] = self._build_re_dict(
+            self.filename_data_format: dict[str, re.Pattern] = self._build_re_dict(
                 config["metadata"].pop(
                     "filename data format",
                     default_conf["metadata"]["filename data format"],
@@ -357,7 +362,7 @@ class Config:
                 "filename data format",
             )
             """ Dictionary with table names (keys) and regex patterns (values) to extract data from the filename. Use re.match.groupdict() syntax."""
-            self.filename_data_processing_rules: Dict[str, Dict[str, Any]] = config[
+            self.filename_data_processing_rules: dict[str, dict[str, Any]] = config[
                 "metadata"
             ].pop(
                 "filename data processing rules",
@@ -409,14 +414,14 @@ class Config:
             exit(1)
 
     # --------------------------------------------------------------
-    def _ensure_mandatory_structure(self, config: Dict) -> Dict[str, Any]:
+    def _ensure_mandatory_structure(self, config: dict) -> dict[str, Any]:
         """Create a dictionary from a string or a dictionary.
 
         Args:
             item (Any): Input string or dictionary.
 
         Returns:
-            Dict[str, Any]: Dictionary of strings.
+            dict[str, Any]: Dictionary of strings.
 
         Raises: None
         """
@@ -469,24 +474,24 @@ class Config:
 
     # --------------------------------------------------------------
     def _merge_dict_set(
-        self, new_data: Dict[str, Any], existing_set: Dict[str, set[str]], name: str
-    ) -> Dict[str, set[str]]:
+        self, new_data: dict[str, Any], existing_set: dict[str, set[str]], name: str
+    ) -> dict[str, set[str]]:
         """Merge a dictionary of sets with the key columns to create a unified dictionary of required columns.
 
         Args:
-            new_data (Dict[str, Any]): Dictionary with table names as keys and sets of required columns as values.
-            existing_set (Dict[str, set[str]]): Existing dictionary with table names as keys and sets of required columns as values.
+            new_data (dict[str, Any]): Dictionary with table names as keys and sets of required columns as values.
+            existing_set (dict[str, set[str]]): Existing dictionary with table names as keys and sets of required columns as values.
             name (str): Name of the configuration section for logging purposes.
 
         Returns:
-            Dict[str, set[str]]: Merged dictionary with table names as keys and sets of required columns as values.
+            dict[str, set[str]]: Merged dictionary with table names as keys and sets of required columns as values.
         """
 
         data = self._build_set_dict(new_data, name)
 
         self.key_columns  # Already built above
 
-        merged_dict: Dict[str, set[str]] = {}
+        merged_dict: dict[str, set[str]] = {}
         all_keys = set(data.keys()) | set(existing_set.keys())
         for k in all_keys:
             merged_dict[k] = data.get(k, set()).union(existing_set.get(k, set()))
@@ -524,14 +529,14 @@ class Config:
         return timestamp
 
     # --------------------------------------------------------------
-    def _remove_empty_keys(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    def _remove_empty_keys(self, config: dict[str, Any]) -> dict[str, Any]:
         """Remove empty keys from the configuration dictionary.
 
         Args:
-            config (Dict[str, Any]): Configuration dictionary.
+            config (dict[str, Any]): Configuration dictionary.
 
         Returns:
-            Dict[str, Any]: Configuration dictionary without empty keys.
+            dict[str, Any]: Configuration dictionary without empty keys.
 
         Raises: None
         """
@@ -540,21 +545,23 @@ class Config:
 
     # --------------------------------------------------------------
     def _validate_table_associations(
-        self, associations: Dict[str, Any]
-    ) -> Dict[str, any]:
+        self, associations: dict[str, Any]
+    ) -> tuple[dict[str, any], bool]:
         """Validate table associations,
         create back references to link the primary keys to tables that reference them, and
         ensure that FK columns are listed as key columns.
 
         Args:
-            associations (Dict[str, Any]): Table associations from the configuration file.
+            associations (dict[str, Any]): Table associations from the configuration file.
+            absolute_pk_in_used (bool): Flag to indicate if absolute primary keys are used.
 
         Returns:
-            Dict[str, TABLE_ASSOCIATIOM_SCHEMA]: Expanded table associations.
+            dict[str, TABLE_ASSOCIATIOM_SCHEMA]: Expanded table associations.
 
         Raises: None
         """
 
+        absolute_pk_in_used = False
         associations = self.limit_character_scope(associations)
         # Dynamically get required keys from PKInfoBase TypedDict
         fk_required_keys = set(PK_BASE_SCHEMA.keys())
@@ -587,6 +594,14 @@ class Config:
                         f"\n\nError in config file. Invalid primary key relative value in table {table}: Used {relative_value}, expected a boolean."
                     )
                     exit(1)
+                elif relative_value:
+                    absolute_pk_in_used = True
+                else:
+                    if absolute_pk_in_used:
+                        print(
+                            f"\n\nError in config file. Inconsistent primary key types: Table {table} uses absolute primary keys while another table uses relative primary keys. All tables must use the same type."
+                        )
+                        exit(1)
 
                 if pk_column in self.key_columns.get(table, set()) and relative_value:
                     self.key_columns[table].remove(pk_column)
@@ -625,7 +640,7 @@ class Config:
                     if fk_column not in self.key_columns.get(table, set()):
                         self.key_columns.setdefault(table, set()).add(fk_column)
 
-        return associations
+        return associations, absolute_pk_in_used
 
     # --------------------------------------------------------------
     def _test_get_regex(self) -> None:
@@ -672,14 +687,14 @@ class Config:
             )
 
     # --------------------------------------------------------------
-    def _load_into_config(self, filename: str) -> Dict[str, Any]:
+    def _load_into_config(self, filename: str) -> dict[str, Any]:
         """Load;update the configuration values from a JSON file encoded with UTF-8.
 
         Args:
             filename (str): Configuration file name.
 
         Returns:
-            Dict[str, Any]: Configuration values.
+            dict[str, Any]: Configuration values.
 
         Raises: None
         """
@@ -776,15 +791,15 @@ class Config:
         return output_format[: -len(log_separator)]
 
     # --------------------------------------------------------------
-    def _build_list_dict(self, data: Dict[str, Any], name: str) -> Dict[str, list[str]]:
+    def _build_list_dict(self, data: dict[str, Any], name: str) -> dict[str, list[str]]:
         """Validate serialized input and build a dictionary with set values
 
         Args:
-            data (Dict[str, Any]): Input data from serialized json file.
+            data (dict[str, Any]): Input data from serialized json file.
             name (str): Name of the data type being processed, used for error messages.
 
         Returns:
-            Dict[str, list[str]]: Dictionary with table names as keys and list of strings as values.
+            dict[str, list[str]]: Dictionary with table names as keys and list of strings as values.
         """
 
         # test if data is of dict type, if not, raise an error
@@ -797,15 +812,15 @@ class Config:
         return {k: self._ensure_list(v) for k, v in data.items()}
 
     # --------------------------------------------------------------
-    def _build_set_dict(self, data: Dict[str, Any], name: str) -> Dict[str, set[str]]:
+    def _build_set_dict(self, data: dict[str, Any], name: str) -> dict[str, set[str]]:
         """Validate serialized input and build a dictionary with set values
 
         Args:
-            data (Dict[str, Any]): Input data from serialized json file.
+            data (dict[str, Any]): Input data from serialized json file.
             name (str): Name of the data type being processed, used for error messages.
 
         Returns:
-            Dict[str, set[str]]: Dictionary with table names as keys and sets of strings as values.
+            dict[str, set[str]]: Dictionary with table names as keys and sets of strings as values.
         """
 
         # test if data is of dict type, if not, raise an error
@@ -819,14 +834,14 @@ class Config:
         return {k: set(self._ensure_list(v)) for k, v in data.items()}
 
     # --------------------------------------------------------------
-    def _build_re_dict(self, data: Dict[str, str], name) -> Dict[str, re.Pattern]:
+    def _build_re_dict(self, data: dict[str, str], name) -> dict[str, re.Pattern]:
         """Build a dictionary with regex patterns for extracting data from filenames.
 
         Args:
-            data (Dict[str, str]): Input data with table names as keys and regex patterns as values.
+            data (dict[str, str]): Input data with table names as keys and regex patterns as values.
 
         Returns:
-            Dict[str, re.Pattern]: Dictionary with table names as keys and compiled regex patterns as values.
+            dict[str, re.Pattern]: Dictionary with table names as keys and compiled regex patterns as values.
         """
 
         # test if data is of dict type, if not, raise an error
@@ -840,15 +855,15 @@ class Config:
 
     # --------------------------------------------------------------
     def _build_row_sorting_dict(
-        self, data: Dict[str, Dict[str, list]]
-    ) -> Dict[str, Dict[str, list]]:
+        self, data: dict[str, dict[str, list]]
+    ) -> dict[str, dict[str, list]]:
         """Build a dictionary with columns to sort rows in the metadata file.
 
         Args:
-            data (Dict[str, str]): Input data with table names as keys and column names as values.
+            data (dict[str, str]): Input data with table names as keys and column names as values.
 
         Returns:
-            Dict[str, str]: Dictionary with table names as keys and column names as values.
+            dict[str, str]: Dictionary with table names as keys and column names as values.
         """
 
         # test if data is of dict type, if not, raise an error
