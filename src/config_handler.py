@@ -293,7 +293,7 @@ class Config:
             )
             """ Columns that define the uniqueness of each row in the metadata file"""
 
-            associations, absolute_pk_in_used = self._validate_table_associations(
+            associations, absolute_pk_in_use = self._validate_table_associations(
                 config["metadata"].pop(
                     "association", default_conf["metadata"]["association"]
                 )
@@ -301,7 +301,7 @@ class Config:
 
             self.table_associations: dict[str, Any] = associations
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.table_association_absolute_pk: bool = absolute_pk_in_used
+            self.table_association_absolute_pk_in_use: bool = absolute_pk_in_use
 
             self.required_columns = self._merge_dict_set(
                 config["metadata"].pop(
@@ -553,15 +553,16 @@ class Config:
 
         Args:
             associations (dict[str, Any]): Table associations from the configuration file.
-            absolute_pk_in_used (bool): Flag to indicate if absolute primary keys are used.
 
         Returns:
             dict[str, TABLE_ASSOCIATIOM_SCHEMA]: Expanded table associations.
+            bool: Flag to indicate if absolute primary keys are used.
 
         Raises: None
         """
 
-        absolute_pk_in_used = False
+        absolute_pk_in_use = True
+
         associations = self.limit_character_scope(associations)
         # Dynamically get required keys from PKInfoBase TypedDict
         fk_required_keys = set(PK_BASE_SCHEMA.keys())
@@ -595,11 +596,11 @@ class Config:
                     )
                     exit(1)
                 elif relative_value:
-                    absolute_pk_in_used = True
+                    absolute_pk_in_use = False
                 else:
-                    if absolute_pk_in_used:
+                    if not absolute_pk_in_use:
                         print(
-                            f"\n\nError in config file. Inconsistent primary key types: Table {table} uses absolute primary keys while another table uses relative primary keys. All tables must use the same type."
+                            f"\n\nError in config file. Inconsistent primary key types: Table {table} uses relative primary keys while another table uses absolute primary keys. All tables must use the same type."
                         )
                         exit(1)
 
@@ -640,7 +641,7 @@ class Config:
                     if fk_column not in self.key_columns.get(table, set()):
                         self.key_columns.setdefault(table, set()).add(fk_column)
 
-        return associations, absolute_pk_in_used
+        return associations, absolute_pk_in_use
 
     # --------------------------------------------------------------
     def _test_get_regex(self) -> None:
