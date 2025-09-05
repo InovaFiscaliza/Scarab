@@ -103,7 +103,7 @@ class Config:
 
         try:
             self.name: str = config.pop("name", default_conf["name"])
-            """ Name of the config.pop(uration, used for logging"""
+            """ Name of the config used for logging and default worksheet naming"""
             self.scarab_version: str = config.pop(
                 "scarab version", default_conf["scarab version"]
             )
@@ -156,7 +156,7 @@ class Config:
             self.default_worksheet_name: str = config.pop(
                 "default worksheet name", default_conf["default worksheet name"]
             )
-            """Default value for the worksheet name. If value of assigned to the default key is equal to this value, will use the name of the config.pop(uration."""
+            """Default value for the worksheet name. If value of assigned to the default key is equal to this value, will use the name of the config."""
             self.store_data_overwrite: bool = config.pop(
                 "overwrite data in store", default_conf["overwrite data in store"]
             )
@@ -293,7 +293,7 @@ class Config:
             )
             """ Columns that define the uniqueness of each row in the metadata file"""
 
-            associations, absolute_pk_in_use = self._validate_table_associations(
+            associations, assoc_null_or_absolute_pk = self._validate_table_associations(
                 config["metadata"].pop(
                     "association", default_conf["metadata"]["association"]
                 )
@@ -301,7 +301,8 @@ class Config:
 
             self.table_associations: dict[str, Any] = associations
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.table_association_absolute_pk_in_use: bool = absolute_pk_in_use
+            self.table_association_null_or_absolute_pk: bool = assoc_null_or_absolute_pk
+            """ True if there is no table association or absolute primary keys are used, False otherwise."""
 
             self.required_columns = self._merge_dict_set(
                 config["metadata"].pop(
@@ -555,7 +556,7 @@ class Config:
             associations (dict[str, Any]): Table associations from the configuration file.
 
         Returns:
-            dict[str, TABLE_ASSOCIATIOM_SCHEMA]: Expanded table associations.
+            dict[str, TABLE_ASSOCIATION_SCHEMA]: Expanded table associations.
             bool: Flag to indicate if absolute primary keys are used.
 
         Raises: None
@@ -637,7 +638,7 @@ class Config:
                     associations[fk_table][PK_KEY].setdefault(REFERENCED_BY_KEY, set())
                     associations[fk_table][PK_KEY][REFERENCED_BY_KEY].add(table)
 
-                    # Test if fk_column is an element of the set defined in self.keycolumns[fk_table], if not, add it
+                    # Test if fk_column is an element of the set defined in self.key_columns[fk_table], if not, add it
                     if fk_column not in self.key_columns.get(table, set()):
                         self.key_columns.setdefault(table, set()).add(fk_column)
 
