@@ -293,16 +293,17 @@ class Config:
             )
             """ Columns that define the uniqueness of each row in the metadata file"""
 
-            associations, assoc_null_or_absolute_pk = self._validate_table_associations(
+            self.table_associations: dict[str, Any] = self._validate_table_associations(
                 config["metadata"].pop(
                     "association", default_conf["metadata"]["association"]
                 )
             )
-
-            self.table_associations: dict[str, Any] = associations
             """ Columns that define the tables associations in the metadata file with multiple tables. Example: "{<Table1>": {"PK":"<ID1>","FK": {"<Table2>": "FK2"}},<Table2>": {"PK":"<ID2>","FK": {}}}"""
-            self.table_association_null_or_absolute_pk: bool = assoc_null_or_absolute_pk
-            """ True if there is no table association or absolute primary keys are used, False otherwise."""
+
+            self.unassociated_tables: set[str] = set(
+                self.table_names.keys()
+            ).difference(set(self.table_associations.keys()))
+            """ Tables that are not associated with any other table."""
 
             self.required_columns = self._merge_dict_set(
                 config["metadata"].pop(
@@ -547,7 +548,7 @@ class Config:
     # --------------------------------------------------------------
     def _validate_table_associations(
         self, associations: dict[str, Any]
-    ) -> tuple[dict[str, any], bool]:
+    ) -> dict[str, any]:
         """Validate table associations,
         create back references to link the primary keys to tables that reference them, and
         ensure that FK columns are listed as key columns.
@@ -562,7 +563,8 @@ class Config:
         Raises: None
         """
 
-        absolute_pk_in_use = True
+        absolute_pk_in_use: bool = True
+        """ True if absolute primary keys are used, False if relative primary keys are used. Used to check consistency within the configuration file"""
 
         associations = self.limit_character_scope(associations)
         # Dynamically get required keys from PKInfoBase TypedDict
@@ -642,7 +644,7 @@ class Config:
                     if fk_column not in self.key_columns.get(table, set()):
                         self.key_columns.setdefault(table, set()).add(fk_column)
 
-        return associations, absolute_pk_in_use
+        return associations
 
     # --------------------------------------------------------------
     def _test_get_regex(self) -> None:

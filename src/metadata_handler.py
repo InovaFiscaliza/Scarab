@@ -21,6 +21,7 @@ import uuid
 import base58
 import json
 from typing import Any
+import copy
 
 
 # ---------------------------------------------------------------
@@ -935,18 +936,22 @@ class DataHandler:
             file (str): The metadata file being processed.
         """
 
-        if self.config.table_association_null_or_absolute_pk:
-            for table in new_data_df.keys():
-                update_dfs, add_dfs = self.split_df_rows_add_update(
-                    new_data_df, table, file
-                )
+        # update reference with tables without associations
+        unassociated_tables = self.config.unassociated_tables.intersection(
+            new_data_df.keys()
+        )
 
-                self._apply_updates_to_reference_data(update_dfs, add_dfs, table, file)
+        for table in unassociated_tables:
+            update_df, add_df = self.split_df_rows_add_update(new_data_df, table)
 
-                self.log.info(
-                    f"Table {table} from file {file}: {len(update_dfs.get(table, pd.DataFrame()))} rows updated, {len(add_dfs.get(table, pd.DataFrame()))} rows added."
-                )
-        else:
+            self._apply_updates_to_reference_data(update_df, add_df, table)
+
+            self.log.info(
+                f"Table {table} from file {file}: {len(update_df.get(table, pd.DataFrame()))} rows updated, {len(add_df.get(table, pd.DataFrame()))} rows added."
+            )
+
+        associated_tables = new_data_df.keys() - unassociated_tables
+        if associated_tables:
             self.update_associated_tables(new_data_df, file)
 
     # --------------------------------------------------------------
@@ -963,10 +968,11 @@ class DataHandler:
             file (str): The metadata file being processed.
 
         Returns:
-            bool: True if any foreign keys were updated, False otherwise.
+            None
         """
 
-        associations_to_check = self.config.table_associations
+        # Create a deep copy to avoid mutating the original config
+        associations_to_check = copy.deepcopy(self.config.table_associations)
         """ association structure to be popped to indicate that the PK or FK of a table was checked and updated."""
         success_running_step: bool = True
         """ True if any primary/foreign key was updated in the last iteration."""
@@ -981,12 +987,14 @@ class DataHandler:
                 df = new_data_df.get(table, pd.DataFrame())
                 if df.empty:
                     associations_to_check.pop(table)
+                    success_running_step = True
                     continue
 
                 # get the table association info from the config file, if not found, remove the table from the associations_to_check dict and continue
-                assoc = self.config.table_associations.get(table, None)
+                assoc = associations_to_check.get(table, None)
                 if not assoc:
                     associations_to_check.pop(table)
+                    success_running_step = True
                     continue
 
                 pk_info_to_check = assoc.get(cm.PK_KEY, None)
@@ -994,25 +1002,26 @@ class DataHandler:
                 if pk_info_to_check:
                     # process only tables with unchecked primary keys where all foreign keys are checked
                     if fk_info_to_check:
+                        success_running_step = True
                         continue
+                    else:
+                        associations_to_check[table].pop(cm.FK_KEY, None)
 
                     # for the table with unchecked primary key, split the dataframe into rows to update and rows to add, mapping old and new primary keys
-                    update_dfs, add_dfs = self.split_df_rows_add_update(
-                        new_data_df, table, file
+                    update_df, add_df = self.split_df_rows_add_update(
+                        new_data_df, table
                     )
 
                     pk_map[table] = {}
                     # apply changes to the PK in the update_dfs dataframes
-                    pk_map, update_dfs = self._update_primary_keys(
-                        pk_map, update_dfs, table
+                    pk_map, update_df = self._update_primary_keys(
+                        pk_map, update_df, table
                     )
 
                     # apply changes to the PK in the add_dfs dataframes
-                    pk_map, add_dfs = self._assign_primary_keys(pk_map, add_dfs, table)
+                    pk_map, add_df = self._assign_primary_keys(pk_map, add_df, table)
 
-                    self._apply_updates_to_reference_data(
-                        update_dfs, add_dfs, table, file
-                    )
+                    self._apply_updates_to_reference_data(update_df, add_df, table)
 
                     # apply changes to the FK in the update_dfs and add_dfs dataframes of other tables, popping the changed FK from the associations_to_check dict
                     new_data_df, associations_to_check = self._update_foreign_keys(
@@ -1023,11 +1032,9 @@ class DataHandler:
                         file,
                     )
 
-                    # mark the pk as checked by removing it from the associations_to_check dict
-                    associations_to_check[table].pop(cm.PK_KEY, None)
+                    # Once pk is checked table may be removed. Remember that all FK have been processed prior to the PK processing.
+                    associations_to_check.pop(table, None)
                     success_running_step = True
-                    reindex_required = True
-                    continue
 
         if not success_running_step:
             raise ValueError(
@@ -1035,11 +1042,11 @@ class DataHandler:
             )
             # TODO: Move the problematic file to trash and continue processing other files. Create a quarantine repository as alternative to trash
 
-        return reindex_required
+        return
 
     # --------------------------------------------------------------
     def split_df_rows_add_update(
-        self, new_data_df: dict[str, pd.DataFrame], table: str, file: str
+        self, new_data_df: dict[str, pd.DataFrame], table: str
     ) -> tuple[dict[dict[str, pd.DataFrame], dict[str, pd.DataFrame]]]:
         """Split new data into rows that need to be updated and rows that need to be added
         Create a primary key mapping to associate the PK in the file to the PK in the reference DF.
@@ -1047,61 +1054,49 @@ class DataHandler:
         Args:
             new_data_df: Dictionary with DataFrames containing various tables.
             table: Name of the table to be processed. new_data_df[table] must exist.
-            file: The metadata file being processed.
-
 
         Returns:
             tuple: (update_dfs, add_dfs)
-                - update_dfs: Dictionary of DataFrames with rows to update
-                - add_dfs: Dictionary of DataFrames with rows to add
+                - update_df: DataFrame with rows to update in table
+                - add_dfs: DataFrame with row to add in table
         """
-        update_dfs = {}  # table -> DataFrame with rows to update
-        add_dfs = {}  # table -> DataFrame with rows to add
-
         df = new_data_df.get(table, pd.DataFrame())
 
         # Find common indexes between new data and reference data
         common_indexes = df.index.intersection(self.ref_df[table].index)
 
-        if not common_indexes.empty:
-            # Rows to update (existing in both dataframes)
+        if common_indexes.empty:
+            # Set rows to update empty and copy all rows to add
+            update_df = pd.DataFrame(columns=df.columns)
+            add_df = df.copy()
+        else:
+            # Set rows to update as the intersection and the remaining as rows to add
             update_df = df.loc[common_indexes].copy()
-
-            # Rows to add (only in new data)
             add_df = df.drop(common_indexes).copy()
 
-            # Store split dataframes into the corresponding dictionaries
-            update_dfs[table] = update_df
-            if not add_df.empty:
-                add_dfs[table] = add_df
-
-        else:
-            # All rows are new
-            add_dfs[table] = df.copy()
-
-        return update_dfs, add_dfs
+        return update_df, add_df
 
     # --------------------------------------------------------------
     def _update_primary_keys(
         self,
         pk_map: dict[str, dict[str, str]],
-        update_dfs: dict[str, pd.DataFrame],
+        update_df: pd.DataFrame,
         table: str,
-    ) -> tuple[dict[dict[str, str]], dict[str, pd.DataFrame]]:
+    ) -> tuple[dict[dict[str, str]], pd.DataFrame]:
         """Update the PK in the update DataFrame to match the reference DF.
         Args:
             pk_map (dict[str, dict[str, str]]): Dictionary with primary key mappings for each table. Must contain the table being processed.
-            update_dfs (dict[str, pd.DataFrame]): Dictionary with DataFrames containing rows to update.
+            update_df (pd.DataFrame): DataFrame containing rows to update.
             table (str): Name of the table to be processed. Table association with PK/FK must be defined in the config file.
         Returns:
             tuple: (pk_map, update_dfs)
                 - pk_map: Updated dictionary mapping old PKs to new PKs by table
-                - update_dfs: Updated dictionary of DataFrames with rows to update
+                - update_df: DataFrame with rows to update in table with updated PKs
         """
 
         # Check if there is data to update
-        if table not in update_dfs or update_dfs[table].empty:
-            return pk_map, update_dfs
+        if update_df.empty:
+            return pk_map, update_df
 
         pk_column = (
             self.config.table_associations.get(table, {})
@@ -1110,71 +1105,69 @@ class DataHandler:
         )
 
         if not pk_column:
-            return pk_map, update_dfs
+            return pk_map, update_df
 
         # Get old and new PKs
-        old_pks = update_dfs[table][pk_column]
-        new_pks = self.ref_df[table].loc[update_dfs[table].index, pk_column]
+        old_pks = update_df[pk_column]
+        new_pks = self.ref_df[table].loc[update_df.index, pk_column]
 
-        # Find where PKs differ
-        pk_diff_mask = old_pks != new_pks
+        # Build mapping only for distinct pairs of old_pks and new_pks
+        pk_pairs = list(zip(old_pks, new_pks))
+        distinct_pk_pairs = {old: new for old, new in pk_pairs}
 
-        # Update pk_map only for changed PKs
-        changed_old_pks = old_pks[pk_diff_mask]
-        changed_new_pks = new_pks[pk_diff_mask]
+        if distinct_pk_pairs:
+            pk_map.setdefault(table, {}).update(distinct_pk_pairs)
 
-        pk_map.setdefault(table, {}).update(dict(zip(changed_old_pks, changed_new_pks)))
+        # Update the PKs in the update dataframe (in case they differ)
+        update_df[pk_column] = new_pks.values
 
-        # Update the PKs in the update dataframe
-        update_dfs[table].loc[pk_diff_mask, pk_column] = changed_new_pks.values
-
-        return pk_map, update_dfs
+        return pk_map, update_df
 
     # --------------------------------------------------------------
     def _assign_primary_keys(
         self,
         pk_map: dict[str, dict[str, str]],
-        add_dfs: dict[str, pd.DataFrame],
+        add_df: pd.DataFrame,
         table: str,
-    ) -> tuple[dict[dict[str, str]], dict[str, pd.DataFrame]]:
+    ) -> tuple[dict[dict[str, str]], pd.DataFrame]:
         """Update the PK in the update DataFrame to match the reference DF.
         Update the PK in the add DataFrame to match the next available PK in the reference DF.
 
         Args:
             pk_map (dict[str, dict[str, str]]): Dictionary with primary key mappings for each table. Must contain the table being processed.
-            add_dfs (dict[str, pd.DataFrame]): Dictionary with DataFrames containing rows to add.
+            add_df (pd.DataFrame): DataFrame containing rows to add.
             table (str): Name of the table to be processed. Table association with PK/FK must be defined in the config file.
 
         Returns:
             tuple: (pk_map, add_dfs)
                 - pk_map: Updated dictionary mapping old PKs to new PKs by table
-                - add_dfs: Updated dictionary of DataFrames with rows to add
+                - add_df: DataFrame with rows to add in table with updated PKs
         """
 
         # Check if there is data to add
-        if table not in add_dfs or add_dfs[table].empty:
-            return pk_map, add_dfs
+        if add_df.empty:
+            return pk_map, add_df
 
         pk_info = self.config.table_associations.get(table, {}).get(cm.PK_KEY, {})
         pk_column = pk_info.get(cm.NAME_KEY, None)
         pk_int_type = pk_info.get(cm.INT_TYPE_KEY, False)
 
         if not pk_column or not pk_int_type:
-            return pk_map, add_dfs
+            return pk_map, add_df
 
         # Initialize the primary_table entry in pk_mod_primary_table if it doesn't exist
         pk_map.setdefault(table, {})
 
         # If PK is defined as a sequential int number
         if pk_int_type:
-            distinct_pks = add_dfs[table][pk_column].drop_duplicates().tolist()
-            min_value = add_dfs[table][pk_column].min()
-            max_value = add_dfs[table][pk_column].max()
+            distinct_pks = add_df[pk_column].drop_duplicates().tolist()
+            min_value = add_df[pk_column].min()
+            max_value = add_df[pk_column].max()
 
             offset = self.next_pk_counter[table] - min_value
 
             # if the PK is relative and an int, add the next_pk_counter value to the minimum value
-            add_dfs[table][pk_column] = add_dfs[table][pk_column] + offset
+            add_df[pk_column] = add_df[pk_column] + offset
 
             # update the next_pk_counter value for the primary_table
             self.next_pk_counter[table] += max_value
@@ -1188,7 +1181,7 @@ class DataHandler:
         # else, if PK is not a sequential int, generate a new UI
         else:
             # Extract original primary key values
-            old_pks = add_dfs[table][pk_column].tolist()
+            old_pks = add_df[pk_column].tolist()
 
             # Create a list of IDs sequentially counting from self.next_pk_counter[primary_table] until self.next_pk_counter[primary_table] + len(original_pks)
             new_pks = list(
@@ -1202,12 +1195,12 @@ class DataHandler:
             pk_map.setdefault(table, {}).update(dict(zip(old_pks, new_pks)))
 
             # Replace the primary key column values with the new keys
-            add_dfs[table][pk_column] = add_dfs[table][pk_column].map(pk_map[table])
+            add_df[pk_column] = add_df[pk_column].map(pk_map[table])
 
             # update self.next_pk_counter[primary_table]
             self.next_pk_counter[table] += len(old_pks)
 
-        return pk_map, add_dfs
+        return pk_map, add_df
 
     # --------------------------------------------------------------
     def _update_foreign_keys(
@@ -1218,7 +1211,8 @@ class DataHandler:
         table: str,
         file: str,
     ) -> tuple[dict[str, pd.DataFrame], dict[str, Any]]:
-        """Update foreign keys in existing dataframe based on key mappings and
+        """Update foreign keys (FK) in existing dataframe based on key mappings,
+        reindex dataframe considering new FK, and
         mark the corresponding changes in the associations_to_check dict.
         Args:
             pk_map (dict[str, dict[str, str]]): Dictionary with primary key mappings for
@@ -1237,8 +1231,6 @@ class DataHandler:
         """
 
         mappings = pk_map.get(table, None)
-        if not mappings:
-            return new_data_df, associations_to_check
 
         referenced_by = (
             self.config.table_associations.get(table, {})
@@ -1257,7 +1249,10 @@ class DataHandler:
                 .get(table, None)
             )
 
-            if not fk_column or fk_column not in new_data_df[ref_table].columns:
+            if (
+                not fk_column
+                or fk_column not in new_data_df.get(ref_table, pd.DataFrame()).columns
+            ):
                 continue
 
             new_data_df[ref_table][fk_column] = new_data_df[ref_table][
@@ -1271,9 +1266,9 @@ class DataHandler:
 
             # Remove processed foreign keys from associations_to_check
             associations_to_check[ref_table][cm.FK_KEY].pop(table, None)
-            if not associations_to_check[ref_table][
-                cm.FK_KEY
-            ]:  # Remove FK_KEY if empty
+
+            # Remove FK_KEY if empty
+            if not associations_to_check[ref_table][cm.FK_KEY]:
                 associations_to_check[ref_table].pop(cm.FK_KEY, None)
 
         return new_data_df, associations_to_check
@@ -1281,58 +1276,54 @@ class DataHandler:
     # --------------------------------------------------------------
     def _apply_updates_to_reference_data(
         self,
-        update_dfs: dict[str, pd.DataFrame],
-        add_dfs: dict[str, pd.DataFrame],
-        file: str,
+        update_df: pd.DataFrame,
+        add_df: pd.DataFrame,
+        table: str,
     ) -> None:
         """Apply updates to reference data from both updated and new rows.
 
         Args:
-            update_dfs: Dictionary of DataFrames with rows to update
-            add_dfs: Dictionary of DataFrames with rows to add
-            file: The metadata file being processed
+            update_df: DataFrame with rows to update
+            add_df: DataFrame with rows to add
+            table: Table to be updated/extended in the reference data
 
         Returns:
             None
         """
 
         # apply updates using combine_first method
-        for table in update_dfs.keys():
+        if not update_df.empty:
             try:
-                self.log.debug(
-                    f"Updating {update_dfs[table].shape[0]} rows in table {table}"
-                )
+                self.log.debug(f"Updating {update_df.shape[0]} rows in table {table}")
 
                 self.ref_df[table] = self._add_missing_columns_from_df(
-                    self.ref_df[table], update_dfs[table]
+                    self.ref_df[table], update_df
                 )
 
-                self.ref_df[table] = update_dfs[table].combine_first(self.ref_df[table])
+                self.ref_df[table] = update_df.combine_first(self.ref_df[table])
 
             except Exception as e:
                 self.log.error(
                     self.config.exception_message_handling(
-                        f"Error updating data from \nFile: {file}\nTable: {table}: Error: {e}"
+                        f"Error updating data in Table: {table}: Error: {e}"
                     )
                 )
 
         # add new rows using concat method
-        for table in add_dfs.keys():
+        if not add_df.empty:
             try:
-                self.log.debug(
-                    f"Adding {add_dfs[table].shape[0]} new rows to table {table}"
-                )
+                self.log.debug(f"Adding {add_df.shape[0]} new rows to table {table}")
 
                 self.ref_df[table] = self._add_missing_columns_from_df(
-                    self.ref_df[table], add_dfs[table]
+                    self.ref_df[table], add_df
                 )
 
-                self.ref_df[table] = pd.concat([self.ref_df[table], add_dfs[table]])
+                self.ref_df[table] = pd.concat([self.ref_df[table], add_df])
 
             except Exception as e:
                 self.log.error(
                     self.config.exception_message_handling(
-                        f"Error adding data from \nFile: {file}\nTable: {table}: Error: {e}"
+                        f"Error adding data  in Table: {table}: Error: {e}"
                     )
                 )
 
