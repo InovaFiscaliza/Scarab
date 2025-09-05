@@ -102,7 +102,7 @@ To finish the test you may use the command `kill -9 <pid>` from another terminal
 The pid is number displayed in the log file and screen, between square brackets after the script name.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -110,6 +110,7 @@ The pid is number displayed in the log file and screen, between square brackets 
     </a>
     <br><br>
 </div>
+
 
 ## Multiple input and output folders test
 
@@ -123,7 +124,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 > * Folder `get_other`, that was initially empty, should have the same content as the `get` folder, including pre-existing files in the raw subfolder.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -131,6 +132,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
     </a>
     <br><br>
 </div>
+
 
 ## Disable overwrite and with same files coming from different sources
 
@@ -144,7 +146,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 > * Same file posted in multiple folders are processed only once.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -171,7 +173,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 > New rows should be added whenever one of the columns associated with the keys are changed.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -191,7 +193,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 Results are expected to be similar to the previous tests, but with a larger file to process and errors such as missing key data, key conflicts and variable columns.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -199,7 +201,6 @@ Results are expected to be similar to the previous tests, but with a larger file
     </a>
     <br><br>
 </div>
-
 
 ## SCH Null Data Test
 
@@ -212,7 +213,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the following
 Different from the previous test, at this time there is no data, but only tables to process. There are conflicts in file naming and missing data to be handled.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -229,14 +230,16 @@ This tests will try to insert data with special characters in the column names.
 
 The `config.json` file includes a required column with all characters allowed, but and the metadata file has a column with a special character that is not allowed.
 
-After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed, the file Anuncios.xlsx originaly placed in the get folder will be moved to the `trash`, since it does not conform with the required columns. The data files will be moved from the `temp` to the `get\raw` folder and metadata files will be moved from the `post` to the `temp` folder, and left in there. The application will keep trying to process these files but fail since they do not conform with the required columns defined in the config.json file, which include special characters
 
-Its expected that all metadata files to be moved to trash. Messages should point that the column with all characters allowed is not present in the metadata file. Check if the name is correct.
+The execution must be interrupted using `ctrl+c` once this loop is detected.
 
-If the `config.json` file is changed to remove the column with all characters, the test should run without errors and the column with special characters (11th column with name `caracterí\xadsticas` in new data files) should be renamed, removing the characters `\xad`.
+To proceed, one must run `uv run ..\src\scarab.py .\sandbox\config_alt.json`, that has the required column with special characters removed from the required keys.
+
+Its expected that all metadata files will be processed without errors and the column with special characters (11th column with name `caracterí\xadsticas` in new data files) should be renamed, removing the characters `\xad`. Metadata files should be moved to store and the application should end in the idle loop, waiting for new files.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -256,7 +259,7 @@ The test need to be run twice using two different configuration files, either us
 Two metadata files will be produced, one consolidating the xlsx files that summarize the raw data and other the two different types of json files, that provide metadata fot the raw files.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -264,6 +267,7 @@ Two metadata files will be produced, one consolidating the xlsx files that summa
     </a>
     <br><br>
 </div>
+
 
 ## Null Data Filename Test
 
@@ -276,7 +280,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 Metadata files will be consolidated and data files will be left in the temp folder, waiting for clean operation, which may be triggered according to the files timestamp.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -284,6 +288,7 @@ Metadata files will be consolidated and data files will be left in the temp fold
     </a>
     <br><br>
 </div>
+
 
 ## Input files and folders to ignore
 
@@ -296,7 +301,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 The file `.file_to_ignore` and folder `folder_to_ignore` should be ignored in the input folders.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -318,7 +323,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 A single xlsx file will be produced in the get folder, with multiple worksheets, one for each input table.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -338,7 +343,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 A single xlsx file will be produced in the get folder, with two worksheets, one for each input file type related to measurement data files and metadata of the files that were processed.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -346,6 +351,7 @@ A single xlsx file will be produced in the get folder, with two worksheets, one 
     </a>
     <br><br>
 </div>
+
 
 ## Multiple input with CSV and single output test
 
@@ -356,7 +362,7 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
 This test use mixed input, including CSV and XLSX files, joining inputs some of the CSV data should be uploaded to one of the tables in the output xlsx file, using worksheets to separate content from different sources.
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">
@@ -377,7 +383,7 @@ This test also include validation of key values, including foreign keys and remo
 
 
 <div>
-    < a href="https://github.com/InovaFiscaliza/Scarab">
+    <a href="https://github.com/InovaFiscaliza/Scarab">
         <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
     </a>
     <a href="#about-scarab-tests">

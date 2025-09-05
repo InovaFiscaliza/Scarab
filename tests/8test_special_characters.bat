@@ -21,9 +21,12 @@ echo First run will give warnings and not upload the data.
 echo In the second run, will update the output and remove invalid characters
 echo    from column names
 echo.
-echo echo Run the script twice, either using two terminals or sequentially using:
+echo Run the script twice, either using two terminals or sequentially using:
+echo.
 echo     uv run ..\src\scarab.py .\sandbox\config.json
+echo.
 echo     move .\sandbox\trash\Anuncios.xlsx .\sandbox\get\Anuncios.xlsx
+echo.
 echo     uv run ..\src\scarab.py .\sandbox\config_alt.json
 echo.
 echo Check if the output is as described in README.md.
