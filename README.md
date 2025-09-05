@@ -18,14 +18,17 @@
 # About Scarab
 
 <div>
-<img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> This app is intended to run as a service and perform basic ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation and logging.
+<img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> </div>
+
+This app is intended to run as a service and perform ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation and logging.
 
 Metadata files are expected to be tables in XLSX or CSV format, with the first row as the column headers, or JSON arrays and dictionaries.
 
-XLSX and JSON files may contain multiple tables defined in sheets or dictionaries entries in the first level, respectively. Association between the tables is defined by "Primary Key" and "Foreign Key" columns, and may be defined with absolute (UI) or relative values (specific to each file). Metadata may also be extracted from the filenames using regex patterns and the filename itself may be stored in the metadata file.
+XLSX and JSON files may contain multiple tables defined in sheets or dictionaries entries in the first level, respectively. Association between the tables is defined by "Primary Key" and "Foreign Key" columns, and may be defined with absolute (UI) or relative values (specific to each file).
+
+Metadata may also be extracted from the filenames using regex patterns and the filename itself may be stored in the metadata file.
 
 Application is written in Python and uses the UV package for environment management and intended to run as a service. Exemples of service configuration files for the Windows Task Manager are provided in the [data/examples](./data/examples/) folder.
-</div>
 
 <div>
     <a href="#about-scarab">
