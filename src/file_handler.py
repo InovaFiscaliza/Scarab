@@ -616,8 +616,8 @@ class FileHandler:
         """
 
         with open(file_path, "rb") as f:
-            rawdata = f.read()
-            result = from_bytes(rawdata).best()
+            raw_data = f.read()
+            result = from_bytes(raw_data).best()
             if result:
                 return result.encoding
             else:
