@@ -5,10 +5,30 @@
     "clean period in hours": 1,
     "delay first clean": true,
     "last clean": "none",
-    "maximum errors before exit" : 5,
-    "maximum file variations" : 100,
-    "character scope" : "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈìÌòÒùÙâÂêÊîÎôÔûÛäÄëËïÏöÖüÜÿŒœÆæ%|?!.,><°\"-_ ]+",
-    "null string values": ["<NA>", "NA", "N/A", "na", "Na", "n/a", "None", "null", "", "pd.NA", "pd.NaT", "pd.NA", "pd.NaT", "nan", "NaN", "NAN", "missing value", "Missing Value", "MISSING VALUE"],
+    "maximum errors before exit": 5,
+    "maximum file variations": 100,
+    "character scope": "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈìÌòÒùÙâÂêÊîÎôÔûÛäÄëËïÏöÖüÜÿŒœÆæ%|?!.,><°\"-_ ]+",
+    "null string values": [
+        "<NA>",
+        "NA",
+        "N/A",
+        "na",
+        "Na",
+        "n/a",
+        "None",
+        "null",
+        "",
+        "pd.NA",
+        "pd.NaT",
+        "pd.NA",
+        "pd.NaT",
+        "nan",
+        "NaN",
+        "NAN",
+        "missing value",
+        "Missing Value",
+        "MISSING VALUE"
+    ],
     "default worksheet key": "_",
     "default multiple object key": "*",
     "default unlimited characters scope": "*",
@@ -41,25 +61,37 @@
     },
     "folders": {
         "post": [],
-        "get" : {}
+        "get": {}
     },
-    "files" : {
+    "files": {
         "metadata file regex": {},
         "data file regex": {},
-        "catalog names":[],
-        "table names": {"_":"<name>"},
+        "catalog names": [],
+        "table names": {
+            "_": "<name>"
+        },
         "input to ignore": []
     },
     "metadata": {
-        "required tables": ["_"],
-        "key": {"_":[]},
+        "required tables": [
+            "_"
+        ],
+        "key": {
+            "_": []
+        },
         "association": {},
-        "in columns": {"_":[]},
+        "in columns": {
+            "_": []
+        },
         "sort by": {},
-        "data filenames": {"_":[]},
-        "data published flag": {"_":[]},
+        "data filenames": {
+            "_": []
+        },
+        "data published flag": {
+            "_": []
+        },
         "add filename": {},
         "filename data format": {},
-        "filename data processing rules" : {}
+        "filename data processing rules": {}
     }
 }
