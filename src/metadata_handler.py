@@ -77,6 +77,20 @@ class DataHandler:
         self.ref_cols: dict[str, list[str]] = col
         """Dictionary with list of columns in in each reference DataFrame."""
 
+        # If all tables were loaded, save the reference file from the dataframe loaded, considering corrections that may have been performed.
+        persist_ref_df = True
+        for df in self.ref_df.values():
+            if df.empty:
+                persist_ref_df = False
+
+        if persist_ref_df:
+            if not self.persist_reference():
+                raise (
+                    RuntimeError(
+                        "Error saving the reference data after loading. Check configuration and file permissions."
+                    )
+                )
+
         self.next_pk_counter: dict[str, int] = self._initialize_next_pk_counter()
         """ Dictionary with initial number to be used as primary keys in each table. The key is the table name and the value is the number of free primary keys. """
         self.pk_mod_table: dict[str, dict[str, str]] = {}
@@ -288,7 +302,7 @@ class DataHandler:
 
             if not duplicate_rows.empty:
                 self.log.warning(
-                    f"Duplicated keys in {len(duplicate_rows)} rows in {file}, table {table}. Rows will be merged and table will be reduced by {len(duplicate_rows) / 2} row(s)."
+                    f"Data key repeated in {len(duplicate_rows)} rows in {file}, table {table}. Rows will be merged"
                 )
                 # Apply the custom aggregation function to the duplicate rows
                 aggregated_rows = duplicate_rows.groupby(self.index_column).agg(
@@ -942,6 +956,9 @@ class DataHandler:
         )
 
         for table in unassociated_tables:
+            if new_data_df.get(table, pd.DataFrame()).empty:
+                continue
+
             update_df, add_df = self.split_df_rows_add_update(new_data_df, table)
 
             self._apply_updates_to_reference_data(update_df, add_df, table)
@@ -999,7 +1016,7 @@ class DataHandler:
 
                 pk_info_to_check = assoc.get(cm.PK_KEY, None)
                 fk_info_to_check = assoc.get(cm.FK_KEY, None)
-                if pk_info_to_check:
+                if pk_info_to_check is not None:
                     # process only tables with unchecked primary keys where all foreign keys are checked
                     if fk_info_to_check:
                         success_running_step = True
@@ -1037,10 +1054,10 @@ class DataHandler:
                     success_running_step = True
 
         if not success_running_step:
+            self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
             raise ValueError(
-                f"Could not update all primary/foreign keys for data from file {file}. Check configuration and data integrity."
+                f"Could not update all primary/foreign keys for metadata from file {file}. File will be moved to trash. Check configuration and metadata file before attempting to reprocess."
             )
-            # TODO: Move the problematic file to trash and continue processing other files. Create a quarantine repository as alternative to trash
 
         return
 
@@ -1371,7 +1388,7 @@ class DataHandler:
 
         if table in self.config.add_filename.keys():
             if self.config.add_filename[table] in df.columns:
-                self.log.warning(
+                self.log.debug(
                     f"Column `{self.config.add_filename[table]}` already exists in table `{table}` from file `{file}`. No filename column will be added."
                 )
                 return df
@@ -1693,14 +1710,14 @@ class DataHandler:
         df = {}
         for table in self.ref_df.keys():
             # sort the reference DataFrame by the columns defined in the config file
-            self.ref_df[table] = self.ref_df[table].sort_values(
+            df[table] = self.ref_df[table].sort_values(
                 by=self.config.rows_sort_by[table][cm.SORT_BY_KEY],
                 ascending=self.config.rows_sort_by[table][cm.ASCENDING_SORT_KEY],
                 ignore_index=True,
             )
 
             # get selected columns in the defined order
-            df[table] = self.ref_df[table][self.ref_cols[table]]
+            df[table] = df[table][self.ref_cols[table]]
 
         # loop through the target catalog files and save the reference data,
         # ensuring that at least one file is saved successfully before returning True
