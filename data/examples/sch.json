@@ -18,7 +18,10 @@
         ],
         "temp": "C:/ProgramData/Anatel/scarab/temp/SCH",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/SCH",
-        "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/SCH",
+        "store": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/SCH",
+            "Z:/sp/STORE/SCH"
+        ],
         "get": {
             "parquet": [
                 "Z:/sp/GET/SCH",

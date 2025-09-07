@@ -8,7 +8,7 @@
         "file output": true,
         "file path": [
             "Z:/sp/GET/appAnalise/log.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/log.txt"
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/log_appAnalise.txt"
         ]
     },
     "folders": {
@@ -18,7 +18,10 @@
         ],
         "temp": "C:/ProgramData/Anatel/scarab/temp/appAnalise",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/appAnalise",
-        "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/appAnalise"
+        "store": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/appAnalise",
+            "Z:/sp/STORE/appAnalise"
+        ]
     },
     "files": {
         "metadata file regex": {
@@ -36,7 +39,9 @@
             "MeasurementData": "5. Resumo de Medições",
             "_": "6. Arquivos Considerados"
         },
-        "input to ignore": ["Z:/sp/POST/monitorRNI/.appanalise_post"]
+        "input to ignore": [
+            "Z:/sp/POST/monitorRNI/.appanalise_post"
+        ]
     },
     "metadata": {
         "required tables": [
@@ -112,10 +117,30 @@
             }
         },
         "sort by": {
-            "ReferenceData1": {"by":["PK1"],"ascending":true},
-            "ReferenceData2": {"by":["PK2"],"ascending":true},
-            "ReferenceData3": {"by":["PK3"],"ascending":true},
-            "ReferenceData4": {"by":["PK4"],"ascending":true}
+            "ReferenceData1": {
+                "by": [
+                    "PK1"
+                ],
+                "ascending": true
+            },
+            "ReferenceData2": {
+                "by": [
+                    "PK2"
+                ],
+                "ascending": true
+            },
+            "ReferenceData3": {
+                "by": [
+                    "PK3"
+                ],
+                "ascending": true
+            },
+            "ReferenceData4": {
+                "by": [
+                    "PK4"
+                ],
+                "ascending": true
+            }
         },
         "add filename": {
             "_": "Filename"

@@ -8,8 +8,8 @@
         "level": "INFO",
         "file output": true,
         "file path": [
-            "Z:/sp/GET/monitorRNI/log_files.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/log_files.txt"
+            "Z:/sp/GET/monitorRNI/log_monitorRNI.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/log_monitorRNI.txt"
         ]
     },
     "folders": {
@@ -25,7 +25,10 @@
         },
         "temp": "C:/ProgramData/Anatel/scarab/temp/monitorRNI",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/monitorRNI",
-        "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/monitorRNI"
+        "store": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/monitorRNI",
+            "Z:/sp/STORE/monitorRNI"
+        ]
     },
     "files": {
         "metadata file regex": {

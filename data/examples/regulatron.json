@@ -8,7 +8,7 @@
         "file output": true,
         "file path": [
             "Z:/sp/GET/Regulatron/log.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/log.txt"
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/log_Regulatron.txt"
         ]
     },
     "folders": {
@@ -16,13 +16,18 @@
             "Z:/sp/POST/Regulatron",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/Regulatron"
         ],
-        "get": {"pdf": [
-            "Z:/sp/GET/Regulatron/Screenshots",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Screenshots"
-        ]},
+        "get": {
+            "pdf": [
+                "Z:/sp/GET/Regulatron/Screenshots",
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Screenshots"
+            ]
+        },
         "temp": "C:/ProgramData/Anatel/scarab/temp/Regulatron",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/Regulatron",
-        "store": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/Regulatron"
+        "store": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/Regulatron",
+            "Z:/sp/STORE/Regulatron"
+        ]
     },
     "files": {
         "metadata file regex": {
@@ -44,42 +49,54 @@
         ]
     },
     "metadata": {
-        "in columns": {"_": [
-            "nome",
-            "pre\u00e7o",
-            "avalia\u00e7\u00f5es",
-            "imagem",
-            "url",
-            "data",
-            "palavra_busca",
-            "p\u00e1gina_de_busca",
-            "certificado",
-            "caracter\u00edsticas",
-            "descri\u00e7\u00e3o",
-            "ean_gtin",
-            "estado",
-            "estoque",
-            "imagens",
-            "fabricante",
-            "modelo",
-            "nota",
-            "product_id",
-            "vendas",
-            "vendedor",
-            "screenshot",
-            "indice",
-            "subcategoria",
-            "nome_sch",
-            "fabricante_sch",
-            "modelo_sch",
-            "tipo_sch",
-            "marketplace"
-        ]},
-        "key": {"_": [
-            "screenshot",
-            "url"
-        ]},
-        "data filenames": {"_": ["screenshot"]},
-        "data published flag": {"_": ["status_screenshot"]}
+        "in columns": {
+            "_": [
+                "nome",
+                "pre\u00e7o",
+                "avalia\u00e7\u00f5es",
+                "imagem",
+                "url",
+                "data",
+                "palavra_busca",
+                "p\u00e1gina_de_busca",
+                "certificado",
+                "caracter\u00edsticas",
+                "descri\u00e7\u00e3o",
+                "ean_gtin",
+                "estado",
+                "estoque",
+                "imagens",
+                "fabricante",
+                "modelo",
+                "nota",
+                "product_id",
+                "vendas",
+                "vendedor",
+                "screenshot",
+                "indice",
+                "subcategoria",
+                "nome_sch",
+                "fabricante_sch",
+                "modelo_sch",
+                "tipo_sch",
+                "marketplace"
+            ]
+        },
+        "key": {
+            "_": [
+                "screenshot",
+                "url"
+            ]
+        },
+        "data filenames": {
+            "_": [
+                "screenshot"
+            ]
+        },
+        "data published flag": {
+            "_": [
+                "status_screenshot"
+            ]
+        }
     }
 }
