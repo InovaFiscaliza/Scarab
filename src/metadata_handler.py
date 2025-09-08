@@ -712,7 +712,7 @@ class DataHandler:
                         sheet_names = excel_file.sheet_names
 
                         # create a copy of sheet_names to avoid modifying the original list with the for loop
-                        sheet_names_copy = sheet_names.copy()
+                        sheets_pending_to_read = sheet_names.copy()
 
                         # If there are multiple worksheets
                         if len(sheet_names) > 1:
@@ -740,12 +740,12 @@ class DataHandler:
                                     new_data_columns[table] = columns
 
                                     # remove the processed sheet name from the list of new_data_df
-                                    sheet_names_copy.remove(sheet_name)
+                                    sheets_pending_to_read.remove(sheet_name)
 
-                        if sheet_names_copy:
-                            if len(sheet_names_copy) == 1:
+                        if sheets_pending_to_read:
+                            if len(sheets_pending_to_read) == 1:
                                 new_df = excel_file.parse(
-                                    sheet_names_copy[0], dtype="string"
+                                    sheets_pending_to_read[0], dtype="string"
                                 )
                                 add_remaining_data = True
                             else:
@@ -1541,13 +1541,6 @@ class DataHandler:
                 suggested_table=self.config.default_multiple_object_key,
             )
 
-        if not latest_file:
-            self.log.warning(
-                "No reference data file found. Starting with a blank reference."
-            )
-            ref_df = {key: pd.DataFrame() for key in self.config.table_names}
-            ref_cols = {key: [] for key in self.config.table_names}
-        else:
             for table, df in ref_df.items():
                 if len(df.columns) == 0:
                     self.log.warning(
@@ -1560,6 +1553,12 @@ class DataHandler:
                         self.log.warning(
                             f"File '{file}' moved to trash as it contains no valid data."
                         )
+        else:
+            self.log.warning(
+                "No reference data file found. Starting with a blank reference."
+            )
+            ref_df = {key: pd.DataFrame() for key in self.config.table_names}
+            ref_cols = {key: [] for key in self.config.table_names}
 
         return ref_df, ref_cols
 
