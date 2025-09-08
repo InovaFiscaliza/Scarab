@@ -158,6 +158,10 @@ class FileHandler:
             shutil.move(file, self.config.trash)
         except Exception as e:
             # FileExistsError not functioning as expected for windows in current version of shutil. Need to handle it with additional test
+            if not os.path.exists(file):
+                self.log.error(f"Error moving {file} to trash folder: {e}")
+                return
+
             if os.path.exists(trashed_file):
                 if overwrite:
                     self.remove_file(trashed_file)
@@ -200,8 +204,6 @@ class FileHandler:
                                 raise Exception(
                                     f"Too many variants of the same file in trash folder. Check folder properties. Error: {e}"
                                 )
-
-                        # TODO: #5 Assign new name to the incoming file in order to avoid overwriting the existing file when trashing
 
                     self.log.info(f"Renamed {filename} to {trashed_filename} in trash.")
 
@@ -522,7 +524,6 @@ class FileHandler:
 
         # Remove empty subfolder after moving files.
         if folder_to_remove:
-            # TODO: #1  Check if the subfolder is expected as defined in the config file and do not remove it
             for folder in folder_to_remove:
                 # New files that may have appeared in the subfolder will be processed in the next run, so test if it is empty before removing
                 if not os.listdir(folder):
@@ -548,7 +549,6 @@ class FileHandler:
 
             self._clean_old_in_folder(self.config.temp)
 
-            # TODO: #3 Sync multiple catalog files by checking if they have same content and merge them
             try:
                 self.config.set_last_clean()
             except Exception as e:
