@@ -7,7 +7,7 @@
         "level": "INFO",
         "file output": true,
         "file path": [
-            "Z:/sp/GET/Regulatron/log.txt",
+            "Z:/sp/GET/Regulatron/log_Regulatron.txt",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/log_Regulatron.txt"
         ]
     },
