@@ -964,7 +964,7 @@ class DataHandler:
             self._apply_updates_to_reference_data(update_df, add_df, table)
 
             self.log.info(
-                f"Table {table} from file {file}: {len(update_df.get(table, pd.DataFrame()))} rows updated, {len(add_df.get(table, pd.DataFrame()))} rows added."
+                f"Table {table} from file {file}: {update_df.shape[0]} rows updated, {add_df.shape[0]} rows added."
             )
 
         associated_tables = new_data_df.keys() - unassociated_tables
@@ -1007,51 +1007,47 @@ class DataHandler:
                     success_running_step = True
                     continue
 
-                # get the table association info from the config file, if not found, remove the table from the associations_to_check dict and continue
+                # get the table association info from the config file, if not found, move to the next
                 assoc = associations_to_check.get(table, None)
-                if not assoc:
-                    associations_to_check.pop(table)
-                    success_running_step = True
+                if assoc is None:
                     continue
 
-                pk_info_to_check = assoc.get(cm.PK_KEY, None)
                 fk_info_to_check = assoc.get(cm.FK_KEY, None)
-                if pk_info_to_check is not None:
-                    # process only tables with unchecked primary keys where all foreign keys are checked
-                    if fk_info_to_check:
-                        success_running_step = True
-                        continue
-                    else:
-                        associations_to_check[table].pop(cm.FK_KEY, None)
 
-                    # for the table with unchecked primary key, split the dataframe into rows to update and rows to add, mapping old and new primary keys
-                    update_df, add_df = self.split_df_rows_add_update(
-                        new_data_df, table
-                    )
-
-                    pk_map[table] = {}
-                    # apply changes to the PK in the update_dfs dataframes
-                    pk_map, update_df = self._update_primary_keys(
-                        pk_map, update_df, table
-                    )
-
-                    # apply changes to the PK in the add_dfs dataframes
-                    pk_map, add_df = self._assign_primary_keys(pk_map, add_df, table)
-
-                    self._apply_updates_to_reference_data(update_df, add_df, table)
-
-                    # apply changes to the FK in the update_dfs and add_dfs dataframes of other tables, popping the changed FK from the associations_to_check dict
-                    new_data_df, associations_to_check = self._update_foreign_keys(
-                        pk_map,
-                        new_data_df,
-                        associations_to_check,
-                        table,
-                        file,
-                    )
-
-                    # Once pk is checked table may be removed. Remember that all FK have been processed prior to the PK processing.
-                    associations_to_check.pop(table, None)
+                # process only tables with unchecked primary keys where all foreign keys are checked
+                if fk_info_to_check is not None:
                     success_running_step = True
+                    continue
+                else:
+                    associations_to_check[table].pop(cm.FK_KEY, None)
+
+                # for the table with unchecked primary key, split the dataframe into rows to update and rows to add, mapping old and new primary keys
+                update_df, add_df = self.split_df_rows_add_update(new_data_df, table)
+                self.log.info(
+                    f"Table {table} from file {file}: {update_df.shape[0]} rows updated, {add_df.shape[0]} rows added."
+                )
+
+                pk_map[table] = {}
+                # apply changes to the PK in the update_dfs dataframes
+                pk_map, update_df = self._update_primary_keys(pk_map, update_df, table)
+
+                # apply changes to the PK in the add_dfs dataframes
+                pk_map, add_df = self._assign_primary_keys(pk_map, add_df, table)
+
+                self._apply_updates_to_reference_data(update_df, add_df, table)
+
+                # apply changes to the FK in the update_dfs and add_dfs dataframes of other tables, popping the changed FK from the associations_to_check dict
+                new_data_df, associations_to_check = self._update_foreign_keys(
+                    pk_map,
+                    new_data_df,
+                    associations_to_check,
+                    table,
+                    file,
+                )
+
+                # Once pk is checked table may be removed. Remember that all FK have been processed prior to the PK processing.
+                associations_to_check.pop(table, None)
+                success_running_step = True
 
         if not success_running_step:
             self.file.trash_it(file=file, overwrite=self.config.trash_data_overwrite)
@@ -1064,7 +1060,7 @@ class DataHandler:
     # --------------------------------------------------------------
     def split_df_rows_add_update(
         self, new_data_df: dict[str, pd.DataFrame], table: str
-    ) -> tuple[dict[dict[str, pd.DataFrame], dict[str, pd.DataFrame]]]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Split new data into rows that need to be updated and rows that need to be added
         Create a primary key mapping to associate the PK in the file to the PK in the reference DF.
 
