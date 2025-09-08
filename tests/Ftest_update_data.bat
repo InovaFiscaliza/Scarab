@@ -15,7 +15,7 @@ if %errorlevel% neq 0 (
 
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 echo.
-echo Test processing of multiple with update data.
+echo Test processing updates in multitable json.
 echo.
 echo Run the script using: uv run ..\src\scarab.py .\sandbox\config.json
 echo.
