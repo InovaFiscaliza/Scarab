@@ -144,7 +144,7 @@
         },
         "add filename": {
             "_": "Filename",
-            "1. Equipamentos e Locais": "Filename"
+            "ReferenceData1": "Filename"
         },
         "filename data format": {
             "_": "(?P<name>\\w+)_(?P<date>\\d{4}\\.\\d{2}\\.\\d{2})_T(?P<time>\\d{2}\\.\\d{2}\\.\\d{2})_(?P<Inspection>\\d+)"
