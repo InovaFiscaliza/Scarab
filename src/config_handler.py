@@ -228,7 +228,7 @@ class Config:
                 "trash", config["folders"].pop("trash")
             )
             """ Trash folder path used for files posted using wrong format. [! Mandatory]"""
-            self.store: str = self._ensure_list(
+            self.store: list[str] = self._ensure_list(
                 default_conf["folders"].get("store", config["folders"].pop("store"))
             )
             """ Store folder path used to store processed files. [! Mandatory]"""
@@ -244,6 +244,9 @@ class Config:
                 )
             )
             """ Full path to the catalog file, where metadata is stored"""
+
+            self.test_folders()
+
             self.metadata_file_regex: dict[str, re.Pattern] = self._build_re_dict(
                 config["files"].pop(
                     "metadata file regex", default_conf["files"]["metadata file regex"]
@@ -1065,6 +1068,70 @@ class Config:
                 )
 
         return tables
+
+    # --------------------------------------------------------------
+    def test_folders(self) -> None:
+        """Test if folders defined in the configuration file exist,
+        create them if they do not, and
+        test if they are writable.
+        Exit with error message if problem found
+
+        Returns:
+            None
+
+        Raises: None
+        """
+
+        try:
+            folders = [os.path.dirname(folder) for folder in self.log_file_path]
+            folders.extend([p for paths in self.get.values() for p in paths])
+            folders.extend([self.trash])
+            folders.extend(self.input_path_list)
+            folders.extend(self.store)
+            folders.extend(os.path.dirname(folder) for folder in self.catalog_files)
+        except Exception as e:
+            print(f"\n\nError: When attempting to build folder list: {e}")
+            exit(1)
+
+        try:
+            for folder in folders:
+                if not os.path.exists(folder):
+                    os.makedirs(folder, exist_ok=True)
+                    print(f"\n\nWARNING: Created folder: {folder}")
+
+                if not os.path.isdir(folder):
+                    print(f"\n\nError: Not a folder: {folder}")
+                    exit(1)
+
+                self.test_folder_writable(folder)
+
+        except Exception as e:
+            print(f"\n\nError: When attempting to test folder {folder}: {e}")
+            exit(1)
+
+    # --------------------------------------------------------------
+    def test_folder_writable(self, folder: str) -> bool:
+        """Test if the folder is writable. Exit with error message if false.
+
+        Args:
+            folder (str): folder path to be tested.
+
+        Returns:
+            bool: True if the folder is writable, False otherwise.
+        """
+
+        try:
+            test_file = os.path.join(folder, ".test_write_access")
+            with open(test_file, "w") as f:
+                f.write("test")
+            try:
+                os.remove(test_file)
+            except Exception as e:
+                print(f"\n\nError: Could not remove test file: {e}")
+                exit(1)
+        except Exception:
+            print(f"\n\nError: Folder not writable: {folder}")
+            exit(1)
 
     # --------------------------------------------------------------
     def is_config_ok(self) -> bool:
