@@ -8,8 +8,8 @@
         "level": "INFO",
         "file output": true,
         "file path": [
-            "Z:/sp/GET/monitorRNI/log_monitorRNI.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/log_monitorRNI.txt"
+            "Z:/sp/GET/log/monitorRNI/log_monitorRNI.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/log/monitorRNI/log_monitorRNI.txt"
         ]
     },
     "folders": {
