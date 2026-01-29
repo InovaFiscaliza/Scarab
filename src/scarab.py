@@ -34,12 +34,12 @@ keep_watching: bool = True
 """Flag to keep the main loop running."""
 error_count = 0
 """Counter of errors to stop the process if too many errors occur."""
-log: logging.Logger = None
+log: logging.Logger | None = None
 """Logger object."""
 
 
 # --------------------------------------------------------------
-def sigint_handler(signal_code: signal.Signals = None, frame: FrameType = None) -> None:
+def sigint_handler(signal_code: signal.Signals, frame: FrameType) -> None:
     """Signal handler to stop the process."""
 
     global keep_watching
@@ -49,7 +49,7 @@ def sigint_handler(signal_code: signal.Signals = None, frame: FrameType = None) 
     module_name = frame_info.filename
     line_number = frame_info.lineno
 
-    log.critical(
+    log.critical(  # type: ignore
         f"{signal.Signals(signal_code).name} received when rolling at [{line_number}] in {module_name}"
     )
     keep_watching = False
@@ -64,7 +64,7 @@ def count_errors(threshold: int) -> None:
 
     error_count += 1
     if error_count > threshold:
-        log.critical("Too many errors. Exiting...")
+        log.critical("Too many errors. Exiting...")  # type: ignore
         keep_watching = False
 
 
@@ -73,9 +73,9 @@ def count_errors(threshold: int) -> None:
 # --------------------------------------------------------------
 
 # Register the signal handler function, to handle system kill commands
-signal.signal(signal.SIGTERM, sigint_handler)
-signal.signal(signal.SIGBREAK, sigint_handler)
-signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGTERM, sigint_handler)  # type: ignore
+signal.signal(signal.SIGBREAK, sigint_handler)  # type: ignore
+signal.signal(signal.SIGINT, sigint_handler)  # type: ignore
 
 
 def main(config_path: str) -> None:
