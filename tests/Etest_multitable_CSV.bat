@@ -9,7 +9,7 @@ tar -xf test_E.tgz
 
 REM Check if extraction was successful
 if %errorlevel% neq 0 (
-    echo Failed to extract test_D.tgz
+    echo Failed to extract test_E.tgz
     exit /b %errorlevel%
 )
 
