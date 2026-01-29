@@ -34,7 +34,7 @@ class FileHandler:
     log: logging.Logger
 
     # --------------------------------------------------------------
-    def move_to_temp(self, source_file: str) -> str:
+    def move_to_temp(self, source_file: str) -> str | None:
         """Move a file to the temp folder, return the new path, resetting the file timestamp for the current time and self.log.the event.
 
         Args:
@@ -181,20 +181,20 @@ class FileHandler:
                     # add timestamp to the filename and rename it
                     rename_failed = True
                     variant = 0
+                    trashed_filename = filename
                     while rename_failed:
+                        trashed_filename = self._add_timestamp_to_name(
+                            filename, variant
+                        )
+                        new_trashed_file = os.path.join(
+                            self.config.trash, trashed_filename
+                        )
                         try:
-                            trashed_filename = self._add_timestamp_to_name(
-                                filename, variant
-                            )
-                            new_trashed_file = os.path.join(
-                                self.config.trash, trashed_filename
-                            )
                             os.rename(trashed_file, new_trashed_file)
                             rename_failed = False
-
                         except Exception as e:
                             self.log.warning(
-                                f"Duplicate name for {new_trashed_file}. Trying variant"
+                                f"Duplicate name for {trashed_filename} in trash. Trying variant"
                             )
                             variant = variant + 1
                             if variant > self.config.maximum_file_variations:

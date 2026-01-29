@@ -65,7 +65,7 @@ PK_EXT_SCHEMA: dict[str, type] = {
 }
 
 TABLE_ASSOCIATION_SCHEMA: dict[str, type] = {
-    PK_KEY: PK_EXT_SCHEMA,
+    PK_KEY: PK_EXT_SCHEMA,  # type: ignore
     FK_KEY: dict[str, str],  # Foreign key mapping: table name -> column name
 }
 
@@ -199,7 +199,7 @@ class Config:
                 "file output", default_conf["log"]["file output"]
             )
             """ Flag to log to file"""
-            self.log_file_path: str = self._ensure_list(
+            self.log_file_path: list[str] = self._ensure_list(
                 config["log"].pop("file path", default_conf["log"]["file path"])
             )
             """ Log file name with path"""
@@ -232,7 +232,7 @@ class Config:
                 default_conf["folders"].get("store", config["folders"].pop("store"))
             )
             """ Store folder path used to store processed files. [! Mandatory]"""
-            self.get: dict[str : list[str]] = self._build_list_dict(
+            self.get: dict[str, list[str]] = self._build_list_dict(
                 config["folders"].pop("get", default_conf["folders"]["get"]),
                 "folders/get",
             )
@@ -551,7 +551,7 @@ class Config:
     # --------------------------------------------------------------
     def _validate_table_associations(
         self, associations: dict[str, Any]
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """Validate table associations,
         create back references to link the primary keys to tables that reference them, and
         ensure that FK columns are listed as key columns.
@@ -882,7 +882,7 @@ class Config:
 
         for key in self.key_columns.keys():
             if key not in data:
-                data[key] = None
+                data[key] = {}
             elif isinstance(data[key], dict):
                 if SORT_BY_KEY in data[key]:
                     data[key][SORT_BY_KEY] = self._ensure_list(
@@ -1106,18 +1106,19 @@ class Config:
                 self.test_folder_writable(folder)
 
         except Exception as e:
-            print(f"\n\nError: When attempting to test folder {folder}: {e}")
+            print(f"\n\nError: When attempting to test folder: {e}")
             exit(1)
 
     # --------------------------------------------------------------
-    def test_folder_writable(self, folder: str) -> bool:
+    def test_folder_writable(self, folder: str) -> None:
         """Test if the folder is writable. Exit with error message if false.
 
         Args:
             folder (str): folder path to be tested.
-
         Returns:
-            bool: True if the folder is writable, False otherwise.
+            None
+        Raises:
+            SystemExit: If the folder is not writable.
         """
 
         try:
@@ -1148,10 +1149,11 @@ class Config:
         test_result = True
         msg = f"\nError: In {self.config_file}:"
 
-        for folder in self.post:
+        for folder in self.input_path_list:
             test_result, msg = self._test_folder(folder, "Post", msg)
 
-        test_result, msg = self._test_folder(self.store, "Store", msg)
+        for folder in self.store:
+            test_result, msg = self._test_folder(folder, "Store", msg)
 
         test_result, msg = self._test_folder(self.temp, "Temp", msg)
 

@@ -30,6 +30,7 @@ POST_ORDER_COLUMN_PREFIX = "post_order-"
 INDEX_COLUMN_PREFIX = "index-"
 DATA_FILE_COLUMN_PREFIX = "file-"
 AGGREGATION_SEPARATOR = ", "
+NO_TABLE_FOUND = "ntf"
 
 
 # --------------------------------------------------------------
@@ -185,7 +186,7 @@ class DataHandler:
         return df
 
     # --------------------------------------------------------------
-    def _custom_agg(self, series: pd.Series) -> str:
+    def _custom_agg(self, series: pd.Series) -> str | None:
         """Custom aggregation function to be used in the groupby method. Null is kept as Null, single value is kept as is, and multiple values are concatenated with a comma separator.
 
         Args:
@@ -323,12 +324,12 @@ class DataHandler:
 
         except KeyError as e:
             self.log.error(
-                f"Key error in dataframe from file {file}, table {table}: {e}"
+                f"Key error in dataframe from file {file}, table '{table}'. Error: {e}"
             )
             return pd.DataFrame()
         except Exception as e:
             self.log.error(
-                f"Error creating index in dataframe from file {file}, table {table}: {e}"
+                f"Error creating index in dataframe from file {file}, table '{table}'. Error: {e}"
             )
             return pd.DataFrame()
 
@@ -493,9 +494,10 @@ class DataHandler:
         distance = {
             k: float("inf") for k in self.config.expected_columns_in_files.keys()
         }
+        distance[NO_TABLE_FOUND] = float("inf")
 
         if assigned_table == self.config.default_multiple_object_key:
-            assigned_table = None
+            assigned_table = NO_TABLE_FOUND
 
         for table, required_columns in self.config.expected_columns_in_files.items():
             # compute the distance between the DataFrame columns and the required columns.
@@ -698,6 +700,8 @@ class DataHandler:
             dict[str,list]: Dictionary with the lists of columns for each table.
         """
 
+        new_df: pd.DataFrame = pd.DataFrame()
+
         new_data_df = {key: pd.DataFrame() for key in self.config.table_names}
         new_data_columns = {key: [] for key in self.config.table_names}
         add_remaining_data = False
@@ -723,7 +727,7 @@ class DataHandler:
                             # Process each worksheet separately.
                             for sheet_name in sheet_names:
                                 table = self.config.sheet_names.get(
-                                    sheet_name, sheet_name
+                                    str(sheet_name), str(sheet_name)
                                 )
 
                                 if table in new_data_df.keys():
@@ -736,6 +740,11 @@ class DataHandler:
                                     new_df, columns, table = self.process_table(
                                         df=new_df, table=table, file=file
                                     )
+                                    if table == NO_TABLE_FOUND:
+                                        self.log.warning(
+                                            f"Worksheet '{sheet_name}' in file {file} could not be associated with any table. Skipping."
+                                        )
+                                        continue
                                     new_data_df[table] = new_df
                                     new_data_columns[table] = columns
 
@@ -775,9 +784,17 @@ class DataHandler:
                         if data and table in data:
                             new_df = self.create_dataframe(data[table])
 
-                            new_df, columns, table = self.process_table(
+                            new_df, columns, assigned_table = self.process_table(
                                 df=new_df, table=table, file=file
                             )
+                            if assigned_table == NO_TABLE_FOUND:
+                                self.log.warning(
+                                    f"Table '{table}' in file {file} could not be associated with any table. Skipping."
+                                )
+                                continue
+                            else:
+                                table = assigned_table
+
                             new_data_df[table] = new_df
                             new_data_columns[table] = columns
 
@@ -797,9 +814,10 @@ class DataHandler:
                 else:
                     table = suggested_table
 
-                new_df, columns, table = self.process_table(
+                new_df, columns, assigned_table = self.process_table(
                     df=new_df, table=table, file=file
                 )
+
                 new_data_df[table] = new_df
                 new_data_columns[table] = columns
 
@@ -1095,7 +1113,7 @@ class DataHandler:
         pk_map: dict[str, dict[str, str]],
         update_df: pd.DataFrame,
         table: str,
-    ) -> tuple[dict[dict[str, str]], pd.DataFrame]:
+    ) -> tuple[dict[str, dict[str, str]], pd.DataFrame]:
         """Update the PK in the update DataFrame to match the reference DF.
         Args:
             pk_map (dict[str, dict[str, str]]): Dictionary with primary key mappings for each table. Must contain the table being processed.
@@ -1103,7 +1121,7 @@ class DataHandler:
             table (str): Name of the table to be processed. Table association with PK/FK must be defined in the config file.
         Returns:
             tuple: (pk_map, update_dfs)
-                - pk_map: Updated dictionary mapping old PKs to new PKs by table
+                - pk_map: (dict[str, dict[str, str]]) For each table, updated dictionary mapping old PKs to new PKs
                 - update_df: DataFrame with rows to update in table with updated PKs
         """
 
@@ -1142,7 +1160,7 @@ class DataHandler:
         pk_map: dict[str, dict[str, str]],
         add_df: pd.DataFrame,
         table: str,
-    ) -> tuple[dict[dict[str, str]], pd.DataFrame]:
+    ) -> tuple[dict[str, dict[str, str]], pd.DataFrame]:
         """Update the PK in the update DataFrame to match the reference DF.
         Update the PK in the add DataFrame to match the next available PK in the reference DF.
 
@@ -1520,7 +1538,7 @@ class DataHandler:
 
         # find the newest file in the list of catalog files
         latest_time: float = 0.0
-        latest_file: str = None
+        latest_file: str | None = None
         ref_df: dict[str, pd.DataFrame] = {}
         ref_cols: dict[str, list] = {}
 
