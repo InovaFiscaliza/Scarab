@@ -36,7 +36,9 @@ For VSCode, the debugger configuration is already set in the .vscode folder to r
 
 Edit the content of the sandbox folder to create the desired structure, making modifications in the config.json file if necessary.
 
-Run the following command to create the corresponding TGZ file:
+You may reset the sandbox folder using the initial test batch file `0clean_test.bat`, which will create a clean sandbox structure, with no data files and a sample config.json file.
+
+After setting the test environment, run the following command to create the corresponding TGZ file (tar is default for Linux and MacOS and since Windows 10 version 1803, the April 2018 Update):
 
 ```cmd
 tar -czvf TEST_NAME.tgz sandbox
@@ -254,7 +256,7 @@ Use `9test_mixed_metadata.bat` to set the sandbox folder structure for the test
 
 This test uses two configuration files, simultaneously processing metadata files with different formats from the same source. POST folder is ommited in the config files and also many configurations are left as default. Json input files uses two distinct dictionaries to represent complementary  metadata of the same data files.
 
-The test need to be run twice using two different configuration files, either using independent terminal instances or sequentially do: `uv run ..\src\scarab.py .\sandbox\config.json` and `uv run ..\src\scarab.py .\sandbox\config_alt.json`.
+The test need to be run twice using two different configuration files, either using independent terminal instances or sequentially do: `uv run ..\src\scarab.py .\sandbox\config.json` and then `uv run ..\src\scarab.py .\sandbox\config_alt.json`.
 
 Two metadata files will be produced, one consolidating the xlsx files that summarize the raw data and other the two different types of json files, that provide metadata fot the raw files.
 
@@ -275,7 +277,7 @@ Use `Atest_mixed_metadata.bat` to set the sandbox folder structure for the test
 
 This test uses search for data file references where the columns with filenames is null
 
-After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
 
 Metadata files will be consolidated and data files will be left in the temp folder, waiting for clean operation, which may be triggered according to the files timestamp.
 
@@ -296,7 +298,7 @@ Use `Btest_mixed_metadata.bat` to set the sandbox folder structure for the test
 
 This test the same performed in the initial test, adding a folder and a file to be ignored in the input folders.
 
-After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
 
 The file `.file_to_ignore` and folder `folder_to_ignore` should be ignored in the input folders.
 
@@ -318,7 +320,7 @@ This test takes as input json files containing multiple tables associated as in 
 
 An additional table is created extracting data from the filenames.
 
-After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
 
 A single xlsx file will be produced in the get folder, with multiple worksheets, one for each input table.
 
@@ -338,7 +340,7 @@ Use `Dtest_multitable_input_single_output.bat` to set the sandbox folder structu
 
 This test uses the same data as the 9th test, but joining inputs from json and xlsx files into a single output xlsx file, using worksheets to separate content from different sources.
 
-After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
 
 A single xlsx file will be produced in the get folder, with two worksheets, one for each input file type related to measurement data files and metadata of the files that were processed.
 
@@ -357,7 +359,7 @@ A single xlsx file will be produced in the get folder, with two worksheets, one 
 
 Use `Etest_multitable_CSV.bat` to set the sandbox folder structure for the test
 
-After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
 
 This test use mixed input, including CSV and XLSX files, joining inputs some of the CSV data should be uploaded to one of the tables in the output xlsx file, using worksheets to separate content from different sources.
 
@@ -375,12 +377,30 @@ This test use mixed input, including CSV and XLSX files, joining inputs some of 
 
 Use `Ftest_update_data.bat` to set the sandbox folder structure for the test
 
-After `uv run ..\src\scarab.py .\sandbox\config.json` is executed.
+Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
 
 This test start with a filled output with repeated data rows. These repeated rows should be removed at start. Afterwards, to perform the test, files from store should be moved to the temp or post folders and no additional line should be added to the output file, only updates should be performed.
 
-This test also include validation of key values, including foreign keys and removing primary keys from the configured key value columns. This is essential to allow updates to be performed. Primary keys a
+This test also include validation of key values, including foreign keys and removing primary keys from the configured key value columns. This is essential to allow updates to be performed.
 
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## monitorSPED test
+
+Use `Gtest_monitorSPED.bat` to set the sandbox folder structure for the test
+
+Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
+
+This will test the MonitorSPED processing, a variation of multitable with loose PK and FK relations.
 
 <div>
     <a href="https://github.com/InovaFiscaliza/Scarab">
