@@ -1,5 +1,8 @@
 @echo off
 setlocal
+echo All .pdf files will be replaced with empty files after running this script.
+echo Press Ctrl+C to cancel or any other key to continue...
+pause >nul
 
 REM Set the target directory
 set "target_dir=C:\Users\sfi.office365.pd\github\scarab\tests\sandbox\post"
