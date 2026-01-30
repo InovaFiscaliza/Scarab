@@ -863,65 +863,82 @@ class DataHandler:
             legacy_order = {item: i for i, item in enumerate(legacy_list)}
             new_order = {item: i for i, item in enumerate(new_list)}
 
-            for item in items_not_in_new:
+            # Sort items_not_in_new by their position in legacy_list to preserve legacy order
+            sorted_items_not_in_new = sorted(
+                items_not_in_new, key=lambda x: legacy_order[x]
+            )
+
+            for item in sorted_items_not_in_new:
                 keep_neighbor_search = True
                 reached_beginning = False
                 reached_end = False
 
                 distance_to_neighbor = 1
-                direction = 1  # 1 to previous, -1 to next
+                direction = -1  # -1 to previous, 1 to next
                 position = legacy_order[item] - 1
 
                 # If the first element in the legacy list is missing in the new list, the previous neighbor is None
                 if position < 0:
-                    direction = -1
+                    direction = 1
                     position = legacy_order[item] + 1
                     reached_beginning = True
 
                 while keep_neighbor_search:
-                    try:
-                        # if neighbor is found in the new list, insert the item in the new list at the same relative position, update the new_set and new_order and stop the search
-                        if legacy_list[position] in new_set:
-                            position = new_order[legacy_list[position]] + direction
-                            merged_list.insert(position, item)
-                            new_set.add(item)
-                            new_order = {item: i for i, item in enumerate(new_list)}
-                            keep_neighbor_search = False
+                    # if neighbor is found in the new list, insert the item in the new list at the same relative position, update the new_set and new_order and stop the search
+                    if legacy_list[position] in new_set:
+                        new_position = new_order[legacy_list[position]] - direction
+                        if new_position < 0:
+                            new_position = 0
+                        merged_list.insert(new_position, item)
+                        new_set.add(item)
+                        new_order = {item: i for i, item in enumerate(merged_list)}
+                        keep_neighbor_search = False
+                    else:
+                        # if moving to the end of the list, increase distance to the neighbor and if not reached the beginning, try the other direction
+                        if direction == -1:
+                            distance_to_neighbor += 1
+                            if not reached_end:
+                                direction = 1
+                        # if moving to the beginning of the list, keep the distance and try the other direction except if reached the end, then keep the direction and increase distance
                         else:
-                            # if moving to the end of the list, increase distance to the neighbor and if not reached the beginning, try the other direction
-                            if direction == -1:
+                            if reached_beginning:
                                 distance_to_neighbor += 1
-                                if not reached_beginning:
-                                    direction = 1
-                            # if moving to the beginning of the list, keep the distance and try the other direction except if reached the end, then keep the direction and increase distance
                             else:
-                                if reached_end:
-                                    distance_to_neighbor += 1
-                                else:
-                                    direction = -1
+                                direction = -1
 
-                            position = legacy_order[item] - (
-                                distance_to_neighbor * direction
-                            )
-                    except IndexError:
-                        # if hit one of the ends, change direction and try again, marking the end reached
+                        position = legacy_order[item] + (
+                            distance_to_neighbor * direction
+                        )
+
+                        # if hit the beginning
                         if position < 0:
+                            # but also the end has been reached
+                            if reached_end:
+                                # Hit both ends, no neighbor is not found in the new list
+                                # Insert the item at end and stop the search
+                                merged_list.append(item)
+                                keep_neighbor_search = False
+
+                            # mark that the beginning has been reached and change direction
                             reached_beginning = True
+                            direction = 1
+                        # if hit the end
+                        elif position >= len(legacy_list):
+                            # but also the beginning has been reached
+                            if reached_beginning:
+                                # Hit both ends, no neighbor is not found in the new list
+                                # Insert the item at end and stop the search
+                                merged_list.append(item)
+                                keep_neighbor_search = False
+
+                            # mark that the end has been reached and change direction
+                            reached_end = True
                             direction = -1
                         else:
-                            reached_end = True
-                            distance_to_neighbor += 1
-                            direction = 1
+                            continue
 
-                        # if no neighbor is not found in the new list (maybe possible with empty initial list), insert the item at end and stop the search
-                        if reached_beginning and reached_end:
-                            merged_list.append(item)
-                            keep_neighbor_search = False
-                            reached_beginning = False
-                            reached_end = False
-
-                        # update the current search position considering the direction taken
-                        position = legacy_order[item] - (
+                        # recompute the position, since the direction has changed
+                        position = legacy_order[item] + (
                             distance_to_neighbor * direction
                         )
 
