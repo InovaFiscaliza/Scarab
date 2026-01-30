@@ -17,6 +17,9 @@
         <li><a href="#Input_files_and_folders_to_ignore">Input files and folders to ignore</a></li>
         <li><a href="#Multi-table_json_input">Multi-table json input</a></li>
         <li><a href="#Multiple_input_and_single_output_test">Multiple input and single output test</a></li>
+        <li><a href="#Multiple_input_with_CSV_and_single_output_test">Multiple input with CSV and single output test</a></li>
+        <li><a href="#Multiple_input_for_update_test">Multiple input for update test</a></li>
+        <li><a href="#monitorSPED_test">monitorSPED test</a></li>
     </ol>
 </details>
 
