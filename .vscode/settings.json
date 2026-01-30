@@ -10,5 +10,6 @@
         "isin",
         "levelname",
         "SIGBREAK"
-    ]
+    ],
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
 }
