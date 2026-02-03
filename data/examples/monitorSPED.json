@@ -1,0 +1,138 @@
+{
+    "name": "MonitorSPED",
+    "check period in seconds": 10,
+    "clean period in hours": 1,
+    "maximum errors before exit": 5,
+    "discard invalid data files": false,
+    "log": {
+        "level": "INFO",
+        "file output": true,
+        "file path": [
+            "Z:/sp/GET/log/monitorSPED/log_monitorSPED.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/log/monitorSPED/log_monitorSPED.txt"
+        ]
+    },
+    "folders": {
+        "post": [
+            "Z:/sp/POST/monitorSPED",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/monitorSPED"
+        ],
+        "temp": "C:/ProgramData/Anatel/scarab/temp/monitorSPED",
+        "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/monitorSPED",
+        "store": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/monitorSPED",
+            "Z:/sp/STORE/monitorSPED"
+        ]
+    },
+    "files": {
+        "metadata file regex": {
+            "*": ".*\\.json$"
+        },
+        "catalog names": [
+            "Z:/sp/GET/monitorSPED/appMonitorSPED.xlsx",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.xlsx"
+        ],
+        "table names": {
+            "project": "PROJETO",
+            "taxEstimateSummary": "APURAÇÃO",
+            "files": "ARQUIVOS",
+            "accounts": "CONTAS",
+            "_": "SHAREPOINT"
+        },
+        "input to ignore": [
+            "Z:/sp/POST/monitorSPED/.monitorSPED"
+        ]
+    },
+    "metadata": {
+        "required tables": [
+            "project",
+            "taxEstimateSummary",
+            "files",
+            "accounts"
+        ],
+        "key": {
+            "project": [
+                "issue",
+                "context",
+                "entityGroupId"
+            ],
+            "taxEstimateSummary": [
+                "entityId",
+                "periodStart",
+                "periodEnd"
+            ],
+            "files": [
+                "fileName",
+                "correlationKey"
+            ],
+            "accounts": [
+                "entityId",
+                "accountCode",
+                "periodYear"
+            ],
+            "_": [
+                "jsonFileName"
+            ]
+        },
+        "in columns": {
+            "project": [
+                "entityGroupName",
+                "entityGroupId"
+            ],
+            "taxEstimateSummary": [
+                "entityName",
+                "valorApuradoFust",
+                "valorApuradoFunttel"
+            ],
+            "files": [
+                "entityName",
+                "entityId",
+                "periodStart",
+                "validationStatus"
+            ],
+            "accounts": [
+                "entityName",
+                "entityId",
+                "accountCode",
+                "description",
+                "total"
+            ]
+        },
+        "sort by": {
+            "project": {
+                "by": [
+                    "issue"
+                ],
+                "ascending": true
+            },
+            "taxEstimateSummary": {
+                "by": [
+                    "entityName",
+                    "periodStart"
+                ],
+                "ascending": true
+            },
+            "files": {
+                "by": [
+                    "entityName",
+                    "periodStart"
+                ],
+                "ascending": true
+            },
+            "accounts": {
+                "by": [
+                    "entityName",
+                    "accountCode"
+                ],
+                "ascending": true
+            }
+        },
+        "add filename": {
+            "_": "jsonFileName"
+        },
+        "filename data format": {
+            "_": "(?P<jsonFileGeneratedBy>\\w+)_(?P<jsonFileGeneratedAt>\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
+        }
+    },
+    "last clean": "2025-07-07 14:14:07"
+}

@@ -57,7 +57,8 @@
                 "FreqStop",
                 "BeginTime",
                 "EndTime",
-                "RelatedFiles"
+                "RelatedFiles",
+                "Filename"
             ],
             "ReferenceData2": [
                 "occMethod"
