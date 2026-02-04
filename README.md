@@ -119,6 +119,13 @@ Companion services were developed to extend the application functionalities and 
 - [PowerAutomate script](https://en.wikipedia.org/wiki/Microsoft_Power_Automate) that extract metadata from files uploaded to MS Sharepoint repositories, through a browser or OneDrive client application. Metadata and corresponding uploaded files are placed into restricted repositories monitored by Scarab service. Example of such script is provided in the [src/PA](./src/PA/) folder.
 - [Windows Scheduler](https://en.wikipedia.org/wiki/Windows_Task_Scheduler) to run Scarab service as a Windows Task. Examples are provided in the [src/Scheduler](./src/Scheduler/) folder. This allows the service to run in a machine without user intervention, starting with the system and restarting in case of failure in a machine capable of also running other companion services, such as OneDrive Client Application, enabling Scarab to access Sharepoint repositories as local synced folders, without the need of additional coding for Sharepoint API access, that may be restricted in some environments.
 
+<div>
+    <a href="#about-scarab">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
 <!-- TESTS -->
 # Tests
 
@@ -159,7 +166,6 @@ These examples include.
     </a>
     <br><br>
 </div>
-
 
 <!-- ROADMAP -->
 # Roadmap
