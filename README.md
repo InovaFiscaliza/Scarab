@@ -6,6 +6,7 @@
         <li><a href="#about-scarab">About Scarab</a></li>
         <li><a href="#scripts-and-files">Scripts and Files</a></li>
         <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#companion-services">Companion Services</a></li>
         <li><a href="#tests">Tests</a></li>
         <li><a href="#setup">Setup</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
@@ -110,6 +111,14 @@ To stop, the script monitor the occurrence of kill signal from the system or ctr
     <br><br>
 </div>
 
+<!-- Companion services -->
+# Companion Services
+
+Companion services were developed to extend the application functionalities and create a production environment integrated with MS Sharepoint and cloud services, including:
+
+- [PowerAutomate script](https://en.wikipedia.org/wiki/Microsoft_Power_Automate) that extract metadata from files uploaded to MS Sharepoint repositories, through a browser or OneDrive client application. Metadata and corresponding uploaded files are placed into restricted repositories monitored by Scarab service. Example of such script is provided in the [src/PA](./src/PA/) folder.
+- [Windows Scheduler](https://en.wikipedia.org/wiki/Windows_Task_Scheduler) to run Scarab service as a Windows Task. Examples are provided in the [src/Scheduler](./src/Scheduler/) folder. This allows the service to run in a machine without user intervention, starting with the system and restarting in case of failure in a machine capable of also running other companion services, such as OneDrive Client Application, enabling Scarab to access Sharepoint repositories as local synced folders, without the need of additional coding for Sharepoint API access, that may be restricted in some environments.
+
 <!-- TESTS -->
 # Tests
 
@@ -155,18 +164,16 @@ These examples include.
 <!-- ROADMAP -->
 # Roadmap
 
-This section presents a simplified view of the roadmap and knwon issues.
+This section presents a simplified view of the roadmap.
 
-For more details, see the [open issues](https://github.com/FSLobao/RF.Fusion/issues)
+* [x] Version 1.0.0: [21/02/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v1.0.0), initial release
+  * [x] version 1.0.1: [31/03/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v1.0.1), bug fix
+  * [x] version 1.1.0: [14/04/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v1.1.0), Row ordering, ignore feature and scarab companion
+* [x] Version 2.0.0: [08/07/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v2.0.0), multi table support with PK/FK update, Advanced regex, Filename processing
+  * [x] version 2.1.0: [08/09/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v2.1.0), Improved validation and error handling, multiple output folders, automatic file encoding identification
+  * [x] version 2.1.1: [30/01/2026](https://github.com/InovaFiscaliza/Scarab/releases/tag/v.2.1.1), fix column order issue, update docstring and typing hints. Add examples and tests. PA companion update to vectorized processing.
+* [ ] Sharepoint direct access through API and [open issues](https://github.com/InovaFiscaliza/Scarab/issues)
 
-* [x] Version 1.0.0: Completed in 21/02/2025
-  * [x] version 1.0.1: Completed in 31/03/2025, bug fix
-  * [x] version 1.1.0: Completed in 14/04/2025, bug fix and scarab companion
-* [ ] Version 2.0.0
-  * [x] Define new configuration format for multi table input 
-  * [x] Code new features
-  * [ ] Test, debug and release
-  
 <div>
     <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
