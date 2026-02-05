@@ -37,7 +37,7 @@
             "taxEstimateSummary": "APURAÇÃO",
             "files": "ARQUIVOS",
             "accounts": "CONTAS",
-            "_": "SHAREPOINT"
+            "_": "PUBLICAÇÃO"
         },
         "input to ignore": [
             "Z:/sp/POST/monitorSPED/.monitorSPED"
