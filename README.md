@@ -86,9 +86,9 @@ Additional columns may be added to the consolidated metadata file, including the
 
 Rows may be ordered by any indicated column, by default they will be sorted following the order by which they were created when processing the input files.
 
-For XLSX files with multiple sheets, JSPN files with multiple dictionaries in the root, or CSV files with significantly different column set or respecting different regex rules, the script can create a multi table consolidated result, including relational association between tables using Primary Key (PK) and Foreign Key (FK) relationships. Such relationships may be relative, within a single file, or absolute, across multiple files.
+For XLSX files with multiple sheets, JSON files with multiple dictionaries in the root, or CSV files with significantly different column set or respecting different regex rules, the script can create a multi table consolidated result, including relational association between tables using Primary Key (PK) and Foreign Key (FK) relationships. Such relationships may be relative, within a single file, or absolute, across multiple files.
 
-The consolidated metadata file is stored in multiple output folder. 
+The consolidated metadata file is stored in multiple output folder and different output formats may be used, primary XLSX but also csv, json, qvd (qlik sense) and parquet. For single table formats (csv, qvd and parquet), when consolidating multi-table data, the base name of the catalog file will have added the suffix "_table", to indicate which table the data is associated to. 
 
 Data files may be of any type and may be moved to multiple output folders. Different output folders may be set for different file regex.
 

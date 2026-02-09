@@ -1821,6 +1821,20 @@ class DataHandler:
                         # TODO: allow start from qvd:  save_at_least_one = True
                     except Exception as e:
                         self.log.error(f"Error saving QVD '{qvd_file}': {e}")
+                        
+                case ".parquet":
+                    base_name = os.path.splitext(catalog_file)[0]
+                    parquet_file = f"{base_name}_*.parquet"
+                    try:
+                        for table in df.keys():
+                            parquet_file = f"{base_name}_{table}.parquet"
+                            df[table].to_parquet(parquet_file, index=False)
+                            self.log.info(
+                                f"Parquet reference data file updated: {parquet_file}"
+                            )
+                        # TODO: allow start from parquet:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving Parquet '{parquet_file}': {e}")
 
                 case _:
                     self.log.error(f"Unsupported catalog file extension: {extension}")
