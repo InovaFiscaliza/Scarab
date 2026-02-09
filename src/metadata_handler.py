@@ -22,6 +22,7 @@ import base58
 import json
 from typing import Any
 import copy
+from pyqvd import QvdTable
 
 
 # ---------------------------------------------------------------
@@ -1754,20 +1755,75 @@ class DataHandler:
         save_at_least_one = False
         # TODO: #19 Instead of saving multiple files from the df, save one and copy to the remaining folders.
         for catalog_file in self.config.catalog_files:
-            try:
-                with pd.ExcelWriter(catalog_file, engine="openpyxl") as writer:
-                    # Write each table to a separate sheet in the Excel file
-                    for table in df.keys():
-                        df[table].to_excel(
-                            writer,
-                            sheet_name=self.config.table_names[table],
-                            index=False,
-                        )
+            # get the extension used on the catalog_file
+            extension = os.path.splitext(catalog_file)[1].lower()
 
-                self.log.info(f"Reference data file updated: {catalog_file}")
-                save_at_least_one = True
-            except Exception as e:
-                self.log.error(f"Error saving reference data: {e}")
+            match extension:
+                case ".xlsx":
+                    try:
+                        with pd.ExcelWriter(catalog_file, engine="openpyxl") as writer:
+                            # Write each table to a separate sheet in the Excel file
+                            for table in df.keys():
+                                df[table].to_excel(
+                                    writer,
+                                    sheet_name=self.config.table_names[table],
+                                    index=False,
+                                )
+                        self.log.info(
+                            f"Excel reference data file updated: {catalog_file}"
+                        )
+                        save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving reference data in Excel: {e}")
+
+                case ".csv":
+                    base_name = os.path.splitext(catalog_file)[0]
+                    csv_file = f"{base_name}_*.csv"
+                    try:
+                        # For CSV, save each table to a separate file with table name suffix
+                        for table in df.keys():
+                            csv_file = f"{base_name}_{table}.csv"
+                            df[table].to_csv(csv_file, index=False, sep=";")
+                            self.log.info(
+                                f"CSV reference data file(s) updated: {csv_file}"
+                            )
+                        # TODO: allow start from CSV:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving CSV '{csv_file}: {e}")
+
+                case ".json":
+                    try:
+                        # Save all tables as a single JSON file with table names as keys
+                        json_data = {
+                            table: df[table].to_dict(orient="records")
+                            for table in df.keys()
+                        }
+                        with open(catalog_file, "w", encoding="utf-8") as json_file:
+                            json.dump(
+                                json_data, json_file, indent=2, ensure_ascii=False
+                            )
+                        self.log.info(
+                            f"Json reference data file updated: {catalog_file}"
+                        )
+                        # TODO: allow start from json:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving Json '{catalog_file}': {e}")
+
+                case ".qvd":
+                    base_name = os.path.splitext(catalog_file)[0]
+                    qvd_file = f"{base_name}_*.qvd"
+                    try:
+                        for table in df.keys():
+                            qvd_file = f"{base_name}_{table}.qvd"
+                            qvd_table = QvdTable.from_pandas(df[table])
+                            qvd_table.to_qvd(qvd_file)
+                            self.log.info(f"Reference data file updated: {qvd_file}")
+                        # TODO: allow start from qvd:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving QVD '{qvd_file}': {e}")
+
+                case _:
+                    self.log.error(f"Unsupported catalog file extension: {extension}")
 
         if not save_at_least_one:
             self.log.error("No reference data file was saved. No changes were made.")
