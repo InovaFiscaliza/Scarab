@@ -62,8 +62,7 @@
                 "periodEnd"
             ],
             "files": [
-                "fileName",
-                "correlationKey"
+                "fileName"
             ],
             "accounts": [
                 "entityId",
