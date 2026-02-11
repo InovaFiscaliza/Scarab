@@ -30,7 +30,10 @@
         },
         "catalog names": [
             "Z:/sp/GET/monitorSPED/appMonitorSPED.xlsx",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.xlsx"
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.xlsx",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.csv",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.parquet",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.qvd"
         ],
         "table names": {
             "project": "PROJETO",
@@ -128,6 +131,9 @@
         },
         "add filename": {
             "_": "jsonFileName"
+        },
+        "add file timestamp": {
+            "_": "createdAt"
         },
         "filename data format": {
             "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
