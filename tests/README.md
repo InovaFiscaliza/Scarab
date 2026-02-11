@@ -20,6 +20,7 @@
         <li><a href="#Multiple_input_with_CSV_and_single_output_test">Multiple input with CSV and single output test</a></li>
         <li><a href="#Multiple_input_for_update_test">Multiple input for update test</a></li>
         <li><a href="#monitorSPED_test">monitorSPED test</a></li>
+        <li><a href="#Timestamp_column_test">Timestamp column test</a></li>
     </ol>
 </details>
 
@@ -404,6 +405,37 @@ Use `Gtest_monitorSPED.bat` to set the sandbox folder structure for the test
 Use `uv run ..\src\scarab.py .\sandbox\config.json` to execute the test.
 
 This will test the MonitorSPED processing, a variation of multitable with loose PK and FK relations.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Timestamp column test
+
+Use `Htest_timestamp.bat` to set the sandbox folder structure for the test.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests folder in the repository path, the following results are expected:
+
+> * Two CSV files with employee records will be processed from the post folder.
+> * Files will be moved to temp during processing, then to store after completion.
+> * Consolidated metadata will be published in three output formats: XLSX, CSV, and JSON.
+> * Output files will contain 6 employee records (merged from both input files).
+> * Two automatically-added columns will appear in the output:
+>   * `source_file`: Contains the filename of the source CSV file (e.g., "employees_batch1.csv").
+>   * `file_timestamp`: Contains the file modification timestamp in ISO 8601 UTC format (e.g., "2026-02-11T19:45:32.123456+00:00").
+> * Records are unique by `employee_id` (key column).
+
+This test validates the `add file timestamp` feature that extracts file modification timestamps from the filesystem and adds them to the metadata.
+
+To test the update behavior, modify one of the CSV files (change a salary value), place it back in the post folder, and observe that Scarab updates only that record with a new timestamp reflecting the modification time.
+
+To finish the test use `ctrl+c`. It may take up to 5 seconds to stop the script after the interruption is received and registered in the log.
 
 <div>
     <a href="https://github.com/InovaFiscaliza/Scarab">
