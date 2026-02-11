@@ -778,6 +778,11 @@ class DataHandler:
 
                     add_remaining_data = True
 
+                case ".parquet":
+                    new_df = pd.read_parquet(file)
+
+                    add_remaining_data = True
+
                 case ".json":
                     # Detect encoding first
                     encoding = self.file.test_file_encoding(file)
