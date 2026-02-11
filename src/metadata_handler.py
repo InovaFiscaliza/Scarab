@@ -1801,15 +1801,21 @@ class DataHandler:
 
         df = {}
         for table in self.ref_df.keys():
-            # sort the reference DataFrame by the columns defined in the config file
-            df[table] = self.ref_df[table].sort_values(
-                by=self.config.rows_sort_by[table][cm.SORT_BY_KEY],
-                ascending=self.config.rows_sort_by[table][cm.ASCENDING_SORT_KEY],
-                ignore_index=True,
-            )
+            try:
+                # sort the reference DataFrame by the columns defined in the config file
+                df[table] = self.ref_df[table].sort_values(
+                    by=self.config.rows_sort_by[table][cm.SORT_BY_KEY],
+                    ascending=self.config.rows_sort_by[table][cm.ASCENDING_SORT_KEY],
+                    ignore_index=True,
+                )
 
-            # get selected columns in the defined order
-            df[table] = df[table][self.ref_cols[table]]
+                # get selected columns in the defined order
+                df[table] = df[table][self.ref_cols[table]]
+            except Exception as e:
+                self.log.error(
+                    f"Error sorting or selecting columns for table '{table}': {e}"
+                )
+                df[table] = self.ref_df[table]
 
         # loop through the target catalog files and save the reference data,
         # ensuring that at least one file is saved successfully before returning True
