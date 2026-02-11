@@ -92,6 +92,7 @@
         },
         "add filename": {},
         "filename data format": {},
-        "filename data processing rules": {}
+        "filename data processing rules": {},
+        "add file timestamp": {}
     }
 }

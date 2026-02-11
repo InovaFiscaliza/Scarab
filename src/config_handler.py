@@ -374,6 +374,11 @@ class Config:
                 default_conf["metadata"]["filename data processing rules"],
             )
             """ Dictionary with old and new characters to be replaced in the data extracted from the filename, defined for each key in the replacement pattern."""
+            self.file_timestamp: dict[str, str] = config["metadata"].pop(
+                "add file timestamp",
+                default_conf["metadata"]["add file timestamp"],
+            )
+            """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the timestamp of the source file. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
 
             # Pop empty objects within the config in the dict
             config = self._remove_empty_keys(config)
