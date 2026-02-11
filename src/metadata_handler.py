@@ -23,6 +23,7 @@ import json
 from typing import Any
 import copy
 from pyqvd import QvdTable
+from pyqvd.io import QvdFileWriterOptions
 
 
 # ---------------------------------------------------------------
@@ -1831,12 +1832,20 @@ class DataHandler:
 
                 case ".csv":
                     base_name = os.path.splitext(catalog_file)[0]
-                    csv_file = f"{base_name}_*.csv"
+                    csv_file = f"{base_name}*.csv"
+                    tables = df.keys()
+
                     try:
                         # For CSV, save each table to a separate file with table name suffix
-                        for table in df.keys():
-                            csv_file = f"{base_name}_{table}.csv"
-                            df[table].to_csv(csv_file, index=False, sep=";")
+                        for table in tables:
+                            if len(tables) == 1:
+                                csv_file = f"{base_name}.csv"
+                            else:
+                                csv_file = f"{base_name}_{table}.csv"
+
+                            df[table].to_csv(
+                                csv_file, index=False, sep=self.config.csv_separator
+                            )
                             self.log.info(
                                 f"CSV reference data file(s) updated: {csv_file}"
                             )
@@ -1864,12 +1873,22 @@ class DataHandler:
 
                 case ".qvd":
                     base_name = os.path.splitext(catalog_file)[0]
-                    qvd_file = f"{base_name}_*.qvd"
+                    qvd_file = f"{base_name}*.qvd"
+                    tables = df.keys()
+
                     try:
-                        for table in df.keys():
-                            qvd_file = f"{base_name}_{table}.qvd"
+                        for table in tables:
+                            if len(tables) == 1:
+                                qvd_file = f"{base_name}.qvd"
+                                table_name = base_name
+                            else:
+                                qvd_file = f"{base_name}_{table}.qvd"
+                                table_name = table
+
                             qvd_table = QvdTable.from_pandas(df[table])
-                            qvd_table.to_qvd(qvd_file)
+                            options = QvdFileWriterOptions(table_name=table_name)
+                            qvd_table.to_qvd(qvd_file, options=options)
+
                             self.log.info(f"Reference data file updated: {qvd_file}")
                         # TODO: allow start from qvd:  save_at_least_one = True
                     except Exception as e:
@@ -1877,10 +1896,16 @@ class DataHandler:
 
                 case ".parquet":
                     base_name = os.path.splitext(catalog_file)[0]
-                    parquet_file = f"{base_name}_*.parquet"
+                    parquet_file = f"{base_name}*.parquet"
+                    tables = df.keys()
+
                     try:
-                        for table in df.keys():
-                            parquet_file = f"{base_name}_{table}.parquet"
+                        for table in tables:
+                            if len(tables) == 1:
+                                parquet_file = f"{base_name}.parquet"
+                            else:
+                                parquet_file = f"{base_name}_{table}.parquet"
+
                             df[table].to_parquet(parquet_file, index=False)
                             self.log.info(
                                 f"Parquet reference data file updated: {parquet_file}"
