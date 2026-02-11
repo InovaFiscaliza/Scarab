@@ -1475,12 +1475,14 @@ class DataHandler:
             # Get file modification time and convert to UTC ISO 8601 format
             try:
                 mtime = os.path.getmtime(file)
-                timestamp = pd.Timestamp(mtime, unit="s", tz="UTC").isoformat()
+                timestamp = pd.Timestamp(mtime, unit="s", tz="UTC").strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
             except (OSError, FileNotFoundError) as e:
                 self.log.warning(
                     f"Could not retrieve timestamp for file `{file}`: {e}. Using current time."
                 )
-                timestamp = pd.Timestamp.now(tz="UTC").isoformat()
+                timestamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
 
             if df.empty:
                 # Create a new DataFrame with one row for empty DataFrames
