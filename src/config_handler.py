@@ -271,10 +271,20 @@ class Config:
                 )
             )
             """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
-            self.csv_separator: str = config["files"]["metadata file formatting"].pop(
-                "csv separator",
-                default_conf["files"]["metadata file formatting"]["csv separator"],
+
+            self.csv_separator: str = (
+                config["files"]
+                .pop(
+                    "metadata file formatting",
+                    default_conf["files"]["metadata file formatting"],
+                )
+                .pop(
+                    "csv separator",
+                    default_conf["files"]["metadata file formatting"]["csv separator"],
+                )
             )
+            """ Separator used in the metadata file if using csv format. Default to semicolon (;)."""
+
             self.table_names: dict[str, str] = self._set_default_table_name(
                 config["files"].pop("table names", default_conf["files"]["table names"])
             )
