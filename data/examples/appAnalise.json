@@ -29,6 +29,10 @@
         },
         "catalog names": [
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.xlsx",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.qvd",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.parquet",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.csv",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.json",
             "Z:/sp/GET/appAnalise/appAnalise.xlsx"
         ],
         "table names": {
