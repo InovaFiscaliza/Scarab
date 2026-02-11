@@ -31,6 +31,7 @@ Scarab is an **Enterprise Service Bus (ESB)** that runs as a Windows service, mo
 
 ## Configuration Patterns
 
+
 ### Config File Structure (JSON)
 - **Mandatory root keys**: `log`, `folders`, `files`, `metadata` (enforced by `_ensure_mandatory_structure()`)
 - **Folder keys**: `post` (list), `temp`, `trash`, `store`, `get` (dict mapping regex keys to folder lists)
@@ -38,6 +39,7 @@ Scarab is an **Enterprise Service Bus (ESB)** that runs as a Windows service, mo
   - `metadata file regex`: Dict with keys (e.g., `"*"`, `"json"`) → regex patterns
   - `data file regex`: Maps to `folders.get` keys for routing files
 - **Table names**: Map JSON keys to human-readable names (e.g., `{"project": "PROJETO"}`)
+- **CSV separator**: New config key `csv separator` (under `files`) sets the delimiter for CSV parsing. Default is `;`, but can be set to `,` or other values for tests or integration.
 - **Special keys**:
   - `"_"`: Default table for single-table data or unmapped JSON keys
   - `"*"`: Refers to all tables in multi-table files

@@ -70,7 +70,10 @@
         "table names": {
             "_": "<name>"
         },
-        "input to ignore": []
+        "input to ignore": [],
+        "metadata file formatting": {
+            "csv separator": ";"
+        }
     },
     "metadata": {
         "required tables": [
@@ -91,8 +94,8 @@
             "_": []
         },
         "add filename": {},
+        "add file timestamp": {},
         "filename data format": {},
-        "filename data processing rules": {},
-        "add file timestamp": {}
+        "filename data processing rules": {}
     }
 }

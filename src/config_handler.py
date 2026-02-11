@@ -271,7 +271,10 @@ class Config:
                 )
             )
             """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
-
+            self.csv_separator: str = config["files"]["metadata file formatting"].pop(
+                "csv separator",
+                default_conf["files"]["metadata file formatting"]["csv separator"],
+            )
             self.table_names: dict[str, str] = self._set_default_table_name(
                 config["files"].pop("table names", default_conf["files"]["table names"])
             )
@@ -279,6 +282,10 @@ class Config:
             self.sheet_names: dict[str, str] = {
                 v: k for k, v in self.table_names.items()
             }
+
+            """ CSV separator used in metadata files"""
+            config["files"] = self._remove_empty_keys(config["files"])
+
             """ Sheet names to be used. {"worksheet_name": "json_root_table_name", ...]"""
             self.required_tables: set[str] = set(
                 self.limit_character_scope(
@@ -363,6 +370,11 @@ class Config:
                 "add filename", default_conf["metadata"]["add filename"]
             )
             """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the source filename. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
+            self.add_timestamp: dict[str, str] = config["metadata"].pop(
+                "add file timestamp",
+                default_conf["metadata"]["add file timestamp"],
+            )
+            """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the timestamp of the source file. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
             self.filename_data_format: dict[str, re.Pattern] = self._build_re_dict(
                 config["metadata"].pop(
                     "filename data format",
@@ -378,11 +390,6 @@ class Config:
                 default_conf["metadata"]["filename data processing rules"],
             )
             """ Dictionary with old and new characters to be replaced in the data extracted from the filename, defined for each key in the replacement pattern."""
-            self.add_timestamp: dict[str, str] = config["metadata"].pop(
-                "add file timestamp",
-                default_conf["metadata"]["add file timestamp"],
-            )
-            """ Dictionary with table names (keys) in which a column with the defined names (values) should be created to store the timestamp of the source file. Leave blank if not needed. Example: {"<table>": "<column_name>"}"""
 
             # Pop empty objects within the config in the dict
             config = self._remove_empty_keys(config)
@@ -466,10 +473,10 @@ class Config:
 
         # Start with columns from add_filename and add_timestamp values
         new_columns: dict[str, set[str]] = {}
-        
+
         for table, col in add_filename.items():
             new_columns.setdefault(table, set()).add(col)
-        
+
         for table, col in add_timestamp.items():
             new_columns.setdefault(table, set()).add(col)
 

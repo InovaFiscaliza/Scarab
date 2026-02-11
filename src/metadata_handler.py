@@ -769,7 +769,10 @@ class DataHandler:
                     encoding = self.file.test_file_encoding(file)
 
                     new_df = pd.read_csv(
-                        file, dtype="string", encoding=encoding, sep=";"
+                        file,
+                        dtype="string",
+                        encoding=encoding,
+                        sep=self.config.csv_separator,
                     )
 
                     add_remaining_data = True
@@ -1467,16 +1470,16 @@ class DataHandler:
                 return df
 
             new_column_name = self.config.add_timestamp[table]
-            
+
             # Get file modification time and convert to UTC ISO 8601 format
             try:
                 mtime = os.path.getmtime(file)
-                timestamp = pd.Timestamp(mtime, unit='s', tz='UTC').isoformat()
+                timestamp = pd.Timestamp(mtime, unit="s", tz="UTC").isoformat()
             except (OSError, FileNotFoundError) as e:
                 self.log.warning(
                     f"Could not retrieve timestamp for file `{file}`: {e}. Using current time."
                 )
-                timestamp = pd.Timestamp.now(tz='UTC').isoformat()
+                timestamp = pd.Timestamp.now(tz="UTC").isoformat()
 
             if df.empty:
                 # Create a new DataFrame with one row for empty DataFrames
@@ -1488,7 +1491,6 @@ class DataHandler:
             self.log.debug(f"No timestamp column required in table `{table}`.")
 
         return df
-        
 
     # --------------------------------------------------------------
     def _apply_filename_data_processing_rules(self, key: str, value: str) -> str:
@@ -1872,7 +1874,7 @@ class DataHandler:
                         # TODO: allow start from qvd:  save_at_least_one = True
                     except Exception as e:
                         self.log.error(f"Error saving QVD '{qvd_file}': {e}")
-                        
+
                 case ".parquet":
                     base_name = os.path.splitext(catalog_file)[0]
                     parquet_file = f"{base_name}_*.parquet"

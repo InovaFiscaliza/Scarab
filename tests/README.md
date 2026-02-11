@@ -431,9 +431,20 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests
 >   * `file_timestamp`: Contains the file modification timestamp in ISO 8601 UTC format (e.g., "2026-02-11T19:45:32.123456+00:00").
 > * Records are unique by `employee_id` (key column).
 
-This test validates the `add file timestamp` feature that extracts file modification timestamps from the filesystem and adds them to the metadata.
+This test validates the `add file timestamp` feature and the new `csv separator` config option. The separator is set to `,` for this test, overriding the default `;`.
 
 To test the update behavior, modify one of the CSV files (change a salary value), place it back in the post folder, and observe that Scarab updates only that record with a new timestamp reflecting the modification time.
+
+**CSV Separator Usage:**
+The test config sets:
+```json
+"files": {
+    "csv separator": ","
+}
+```
+This ensures correct parsing of the test CSV files.
+
+If you want to test with other delimiters, change the `csv separator` value in the config.
 
 To finish the test use `ctrl+c`. It may take up to 5 seconds to stop the script after the interruption is received and registered in the log.
 
