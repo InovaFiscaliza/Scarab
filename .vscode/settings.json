@@ -9,7 +9,8 @@
         "Inova",
         "isin",
         "levelname",
+        "pyqvd",
         "SIGBREAK"
     ],
-    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+    "python.defaultInterpreterPath": "c:\\GitHub\\Scarab\\.venv\\Scripts\\python.exe"
 }

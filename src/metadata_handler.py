@@ -22,6 +22,8 @@ import base58
 import json
 from typing import Any
 import copy
+from pyqvd import QvdTable
+from pyqvd.io import QvdFileWriterOptions
 
 
 # ---------------------------------------------------------------
@@ -561,6 +563,7 @@ class DataHandler:
         # Add columns that will be included in the output
         transformations = [
             lambda df: self._add_filename_column(df, table, file),
+            lambda df: self._add_timestamp_column(df, table, file),
             lambda df: self._add_filename_data(df, table, file),
             lambda df: self._fix_create_data_published_column(df, table),
         ]
@@ -767,7 +770,10 @@ class DataHandler:
                     encoding = self.file.test_file_encoding(file)
 
                     new_df = pd.read_csv(
-                        file, dtype="string", encoding=encoding, sep=";"
+                        file,
+                        dtype="string",
+                        encoding=encoding,
+                        sep=self.config.csv_separator,
                     )
 
                     add_remaining_data = True
@@ -1439,6 +1445,57 @@ class DataHandler:
         return df
 
     # --------------------------------------------------------------
+    def _add_timestamp_column(
+        self, df: pd.DataFrame, table: str, file: str
+    ) -> pd.DataFrame:
+        """Complement the data in the reference DataFrame with timestamp from the processed file.
+
+        Args:
+            df: DataFrame into which the new column with timestamp may be created.
+            table (str): Name of the table to be used as defined in the config file.
+            file (str): The metadata file being processed.
+
+        Returns:
+            pd.DataFrame: Updated DataFrame with the new timestamp column.
+        """
+
+        if self.config.add_timestamp is None:
+            self.log.debug("No timestamp column required in the config file.")
+            return df
+
+        if table in self.config.add_timestamp.keys():
+            if self.config.add_timestamp[table] in df.columns:
+                self.log.debug(
+                    f"Column `{self.config.add_timestamp[table]}` already exists in table `{table}` from file `{file}`. No timestamp column will be added."
+                )
+                return df
+
+            new_column_name = self.config.add_timestamp[table]
+
+            # Get file modification time and convert to UTC ISO 8601 format
+            try:
+                mtime = os.path.getmtime(file)
+                timestamp = pd.Timestamp(mtime, unit="s", tz="UTC").strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            except (OSError, FileNotFoundError) as e:
+                self.log.warning(
+                    f"Could not retrieve timestamp for file `{file}`: {e}. Using current time."
+                )
+                timestamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            if df.empty:
+                # Create a new DataFrame with one row for empty DataFrames
+                df = pd.DataFrame({new_column_name: [timestamp]})
+            else:
+                # Use assign for non-empty DataFrames
+                df = df.assign(**{new_column_name: timestamp})
+        else:
+            self.log.debug(f"No timestamp column required in table `{table}`.")
+
+        return df
+
+    # --------------------------------------------------------------
     def _apply_filename_data_processing_rules(self, key: str, value: str) -> str:
         """Apply the filename data processing rules to the value.
 
@@ -1754,20 +1811,113 @@ class DataHandler:
         save_at_least_one = False
         # TODO: #19 Instead of saving multiple files from the df, save one and copy to the remaining folders.
         for catalog_file in self.config.catalog_files:
-            try:
-                with pd.ExcelWriter(catalog_file, engine="openpyxl") as writer:
-                    # Write each table to a separate sheet in the Excel file
-                    for table in df.keys():
-                        df[table].to_excel(
-                            writer,
-                            sheet_name=self.config.table_names[table],
-                            index=False,
-                        )
+            # get the extension used on the catalog_file
+            extension = os.path.splitext(catalog_file)[1].lower()
 
-                self.log.info(f"Reference data file updated: {catalog_file}")
-                save_at_least_one = True
-            except Exception as e:
-                self.log.error(f"Error saving reference data: {e}")
+            match extension:
+                case ".xlsx":
+                    try:
+                        with pd.ExcelWriter(catalog_file, engine="openpyxl") as writer:
+                            # Write each table to a separate sheet in the Excel file
+                            for table in df.keys():
+                                df[table].to_excel(
+                                    writer,
+                                    sheet_name=self.config.table_names[table],
+                                    index=False,
+                                )
+                        self.log.info(
+                            f"Excel reference data file updated: {catalog_file}"
+                        )
+                        save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving reference data in Excel: {e}")
+
+                case ".csv":
+                    base_name = os.path.splitext(catalog_file)[0]
+                    csv_file = f"{base_name}*.csv"
+                    tables = df.keys()
+
+                    try:
+                        # For CSV, save each table to a separate file with table name suffix
+                        for table in tables:
+                            if len(tables) == 1:
+                                csv_file = f"{base_name}.csv"
+                            else:
+                                csv_file = f"{base_name}_{table}.csv"
+
+                            df[table].to_csv(
+                                csv_file, index=False, sep=self.config.csv_separator
+                            )
+                            self.log.info(
+                                f"CSV reference data file(s) updated: {csv_file}"
+                            )
+                        # TODO: allow start from CSV:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving CSV '{csv_file}: {e}")
+
+                case ".json":
+                    try:
+                        # Save all tables as a single JSON file with table names as keys
+                        json_data = {
+                            table: df[table].to_dict(orient="records")
+                            for table in df.keys()
+                        }
+                        with open(catalog_file, "w", encoding="utf-8") as json_file:
+                            json.dump(
+                                json_data, json_file, indent=2, ensure_ascii=False
+                            )
+                        self.log.info(
+                            f"Json reference data file updated: {catalog_file}"
+                        )
+                        # TODO: allow start from json:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving Json '{catalog_file}': {e}")
+
+                case ".qvd":
+                    base_name = os.path.splitext(catalog_file)[0]
+                    qvd_file = f"{base_name}*.qvd"
+                    tables = df.keys()
+
+                    try:
+                        for table in tables:
+                            if len(tables) == 1:
+                                qvd_file = f"{base_name}.qvd"
+                                table_name = base_name
+                            else:
+                                qvd_file = f"{base_name}_{table}.qvd"
+                                table_name = table
+
+                            qvd_table = QvdTable.from_pandas(df[table])
+                            options = QvdFileWriterOptions(table_name=table_name)
+                            qvd_table.to_qvd(qvd_file, options=options)
+
+                            self.log.info(f"Reference data file updated: {qvd_file}")
+                        # TODO: allow start from qvd:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving QVD '{qvd_file}': {e}")
+
+                case ".parquet":
+                    base_name = os.path.splitext(catalog_file)[0]
+                    parquet_file = f"{base_name}*.parquet"
+                    tables = df.keys()
+
+                    try:
+                        for table in tables:
+                            if len(tables) == 1:
+                                parquet_file = f"{base_name}.parquet"
+                            else:
+                                parquet_file = f"{base_name}_{table}.parquet"
+
+                            df[table].to_parquet(parquet_file, index=False)
+                            self.log.info(
+                                f"Parquet reference data file updated: {parquet_file}"
+                            )
+                        # TODO: allow start from parquet:  save_at_least_one = True
+                    except Exception as e:
+                        self.log.error(f"Error saving Parquet '{parquet_file}': {e}")
+
+                case _:
+                    self.log.error(f"Unsupported catalog file extension: {extension}")
 
         if not save_at_least_one:
             self.log.error("No reference data file was saved. No changes were made.")
