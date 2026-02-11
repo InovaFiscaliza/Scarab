@@ -562,6 +562,7 @@ class DataHandler:
         # Add columns that will be included in the output
         transformations = [
             lambda df: self._add_filename_column(df, table, file),
+            lambda df: self._add_timestamp_column(df, table, file),
             lambda df: self._add_filename_data(df, table, file),
             lambda df: self._fix_create_data_published_column(df, table),
         ]
@@ -1438,6 +1439,56 @@ class DataHandler:
             self.log.debug(f"No filename column required in table `{table}`.")
 
         return df
+
+    # --------------------------------------------------------------
+    def _add_timestamp_column(
+        self, df: pd.DataFrame, table: str, file: str
+    ) -> pd.DataFrame:
+        """Complement the data in the reference DataFrame with timestamp from the processed file.
+
+        Args:
+            df: DataFrame into which the new column with timestamp may be created.
+            table (str): Name of the table to be used as defined in the config file.
+            file (str): The metadata file being processed.
+
+        Returns:
+            pd.DataFrame: Updated DataFrame with the new timestamp column.
+        """
+
+        if self.config.add_timestamp is None:
+            self.log.debug("No timestamp column required in the config file.")
+            return df
+
+        if table in self.config.add_timestamp.keys():
+            if self.config.add_timestamp[table] in df.columns:
+                self.log.debug(
+                    f"Column `{self.config.add_timestamp[table]}` already exists in table `{table}` from file `{file}`. No timestamp column will be added."
+                )
+                return df
+
+            new_column_name = self.config.add_timestamp[table]
+            
+            # Get file modification time and convert to UTC ISO 8601 format
+            try:
+                mtime = os.path.getmtime(file)
+                timestamp = pd.Timestamp(mtime, unit='s', tz='UTC').isoformat()
+            except (OSError, FileNotFoundError) as e:
+                self.log.warning(
+                    f"Could not retrieve timestamp for file `{file}`: {e}. Using current time."
+                )
+                timestamp = pd.Timestamp.now(tz='UTC').isoformat()
+
+            if df.empty:
+                # Create a new DataFrame with one row for empty DataFrames
+                df = pd.DataFrame({new_column_name: [timestamp]})
+            else:
+                # Use assign for non-empty DataFrames
+                df = df.assign(**{new_column_name: timestamp})
+        else:
+            self.log.debug(f"No timestamp column required in table `{table}`.")
+
+        return df
+        
 
     # --------------------------------------------------------------
     def _apply_filename_data_processing_rules(self, key: str, value: str) -> str:
