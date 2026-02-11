@@ -349,6 +349,10 @@ class Config:
                         "add filename", default_conf["metadata"]["add filename"]
                     ),
                     config["metadata"].get(
+                        "add file timestamp",
+                        default_conf["metadata"]["add file timestamp"],
+                    ),
+                    config["metadata"].get(
                         "filename data format",
                         default_conf["metadata"]["filename data format"],
                     ),
@@ -374,7 +378,7 @@ class Config:
                 default_conf["metadata"]["filename data processing rules"],
             )
             """ Dictionary with old and new characters to be replaced in the data extracted from the filename, defined for each key in the replacement pattern."""
-            self.file_timestamp: dict[str, str] = config["metadata"].pop(
+            self.add_timestamp: dict[str, str] = config["metadata"].pop(
                 "add file timestamp",
                 default_conf["metadata"]["add file timestamp"],
             )
@@ -444,22 +448,30 @@ class Config:
 
     # --------------------------------------------------------------
     def _get_expected_columns_in_files(
-        self, add_filename: dict[str, str], filename_data_format: dict[str, str]
+        self,
+        add_filename: dict[str, str],
+        add_timestamp: dict[str, str],
+        filename_data_format: dict[str, str],
     ) -> dict[str, set[str]]:
-        """Get expected columns in files based on add_filename and filename_data_format.
+        """Get expected columns in files based on add_filename, add_timestamp, and filename_data_format.
 
         Args:
             add_filename (dict[str,str]): Dictionary with table names (keys) and column names (values) to be added to the metadata.
+            add_timestamp (dict[str,str]): Dictionary with table names (keys) and column names (values) for timestamp columns to be added.
             filename_data_format (dict[str,str]): Dictionary with table names (keys) and regex patterns (values) to extract data from filenames.
 
         Returns:
             dict[str, set[str]]: Dictionary with table names (keys) and sets of expected columns (values).
         """
 
-        # Start with columns from add_filename values
-        new_columns: dict[str, set[str]] = {
-            table: {col} for table, col in add_filename.items()
-        }
+        # Start with columns from add_filename and add_timestamp values
+        new_columns: dict[str, set[str]] = {}
+        
+        for table, col in add_filename.items():
+            new_columns.setdefault(table, set()).add(col)
+        
+        for table, col in add_timestamp.items():
+            new_columns.setdefault(table, set()).add(col)
 
         # Extract named capture groups from regex patterns
         pattern: re.Pattern = re.compile(r"<(.*?)>")
