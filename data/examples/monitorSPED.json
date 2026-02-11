@@ -37,7 +37,7 @@
             "taxEstimateSummary": "APURAÇÃO",
             "files": "ARQUIVOS",
             "accounts": "CONTAS",
-            "_": "SHAREPOINT"
+            "_": "PUBLICAÇÃO"
         },
         "input to ignore": [
             "Z:/sp/POST/monitorSPED/.monitorSPED"
@@ -130,7 +130,7 @@
             "_": "jsonFileName"
         },
         "filename data format": {
-            "_": "(?P<jsonFileGeneratedBy>\\w+)_(?P<jsonFileGeneratedAt>\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
+            "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
     "last clean": "2025-07-07 14:14:07"
