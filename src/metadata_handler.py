@@ -756,10 +756,21 @@ class DataHandler:
 
                         if sheets_pending_to_read:
                             if len(sheets_pending_to_read) == 1:
-                                new_df = excel_file.parse(
-                                    sheets_pending_to_read[0], dtype="string"
-                                )
-                                add_remaining_data = True
+                                if (
+                                    self.config.default_worksheet_key
+                                    in self.config.table_names.keys()
+                                ):
+                                    self.log.debug(
+                                        f"Remaining data in file {file} will be added default table."
+                                    )
+                                    new_df = excel_file.parse(
+                                        sheets_pending_to_read[0], dtype="string"
+                                    )
+                                    add_remaining_data = True
+                                else:
+                                    self.log.warning(
+                                        f"Some data in file {file} could not be associated with any table and will be ignored."
+                                    )
                             else:
                                 self.log.warning(
                                     "Multiple worksheets in file {file}. Check configuration to include table names to all worksheets."
@@ -813,8 +824,20 @@ class DataHandler:
 
                     # add the remaining data from the json file to the default base_key table
                     if data:
-                        new_df = self.create_dataframe(data)
-                        add_remaining_data = True
+                        if (
+                            self.config.default_worksheet_key
+                            in self.config.table_names.keys()
+                        ):
+                            self.log.debug(
+                                f"Remaining data in file {file} will be added default table."
+                            )
+                            table = self.config.default_worksheet_key
+                            new_df = self.create_dataframe(data)
+                            add_remaining_data = True
+                        else:
+                            self.log.warning(
+                                f"Some data in file {file} could not be associated with any table and will be ignored."
+                            )
 
                 case _:
                     self.log.error(f"Unsupported metadata file type: {file_extension}")
