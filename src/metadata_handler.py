@@ -1124,7 +1124,75 @@ class DataHandler:
                 f"Could not update all primary/foreign keys for metadata from file {file}. File will be moved to trash. Check configuration and metadata file before attempting to reprocess."
             )
 
+        # Delete orphan dimension rows if configured
+        self._delete_orphan_dimension_rows(file)
+
         return
+
+    # --------------------------------------------------------------
+    def _delete_orphan_dimension_rows(self, file: str) -> None:
+        """Delete orphan rows from dimension tables where no FK in any referencing table points to the PK.
+        Only applies to tables with 'delete orphan' set to True in the PK association config.
+        Loops until no more orphans are found (cascading cleanup).
+
+        Args:
+            file (str): The metadata file being processed (for logging).
+
+        Returns:
+            None
+        """
+
+        orphans_found = True
+        while orphans_found:
+            orphans_found = False
+
+            for table, assoc in self.config.table_associations.items():
+                pk_info = assoc.get(cm.PK_KEY, {})
+
+                # Skip tables not configured for orphan deletion
+                if not pk_info.get(cm.DELETE_ORPHAN_KEY, False):
+                    continue
+
+                referenced_by = pk_info.get(cm.REFERENCED_BY_KEY, set())
+                if not referenced_by:
+                    continue
+
+                pk_column = pk_info.get(cm.NAME_KEY, None)
+                if not pk_column:
+                    continue
+
+                ref_table_df = self.ref_df.get(table, pd.DataFrame())
+                if ref_table_df.empty:
+                    continue
+
+                # Collect all FK values from all referencing tables
+                all_fk_values = set()
+                for ref_table in referenced_by:
+                    fk_column = (
+                        self.config.table_associations.get(ref_table, {})
+                        .get(cm.FK_KEY, {})
+                        .get(table, None)
+                    )
+                    if (
+                        fk_column
+                        and fk_column
+                        in self.ref_df.get(ref_table, pd.DataFrame()).columns
+                    ):
+                        all_fk_values.update(
+                            self.ref_df[ref_table][fk_column].dropna().unique()
+                        )
+
+                # Find PK values not referenced by any FK
+                pk_values = ref_table_df[pk_column]
+                orphan_mask = ~pk_values.isin(all_fk_values)
+                orphan_count = orphan_mask.sum()
+
+                if orphan_count > 0:
+                    orphans_found = True
+                    self.log.info(
+                        f"Deleting {orphan_count} orphan row(s) from table {table} after processing file {file}."
+                    )
+                    self.ref_df[table] = ref_table_df[~orphan_mask]
 
     # --------------------------------------------------------------
     def split_df_rows_add_update(

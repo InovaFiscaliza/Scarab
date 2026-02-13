@@ -37,6 +37,8 @@ RELATIVE_VALUE_KEY: str = "relative value"
 """Key to indicate that the primary key is relative within the file in table association dictionaries."""
 REFERENCED_BY_KEY: str = "referenced by"
 """Key to identify the tables that reference the primary key in table association dictionaries."""
+DELETE_ORPHAN_KEY: str = "delete orphan"
+"""Key to indicate that orphan rows in the dimension table should be deleted when no FK references them."""
 REPLACE_KEY: str = "replace"
 """Key to identify replacement rules in filename data replacement dictionaries."""
 OLD_KEY: str = "old"
@@ -62,6 +64,7 @@ PK_BASE_SCHEMA: dict[str, type] = {
 
 PK_EXT_SCHEMA: dict[str, type] = {
     **PK_BASE_SCHEMA,
+    DELETE_ORPHAN_KEY: bool,  # Optional: delete orphan rows in this dimension table
     REFERENCED_BY_KEY: set[str],  # List of tables that reference this primary key
 }
 
@@ -644,6 +647,15 @@ class Config:
                             f"\n\nError in config file. Inconsistent primary key types: Table {table} uses relative primary keys while another table uses absolute primary keys. All tables must use the same type."
                         )
                         exit(1)
+
+                # Validate and default delete orphan setting
+                delete_orphan = assoc[PK_KEY].get(DELETE_ORPHAN_KEY, False)
+                if not isinstance(delete_orphan, bool):
+                    print(
+                        f"\n\nError in config file. Invalid delete orphan value in table {table}: Used {delete_orphan}, expected a boolean."
+                    )
+                    exit(1)
+                assoc[PK_KEY][DELETE_ORPHAN_KEY] = delete_orphan
 
                 if pk_column in self.key_columns.get(table, set()) and relative_value:
                     self.key_columns[table].remove(pk_column)
