@@ -1843,6 +1843,8 @@ class DataHandler:
         # loop through the target catalog files and save the reference data,
         # ensuring that at least one file is saved successfully before returning True
         save_at_least_one = False
+        save_multiple_files = False
+
         # TODO: #19 Instead of saving multiple files from the df, save one and copy to the remaining folders.
         for catalog_file in self.config.catalog_files:
             # get the extension used on the catalog_file
@@ -1885,6 +1887,7 @@ class DataHandler:
                             self.log.info(
                                 f"CSV reference data file(s) updated: {csv_file}"
                             )
+                        save_multiple_files = True
                         # TODO: allow start from CSV:  save_at_least_one = True
                     except Exception as e:
                         self.log.error(f"Error saving CSV '{csv_file}: {e}")
@@ -1903,7 +1906,7 @@ class DataHandler:
                         self.log.info(
                             f"Json reference data file updated: {catalog_file}"
                         )
-                        # TODO: allow start from json:  save_at_least_one = True
+                        save_at_least_one = True
                     except Exception as e:
                         self.log.error(f"Error saving Json '{catalog_file}': {e}")
 
@@ -1926,6 +1929,7 @@ class DataHandler:
                             qvd_table.to_qvd(qvd_file, options=options)
 
                             self.log.info(f"Reference data file updated: {qvd_file}")
+                        save_multiple_files = True
                         # TODO: allow start from qvd:  save_at_least_one = True
                     except Exception as e:
                         self.log.error(f"Error saving QVD '{qvd_file}': {e}")
@@ -1946,6 +1950,7 @@ class DataHandler:
                             self.log.info(
                                 f"Parquet reference data file updated: {parquet_file}"
                             )
+                        save_multiple_files = True
                         # TODO: allow start from parquet:  save_at_least_one = True
                     except Exception as e:
                         self.log.error(f"Error saving Parquet '{parquet_file}': {e}")
@@ -1954,6 +1959,12 @@ class DataHandler:
                     self.log.error(f"Unsupported catalog file extension: {extension}")
 
         if not save_at_least_one:
-            self.log.error("No reference data file was saved. No changes were made.")
+            self.log.warning(
+                "No reference data file was saved. Memory processing only."
+            )
+            if save_multiple_files:
+                self.log.warning(
+                    "Multiple reference data files saved. No automatic recovery from these files is currently implemented. Please ensure that at least one reference data file is saved successfully to enable recovery in case of issues with the reference data in memory."
+                )
 
         return save_at_least_one
