@@ -678,10 +678,6 @@ class Config:
                     associations[fk_table][PK_KEY].setdefault(REFERENCED_BY_KEY, set())
                     associations[fk_table][PK_KEY][REFERENCED_BY_KEY].add(table)
 
-                    # Test if fk_column is an element of the set defined in self.key_columns[fk_table], if not, add it
-                    if fk_column not in self.key_columns.get(table, set()):
-                        self.key_columns.setdefault(table, set()).add(fk_column)
-
         return associations
 
     # --------------------------------------------------------------
