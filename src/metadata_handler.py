@@ -1967,4 +1967,4 @@ class DataHandler:
                     "Multiple reference data files saved. No automatic recovery from these files is currently implemented. Please ensure that at least one reference data file is saved successfully to enable recovery in case of issues with the reference data in memory."
                 )
 
-        return save_at_least_one
+        return save_at_least_one or save_multiple_files
