@@ -21,6 +21,10 @@
         <li><a href="#Multiple_input_for_update_test">Multiple input for update test</a></li>
         <li><a href="#monitorSPED_test">monitorSPED test</a></li>
         <li><a href="#Timestamp_column_test">Timestamp column test</a></li>
+        <li><a href="#Multitable_test">Multitable test</a></li>
+        <li><a href="#Multitable_update_dimension_test">Multitable update dimension test</a></li>
+        <li><a href="#Multitable_update_fact_test">Multitable update fact test</a></li>
+        <li><a href="#Multitable_orphan_handling_test">Multitable orphan handling test</a></li>
     </ol>
 </details>
 
@@ -447,6 +451,121 @@ This ensures correct parsing of the test CSV files.
 If you want to test with other delimiters, change the `csv separator` value in the config.
 
 To finish the test use `ctrl+c`. It may take up to 5 seconds to stop the script after the interruption is received and registered in the log.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multitable test
+
+Use `Itest_multitable.bat` to set the sandbox folder structure for the test.
+
+This test validates the base multitable architecture with Primary Key (PK) and Foreign Key (FK) relationships across three tables: `DimProduct`, `DimCustomer`, and `FactSales`.
+
+The initial JSON input contains dimension tables with products (P1, P2) and customers (C1, C2), plus a fact table with sales (S1, S2) referencing the dimensions via FK.
+
+Use `Itest_multitable.bat a` to only extract the test data without running the script. Otherwise, run `Itest_multitable.bat` to execute the full test, which will automatically compare the expected and obtained results using VS Code diff.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests folder in the repository path, the following results are expected:
+
+> * The initial JSON file will be processed from the post folder.
+> * A consolidated `catalog.json` will be published in the get folder with three tables: `DimProduct`, `DimCustomer`, and `FactSales`.
+> * Integer PKs are assigned sequentially to each dimension and fact row.
+> * FK columns in `FactSales` correctly reference the PKs of their associated dimension tables.
+> * The metadata file will be moved to the store folder after processing.
+
+To finish the test use `ctrl+c`. It may take up to 2 seconds to stop the script after the interruption is received and registered in the log.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multitable update dimension test
+
+Use `Jtest_multitable_update_dim.bat` to set the sandbox folder structure for the test.
+
+This test validates updating dimension tables in a multitable setup. Starting from the base catalog produced by test I, a new JSON file is processed that updates the `DimProduct` table, fixing the product name for P1 (from `W'dget` to `Widget`) and providing new PK values.
+
+Use `Jtest_multitable_update_dim.bat a` to only extract the test data without running the script. Otherwise, run `Jtest_multitable_update_dim.bat` to execute the full test, which will automatically compare the expected and obtained results using VS Code diff.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests folder in the repository path, the following results are expected:
+
+> * The update file will be processed and the dimension table `DimProduct` will be updated with corrected product names.
+> * PK values in the dimension tables are reconciled — incoming PKs from the update file are remapped to the existing catalog's PK sequence.
+> * FK references in `FactSales` are updated to reflect any changes in dimension PKs.
+> * The update file will be moved to the store folder after processing.
+
+To finish the test use `ctrl+c`. It may take up to 2 seconds to stop the script after the interruption is received and registered in the log.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multitable update fact test
+
+Use `Ktest_multitable_update_fact.bat` to set the sandbox folder structure for the test.
+
+This test validates updating the fact table (`FactSales`) in a multitable setup. A new JSON file is processed that adds a new sale (S3) and updates an existing sale (S1), changing its quantity and amount.
+
+Use `Ktest_multitable_update_fact.bat a` to only extract the test data without running the script. Otherwise, run `Ktest_multitable_update_fact.bat` to execute the full test, which will automatically compare the expected and obtained results using VS Code diff.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests folder in the repository path, the following results are expected:
+
+> * Sale S1 will be updated with new values: Qty from 2 to 3 and Amount from 20 to 30.
+> * A new sale S3 will be added to the `FactSales` table with FK references to existing dimension entries.
+> * Existing dimension tables (`DimProduct` and `DimCustomer`) remain unchanged.
+> * The update file will be moved to the store folder after processing.
+
+To finish the test use `ctrl+c`. It may take up to 2 seconds to stop the script after the interruption is received and registered in the log.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Multitable orphan handling test
+
+Use `Ltest_multitable_orphan_handling.bat` to set the sandbox folder structure for the test.
+
+This test validates orphan handling in multitable PK/FK relationships. A new JSON file is processed that updates the fact table so that all sales now reference only `P1` (Widget) and `C1` (Alice), leaving `P2` (Gadget) and `C2` (Bob) as orphans — dimension rows no longer referenced by any fact row.
+
+The config defines different orphan handling policies per dimension table:
+- `DimProduct`: `"delete orphan": true` — unreferenced products are removed.
+- `DimCustomer`: `"delete orphan": false` — unreferenced customers are kept.
+
+Use `Ltest_multitable_orphan_handling.bat a` to only extract the test data without running the script. Otherwise, run `Ltest_multitable_orphan_handling.bat` to execute the full test, which will automatically compare the expected and obtained results using VS Code diff.
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests folder in the repository path, the following results are expected:
+
+> * All sales (S1, S2, S3) in `FactSales` will reference only `P1` and `C1`.
+> * `DimProduct` will contain only P1 (Widget) — P2 (Gadget) is deleted because `delete orphan` is `true`.
+> * `DimCustomer` will retain both C1 (Alice) and C2 (Bob) — C2 is kept despite being unreferenced because `delete orphan` is `false`.
+> * The update file will be moved to the store folder after processing.
+
+To finish the test use `ctrl+c`. It may take up to 2 seconds to stop the script after the interruption is received and registered in the log.
 
 <div>
     <a href="https://github.com/InovaFiscaliza/Scarab">
