@@ -1,6 +1,7 @@
 {
     "name": "unnamed",
     "scarab version": "2.1.1",
+    "test mode": false,
     "check period in seconds": 10,
     "clean period in hours": 1,
     "delay first clean": true,

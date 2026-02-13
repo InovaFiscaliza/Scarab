@@ -112,6 +112,8 @@ class Config:
                 "scarab version", default_conf["scarab version"]
             )
             """ Version of the scarab script"""
+            self.test_mode: bool = config.pop("test mode", default_conf["test mode"])
+            """ Flag to indicate if the script is running in test mode. If True, will finish execution after processing the current batch of files."""
             self.check_period: int = config.pop(
                 "check period in seconds", default_conf["check period in seconds"]
             )

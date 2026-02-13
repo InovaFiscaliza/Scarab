@@ -115,7 +115,13 @@ def main(config_path: str) -> None:
 
             fh.clean_folders()
 
-            time.sleep(config.check_period)
+            if config.test_mode:
+                keep_watching = False
+                log.critical(
+                    "Test mode enabled. Finishing execution after processing current batch of files."
+                )
+            else:
+                time.sleep(config.check_period)
 
             error_count = 0
 
