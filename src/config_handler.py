@@ -294,10 +294,11 @@ class Config:
             self.table_names: dict[str, str] = self._set_default_table_name(
                 config["files"].pop("table names", default_conf["files"]["table names"])
             )
-            """ Table names to be used. {"json_root_table_name": "worksheet_name", ...]"""
+            """ Table names to be used. {"json_root_table_name": "worksheet_name"}. Also creates the mapping {"worksheet_name": "worksheet_name"} to handle the resulting spreadsheet, when output is reloaded as input."""
             self.sheet_names: dict[str, str] = {
                 v: k for k, v in self.table_names.items()
             }
+            self.sheet_names.update({k: k for k in self.table_names})
 
             """ CSV separator used in metadata files"""
             config["files"] = self._remove_empty_keys(config["files"])
