@@ -1893,12 +1893,17 @@ class DataHandler:
         df = {}
         for table in self.ref_df.keys():
             try:
-                # sort the reference DataFrame by the columns defined in the config file
-                df[table] = self.ref_df[table].sort_values(
-                    by=self.config.rows_sort_by[table][cm.SORT_BY_KEY],
-                    ascending=self.config.rows_sort_by[table][cm.ASCENDING_SORT_KEY],
-                    ignore_index=True,
-                )
+                # if table has data, sort the reference DataFrame by the columns defined in the config file
+                if (not self.ref_df[table].empty) and (
+                    table in self.config.rows_sort_by.keys()
+                ):
+                    df[table] = self.ref_df[table].sort_values(
+                        by=self.config.rows_sort_by[table][cm.SORT_BY_KEY],
+                        ascending=self.config.rows_sort_by[table][
+                            cm.ASCENDING_SORT_KEY
+                        ],
+                        ignore_index=True,
+                    )
 
                 # get selected columns in the defined order
                 df[table] = df[table][self.ref_cols[table]]
