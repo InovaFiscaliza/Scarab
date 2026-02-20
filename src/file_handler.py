@@ -16,7 +16,6 @@ import config_handler as cm
 import logging
 import os
 import shutil
-import glob
 import pandas as pd
 import hashlib
 import itertools
@@ -32,6 +31,63 @@ from typing import List
 class FileHandler:
     config: cm.Config
     log: logging.Logger
+
+    # --------------------------------------------------------------
+    def _get_all_folder_content(self, root_folder: str) -> list[str]:
+        """Get all files and folders recursively.
+        Similar to glob.glob("**", recursive=True) but including hidden files.
+
+
+        Args:
+            root_folder (str): Root directory to scan.
+
+        Returns:
+            list[str]: List of relative paths from root_folder.
+        """
+
+        all_items = []
+        for dirpath, dirnames, filenames in os.walk(root_folder):
+            # Get relative path from root_folder
+            rel_dir = os.path.relpath(dirpath, root_folder)
+
+            # Add all subdirectories (with relative path)
+            for dirname in dirnames:
+                if rel_dir == ".":
+                    all_items.append(dirname)
+                else:
+                    all_items.append(os.path.join(rel_dir, dirname))
+
+            # Add all files (with relative path)
+            for filename in filenames:
+                if rel_dir == ".":
+                    all_items.append(filename)
+                else:
+                    all_items.append(os.path.join(rel_dir, filename))
+
+        return all_items
+
+    # --------------------------------------------------------------
+    def _filter_ignored_input(self, folder_content: list[str]) -> set[str]:
+        """Filter out items that match any configured ignore pattern.
+
+        Args:
+            folder_content (list[str]): Relative paths from the input folder.
+
+        Returns:
+            set[str]: Input items excluding ignored entries.
+        """
+
+        if not self.config.input_to_ignore:
+            return set(folder_content)
+
+        return {
+            item
+            for item in folder_content
+            if not any(
+                pattern.search(item) or pattern.match(os.path.basename(item))
+                for pattern in self.config.input_to_ignore
+            )
+        }
 
     # --------------------------------------------------------------
     def move_to_temp(self, source_file: str) -> str | None:
@@ -440,13 +496,13 @@ class FileHandler:
 
         # Loop through all post folders and temp folder
         for input_folder in self.config.input_path_list:
-            folder_content = glob.glob("**", root_dir=input_folder, recursive=True)
+            folder_content = self._get_all_folder_content(input_folder)
 
             if not folder_content:
                 self.log.debug(f"Folder {input_folder} is empty.")
             else:
                 # remove files and folders to ignore from the list
-                folder_content = set(folder_content) - self.config.input_to_ignore
+                folder_content = self._filter_ignored_input(folder_content)
 
                 # add path to filenames
                 folder_content = set(
@@ -489,10 +545,10 @@ class FileHandler:
         """
 
         # Get content from folder
-        folder_content = glob.glob("**", root_dir=folder, recursive=True)
+        folder_content = self._get_all_folder_content(folder)
 
         # Remove files and folder to ignore from the list of cleaning
-        folder_content = set(folder_content) - self.config.input_to_ignore
+        folder_content = self._filter_ignored_input(folder_content)
 
         if not folder_content:
             self.log.info(f"Nothing to clean in {folder}.")
@@ -573,7 +629,7 @@ class FileHandler:
             # get the content from all folders into a dictionary of lists
             folders = {}
             for folder in self.config.get:
-                folders[folder] = glob.glob("**", root_dir=folder, recursive=True)
+                folders[folder] = self._get_all_folder_content(folder)
 
             # Use itertools.combinations to generate pairs of folders for comparison
             for folder1, folder2 in itertools.combinations(folders.keys(), 2):

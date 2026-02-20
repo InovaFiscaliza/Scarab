@@ -269,14 +269,14 @@ class Config:
             """ Dictionary with regex formatting to be used to select filenames to be processed as raw data files"""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
-            self.input_to_ignore: set[str] = set(
+            self.input_to_ignore: list[re.Pattern[str]] = self._build_ignore_patterns(
                 self._ensure_list(
                     config["files"].pop(
                         "input to ignore", default_conf["files"]["input to ignore"]
                     )
                 )
             )
-            """ Set with files and folders to ignore in the input folders. Files within ignored folders will not be ignored. Use exact names only, including relative path to the input folder."""
+            """ List of compiled regex patterns for files and folders to ignore in input folders. Supports both literal strings (exact match) and regex patterns (prefix with 're:')."""
 
             self.csv_separator: str = (
                 config["files"]
@@ -450,6 +450,39 @@ class Config:
                 f"\n\nError: Invalid type for item: {type(item)}. Expected a string or a list."
             )
             exit(1)
+
+    # --------------------------------------------------------------
+    def _build_ignore_patterns(self, values: list[str]) -> list[re.Pattern[str]]:
+        """Build regex patterns for input_to_ignore, supporting both literal strings and regex patterns.
+
+        - Strings prefixed with 're:' are treated as raw regex patterns
+        - All other strings are treated as literals (exact match using basename or relative path)
+
+        Args:
+            values (list[str]): List of ignore patterns from config
+
+        Returns:
+            list[re.Pattern[str]]: Compiled regex patterns
+        """
+
+        patterns = []
+        for value in values:
+            if value.startswith("re:"):
+                # Explicit regex mode: use the pattern as-is (strip 're:' prefix)
+                try:
+                    patterns.append(re.compile(value[3:]))
+                except re.error as e:
+                    print(
+                        f"\n\nError: Invalid regex pattern in 'input to ignore': {value[3:]} - {e}"
+                    )
+                    exit(1)
+            else:
+                # Literal mode: match basename or full relative path
+                # Use os.path.basename to extract just the filename/folder name
+                escaped = re.escape(os.path.basename(value))
+                patterns.append(re.compile(rf"^{escaped}$"))
+
+        return patterns
 
     # --------------------------------------------------------------
     def _ensure_mandatory_structure(self, config: dict) -> dict[str, Any]:
