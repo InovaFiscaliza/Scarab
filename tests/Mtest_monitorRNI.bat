@@ -28,118 +28,158 @@ if "%~1"=="0" (
     exit /b 0
 )
 
+set "arg=%~1"
+set "max=4"
+if not "%arg%"=="" (
+    if "%arg:~0,1%"=="<" (
+        set "max=%arg:~1%"
+        set /a max-=1
+    ) else (
+        set "max=%arg%"
+    )
+) else (
+    set "max=4"
+)
+
 REM Run the Scarab script for Scenario1
 uv run ..\src\scarab.py .\sandbox\config.json
 
-call :check_folder .\sandbox\post .monitorRNI_post
+set "run1=0"
+if %max% GEQ 1 set "run1=1"
+if "%arg%"=="1" set "run1=1"
 
-call :check_file_exists .\sandbox\teams\monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.teams "Failed: File \"monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.teams\" was not moved to the ./teams folder."
+if %run1%==1 (
 
-call :check_file_exists .\sandbox\get\raw\8059Log_080152_270324.txt "Failed: File \"8059Log_080152_270324.txt\" was not moved to the ./get/raw folder."
+    call :check_folder .\sandbox\post .monitorRNI_post
 
-call :check_file_exists .\sandbox\store\monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.json "Failed: File \"monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.json\" was not created in the ./store folder."
+    call :check_file_exists .\sandbox\teams\monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.teams "Failed: File \"monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.teams\" was not moved to the ./teams folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\get\raw\8059Log_080152_270324.txt "Failed: File \"8059Log_080152_270324.txt\" was not moved to the ./get/raw folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\store\monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.json "Failed: File \"monitorRNI_20260211_e2dc3d88-3d5e-49d4-95c9-37d445c4737f.json\" was not created in the ./store folder."
 
-call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario1\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
+    call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
 
-echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-echo.
-echo Scenario1 checks passed successfully.
-echo.
-echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
 
-if "%~1"=="1" (
-    echo Test completed for Scenario1. To run the next scenarios, run the script again with argument 2.
-    exit /b 0
+    call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario1\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
+
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo.
+    echo Scenario1 checks passed successfully.
+    echo.
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    if %max% LEQ 1 (
+        echo Test completed for Scenario1. To run the next scenarios, run the script again with argument 2.
+        exit /b 0
+    )
 )
 
 REM Prepare Scenario2 and run the Scarab script again
-copy .\sandbox\store\Scenario2\* .\sandbox\post\ >nul
+set "run1=0"
+if %max% GEQ 2 set "run1=1"
+if "%arg%"=="2" set "run1=1"
+if %run1%==1 (
+    copy .\sandbox\store\Scenario2\* .\sandbox\post\ >nul
 
-uv run ..\src\scarab.py .\sandbox\config.json
+    uv run ..\src\scarab.py .\sandbox\config.json
 
-call :check_folder .\sandbox\post .monitorRNI_post
+    call :check_folder .\sandbox\post .monitorRNI_post
 
-call :check_file_exists .\sandbox\teams\monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.teams "Failed: File \"monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.teams\" was not moved to the ./teams folder."
+    call :check_file_exists .\sandbox\teams\monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.teams "Failed: File \"monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.teams\" was not moved to the ./teams folder."
 
-call :check_file_exists .\sandbox\get\raw\8059Log_080152_270324.txt "Failed: File \"8059Log_080152_270324.txt\" was not moved to the ./get/raw folder."
+    call :check_file_exists .\sandbox\get\raw\8059Log_080152_270324.txt "Failed: File \"8059Log_080152_270324.txt\" was not moved to the ./get/raw folder."
 
-call :check_file_exists .\sandbox\store\monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.json "Failed: File \"monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.json\" was not created in the ./store folder."
+    call :check_file_exists .\sandbox\store\monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.json "Failed: File \"monitorRNI_20260211_536b0e6a-45bd-4737-92ba-068a1fc1a2a6.json\" was not created in the ./store folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
 
-call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario2\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
+    call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario2\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
 
-echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-echo.
-echo Scenario2 checks passed successfully.
-echo.
-echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo.
+    echo Scenario2 checks passed successfully.
+    echo.
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if "%~1"=="2" (
-    echo Test completed for Scenario2. To run the next scenarios, run the script again with argument 3.
-    exit /b 0
+    if %max% LEQ 2 (
+        echo Test completed for Scenario2. To run the next scenarios, run the script again with argument 3.
+        exit /b 0
+    )
 )
 
 REM Prepare Scenario3 and run the Scarab script again
-copy .\sandbox\store\Scenario3\* .\sandbox\post\ >nul
+set "run1=0"
+if %max% GEQ 3 set "run1=1"
+if "%arg%"=="3" set "run1=1"
+if %run1%==1 (
+    copy .\sandbox\store\Scenario3\* .\sandbox\post\ >nul
 
-uv run ..\src\scarab.py .\sandbox\config.json
+    uv run ..\src\scarab.py .\sandbox\config.json
 
-call :check_folder .\sandbox\post .monitorRNI_post
+    call :check_folder .\sandbox\post .monitorRNI_post
 
-call :check_file_exists .\sandbox\teams\monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.teams "Failed: File \"monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.teams\" was not moved to the ./teams folder."
+    call :check_file_exists .\sandbox\teams\monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.teams "Failed: File \"monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.teams\" was not moved to the ./teams folder."
 
-call :check_file_exists .\sandbox\get\raw\8059Log_082159_190324.txt "Failed: File \"8059Log_082159_190324.txt\" was not moved to the ./get/raw folder."
+    call :check_file_exists .\sandbox\get\raw\8059Log_082159_190324.txt "Failed: File \"8059Log_082159_190324.txt\" was not moved to the ./get/raw folder."
 
-call :check_file_exists .\sandbox\get\raw\8059Log_084234_200324.txt "Failed: File \"8059Log_084234_200324.txt\" was not moved to the ./get/raw folder."
+    call :check_file_exists .\sandbox\get\raw\8059Log_084234_200324.txt "Failed: File \"8059Log_084234_200324.txt\" was not moved to the ./get/raw folder."
 
-call :check_file_exists .\sandbox\store\monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.json "Failed: File \"monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.json\" was not created in the ./store folder."
+    call :check_file_exists .\sandbox\store\monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.json "Failed: File \"monitorRNI_20260211_bb21dd3c-251a-4f5f-b93f-689b0fbe8dd8.json\" was not created in the ./store folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
 
-call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario3\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
+    call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario3\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
 
-echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-echo.
-echo Scenario3 checks passed successfully.
-echo.
-echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo.
+    echo Scenario3 checks passed successfully.
+    echo.
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if "%~1"=="3" (
-    echo Test completed for Scenario3. To run the next scenarios, run the script again with argument 4.
-    exit /b 0
+    if %max% LEQ 3 (
+        echo Test completed for Scenario3. To run the next scenarios, run the script again with argument 4.
+        exit /b 0
+    )
 )
 
 REM Prepare Scenario4 and run the Scarab script again
-copy .\sandbox\store\Scenario4\* .\sandbox\post\ >nul
+set "run1=0"
+if %max% GEQ 4 set "run1=1"
+if "%arg%"=="4" set "run1=1"
+if %run1%==1 (
+    copy .\sandbox\store\Scenario4\* .\sandbox\post\ >nul
 
-uv run ..\src\scarab.py .\sandbox\config.json
+    uv run ..\src\scarab.py .\sandbox\config.json
 
-call :check_folder .\sandbox\post .monitorRNI_post
+    call :check_folder .\sandbox\post .monitorRNI_post
 
-call :check_file_exists .\sandbox\teams\monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.teams "Failed: File \"monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.teams\" was not moved to the ./teams folder."
+    call :check_file_exists .\sandbox\teams\monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.teams "Failed: File \"monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.teams\" was not moved to the ./teams folder."
 
-call :check_file_exists .\sandbox\get\raw\8059Log_082159_190324.txt "Failed: File \"8059Log_082159_190324.txt\" was not moved to the ./get/raw folder."
+    call :check_file_exists .\sandbox\get\raw\8059Log_082159_190324.txt "Failed: File \"8059Log_082159_190324.txt\" was not moved to the ./get/raw folder."
 
-call :check_file_exists .\sandbox\get\raw\8059Log_084234_200324.txt "Failed: File \"8059Log_084234_200324.txt\" was not moved to the ./get/raw folder."
+    call :check_file_exists .\sandbox\get\raw\8059Log_084234_200324.txt "Failed: File \"8059Log_084234_200324.txt\" was not moved to the ./get/raw folder."
 
-call :check_file_exists .\sandbox\store\monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.json "Failed: File \"monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.json\" was not created in the ./store folder."
+    call :check_file_exists .\sandbox\store\monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.json "Failed: File \"monitorRNI_20260211_5b1a317d-211a-443e-8420-83fc84567a44.json\" was not created in the ./store folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\get\monitorRNI.xlsx "Failed: File \"monitorRNI.xlsx\" was not created in the ./get folder."
 
-call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
+    call :check_file_exists .\sandbox\get\monitorRNI.json "Failed: File \"monitorRNI.json\" was not created in the ./get folder."
 
-call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario4\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
+    call :check_file_compare .\sandbox\get\monitorRNI.json .\sandbox\results\Scenario4\monitorRNI.json "Warning: The content of \"monitorRNI.json\" does not match the expected result."
 
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo.
+    echo Scenario4 checks passed successfully.
+    echo.
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+)
 exit /b 0
 
 REM --------------------------------------------------------------
