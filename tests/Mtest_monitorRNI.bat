@@ -13,8 +13,8 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
-REM If any argument is provided, exit after extraction only
-if not "%~1"=="" (
+REM If argument is nummber 0, only display the test setup instructions
+if "%~1"=="0" (
     echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     echo.
     echo Monitor RNI test setup.
@@ -51,6 +51,11 @@ echo Scenario1 checks passed successfully.
 echo.
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+if "%~1"=="1" (
+    echo Test completed for Scenario1. To run the next scenarios, run the script again with argument 2.
+    exit /b 0
+)
+
 REM Prepare Scenario2 and run the Scarab script again
 copy .\sandbox\store\Scenario2\* .\sandbox\post\ >nul
 
@@ -75,6 +80,11 @@ echo.
 echo Scenario2 checks passed successfully.
 echo.
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if "%~1"=="2" (
+    echo Test completed for Scenario2. To run the next scenarios, run the script again with argument 3.
+    exit /b 0
+)
 
 REM Prepare Scenario3 and run the Scarab script again
 copy .\sandbox\store\Scenario3\* .\sandbox\post\ >nul
@@ -102,6 +112,11 @@ echo.
 echo Scenario3 checks passed successfully.
 echo.
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if "%~1"=="3" (
+    echo Test completed for Scenario3. To run the next scenarios, run the script again with argument 4.
+    exit /b 0
+)
 
 REM Prepare Scenario4 and run the Scarab script again
 copy .\sandbox\store\Scenario4\* .\sandbox\post\ >nul
@@ -146,7 +161,6 @@ for /f "delims=" %%i in ('dir /b "%folder%"') do (
     )
 )
 if !found_other! equ 1 (
-    echo press any key to continue...
     pause
 REM     set /p "choice=Do you want to stop the test? (y/n): "
 REM     if /i "%choice%"=="y" (
@@ -156,7 +170,6 @@ REM     )
 )
 if !found_allowed! equ 0 (
     echo Failed: File "%allowed_file%" was not found in the %folder% folder.
-    echo press any key to continue...
     pause
 REM     set /p "choice=Do you want to stop the test? (y/n): "
 REM     if /i "%choice%"=="y" (
@@ -177,7 +190,6 @@ set "target_file=%~1"
 set "error_msg=%~2"
 if not exist "%target_file%" (
     echo %error_msg%
-    echo press any key to continue...
     pause
 REM    set /p "choice=Do you want to stop the test? (y/n): "
 REM    if /i "%choice%"=="y" (
@@ -202,7 +214,6 @@ fc "%file_a%" "%file_b%" >nul
 if %errorlevel% neq 0 (
     echo %warn_msg%
     code -d "%file_a%" "%file_b%"
-    echo press any key to continue...
     pause
 REM        set /p "choice=Do you want to stop the test? (y/n): "
 REM        if /i "%choice%"=="y" (

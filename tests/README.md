@@ -25,6 +25,7 @@
         <li><a href="#Multitable_update_dimension_test">Multitable update dimension test</a></li>
         <li><a href="#Multitable_update_fact_test">Multitable update fact test</a></li>
         <li><a href="#Multitable_orphan_handling_test">Multitable orphan handling test</a></li>
+        <li><a href="#monitorRNI_multiple_scenario_test">monitorRNI multiple scenario test</a></li>
     </ol>
 </details>
 
@@ -566,6 +567,54 @@ After `uv run ..\src\scarab.py .\sandbox\config.json` is executed from the tests
 > * The update file will be moved to the store folder after processing.
 
 To finish the test use `ctrl+c`. It may take up to 2 seconds to stop the script after the interruption is received and registered in the log.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## monitorRNI multiple scenario test
+
+Use `Mtest_monitorRNI.bat` to set the sandbox folder structure for the test.
+
+This test validates the `monitorRNI` flow through multiple scenarios, including initial consolidation and retification behavior, and validates expected outputs against reference files under `sandbox\results\Scenario1` to `Scenario4`.
+
+The script supports the following options:
+
+* `Mtest_monitorRNI.bat 0`: Extracts sandbox and only displays setup instructions (does not run Scarab).
+* `Mtest_monitorRNI.bat 1`: Runs Scenario1 and stops.
+* `Mtest_monitorRNI.bat 2`: Runs Scenario1 and Scenario2, then stops.
+* `Mtest_monitorRNI.bat 3`: Runs Scenario1, Scenario2, and Scenario3, then stops.
+* `Mtest_monitorRNI.bat 4` or `Mtest_monitorRNI.bat`: Runs all scenarios (Scenario1 to Scenario4).
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed by the batch script, the following behavior is expected:
+
+> * The output workbook `monitorRNI.xlsx` is generated in `get` with the consolidated sheets for the monitorRNI model, including `PUBLICAÇÃO`, `PROJETO`, `ARQUIVOS`, `PM-RNI`, and `DEMANDA EXTERNA`.
+> * `PUBLICAÇÃO` works as a wildcard table for root JSON keys not consolidated in other sheets, with `correlationKey` extracted from filename.
+> * `PROJETO` is the parent table and uses the key composed by `system`, `issue`, `context`, `entityGroupName`, `entityGroupId`, and `unit`; this key drives inclusion/replacement logic in dependent sheets.
+> * Metadata JSON outputs are generated in `get\monitorRNI.json` and compared with the expected reference for each scenario.
+> * Input metadata files are moved to `store`, raw files are published under `get\raw`, and Teams notification files are generated in `teams`.
+
+Scenario progression validated by the script:
+
+> * **Scenario1**: initial consolidation using the first monitorRNI post package.
+> * **Scenario2**: incremental update using additional posted data; output is compared with `results\Scenario2`.
+> * **Scenario3**: additional update with new raw logs and metadata references; output is compared with `results\Scenario3`.
+> * **Scenario4 (retification)**: update flow where data associated with `oldCorrelationKey` is replaced by records associated with `newCorrelationKey` in all tabs except `PUBLICAÇÃO`; output is compared with `results\Scenario4`.
+
+Notification expectation for this flow:
+
+> * During the initial consolidation flow, notifications are expected for the servers **Eric** and **Lobão**.
+> * In the retification scenario, notification is expected for **Lobão**.
+
+If a scenario comparison fails, the script opens VS Code diff (`code -d`) between obtained and expected `monitorRNI.json` and pauses execution for inspection.
+
+To finish running the Scarab process manually, use `ctrl+c`.
 
 <div>
     <a href="https://github.com/InovaFiscaliza/Scarab">
