@@ -586,11 +586,15 @@ This test validates the `monitorRNI` flow through multiple scenarios, including 
 
 The script supports the following options:
 
+* `Mtest_monitorRNI.bat`: Runs all scenarios (Scenario1 to Scenario4).
 * `Mtest_monitorRNI.bat 0`: Extracts sandbox and only displays setup instructions (does not run Scarab).
 * `Mtest_monitorRNI.bat 1`: Runs Scenario1 and stops.
-* `Mtest_monitorRNI.bat 2`: Runs Scenario1 and Scenario2, then stops.
-* `Mtest_monitorRNI.bat 3`: Runs Scenario1, Scenario2, and Scenario3, then stops.
-* `Mtest_monitorRNI.bat 4` or `Mtest_monitorRNI.bat`: Runs all scenarios (Scenario1 to Scenario4).
+* `Mtest_monitorRNI.bat 2`: Runs Scenario2, then stops.
+* `Mtest_monitorRNI.bat 3`: Runs Scenario3, then stops.
+* `Mtest_monitorRNI.bat 4`: Runs Scenario4, then stops.
+* `Mtest_monitorRNI.bat <2`: Runs all scenarios below 2 (Scenario1 only).
+* `Mtest_monitorRNI.bat <3`: Runs all scenarios below 3 (Scenario1 and Scenario2).
+* `Mtest_monitorRNI.bat <4`: Runs all scenarios below 4 (Scenario1 to Scenario3).
 
 After `uv run ..\src\scarab.py .\sandbox\config.json` is executed by the batch script, the following behavior is expected:
 
