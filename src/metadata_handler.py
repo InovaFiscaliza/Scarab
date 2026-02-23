@@ -188,6 +188,22 @@ class DataHandler:
         return df
 
     # --------------------------------------------------------------
+    def _normalize_null_in_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize null-equivalent values in a DataFrame to pd.NA for consistent handling.
+        Uses the configured null_string_values list to identify values that should be treated as null.
+        This operation is vectorized and operates on all columns simultaneously for efficiency.
+
+        Args:
+            df (pd.DataFrame): DataFrame (or subset) to normalize.
+
+        Returns:
+            pd.DataFrame: DataFrame with null-equivalent values replaced by pd.NA.
+        """
+        # Replace all configured null-equivalent string values with pd.NA
+        # This is vectorized - pandas applies the operation to all columns at once
+        return df.replace(self.config.null_string_values, pd.NA)
+
+    # --------------------------------------------------------------
     def _custom_agg(self, series: pd.Series) -> str | None:
         """Custom aggregation function to be used in the groupby method. Null is kept as Null, single value is kept as is, and multiple values are concatenated with a comma separator.
 
@@ -293,7 +309,12 @@ class DataHandler:
         try:
             # create a column to be used as index, merging the columns in index_column list
             df = df.assign(
-                **{self.index_column: df[columns].astype(str).agg("-".join, axis=1)}
+                **{
+                    self.index_column: df[columns]
+                    .astype(str)
+                    .apply(lambda x: x.str.strip())
+                    .agg("-".join, axis=1)
+                }
             )
 
             # drop rows in which the column with name defined in the self.index_column has value null
@@ -592,6 +613,7 @@ class DataHandler:
 
         # Perform additional table transformation considering existing data and add control columns (not to be included in the output)
         transformations = [
+            lambda df: self._normalize_null_in_dataframe(df),
             lambda df: self._create_data_file_control_column(df, table),
             lambda df: self._create_index(df, table, file),
             lambda df: self._set_types(df, table, file),
