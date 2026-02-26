@@ -13,24 +13,41 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
+REM If argument is number 0, only display the test setup instructions
+if "%~1"=="0" (
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo.
+    echo Test with special characters in columns name.
+    echo.
+    echo First run will give warnings and not upload the data.
+    echo In the second run, will update the output and remove invalid characters
+    echo    from column names
+    echo.
+    echo Run the script twice, either using two terminals or sequentially using:
+    echo.
+    echo     uv run ..\src\scarab.py .\sandbox\config.json
+    echo.
+    echo     move .\sandbox\trash\Anuncios.xlsx .\sandbox\get\Anuncios.xlsx
+    echo.
+    echo     uv run ..\src\scarab.py .\sandbox\config_alt.json
+    echo.
+    echo Check if the output is as described in README.md.
+    echo.
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    exit /b 0
+)
+
+REM Run the Scarab script for Scenario1
+uv run ..\src\scarab.py .\sandbox\config.json
+
+echo.
 echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-echo.
-echo Test with special characters in columns name.
-echo.
-echo First run will give warnings and not upload the data. 
-echo In the second run, will update the output and remove invalid characters
-echo    from column names
-echo.
-echo Run the script twice, either using two terminals or sequentially using:
-echo.
-echo     uv run ..\src\scarab.py .\sandbox\config.json
-echo.
-echo     move .\sandbox\trash\Anuncios.xlsx .\sandbox\get\Anuncios.xlsx
-echo.
-echo     uv run ..\src\scarab.py .\sandbox\config_alt.json
-echo.
-echo Check if the output is as described in README.md.
-echo.
-echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+echo "First run should have given warnings about invalid characters in column names and not uploaded the data."
+pause
+
+move .\sandbox\trash\Anuncios.xlsx .\sandbox\get\Anuncios.xlsx
+
+uv run ..\src\scarab.py .\sandbox\config_alt.json
 
 exit /b 0

@@ -13,8 +13,8 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
-REM If any argument is provided, exit after extraction only
-if not "%~1"=="" (
+REM If argument is number 0, only display the test setup instructions
+if "%~1"=="0" (
     echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     echo.
     echo Multitable update dimension table test
@@ -28,7 +28,7 @@ if not "%~1"=="" (
     exit /b 0
 )
 
-REM Run the Scarab script
+REM Run the Scarab script for Scenario1
 uv run ..\src\scarab.py .\sandbox\config.json
 
 REM Compare expected and obtained results
