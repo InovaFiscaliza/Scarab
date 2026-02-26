@@ -70,7 +70,9 @@ PK_EXT_SCHEMA: dict[str, type] = {
 
 TABLE_ASSOCIATION_SCHEMA: dict[str, type] = {
     PK_KEY: PK_EXT_SCHEMA,  # type: ignore
-    FK_KEY: dict[str, str],  # Foreign key mapping: table name -> column name
+    FK_KEY: dict[
+        str, dict
+    ],  # Foreign key mapping: table name -> {name: column name, delete orphan: bool}
 }
 
 
@@ -708,10 +710,43 @@ class Config:
                     )
                     exit(1)
 
-                for fk_table, fk_column in assoc[FK_KEY].items():
-                    if not isinstance(fk_table, str) or not isinstance(fk_column, str):
+                normalized_fk: dict[str, dict[str, Any]] = {}
+
+                for fk_table, fk_value in assoc[FK_KEY].items():
+                    if not isinstance(fk_table, str):
                         print(
-                            f"\n\nError in config file. Invalid foreign key structure in table {table}: Used {fk_table}:{fk_column}, expected a string for table name and column name."
+                            f"\n\nError in config file. Invalid foreign key table name in table {table}: Used {fk_table}, expected a string."
+                        )
+                        exit(1)
+
+                    fk_column: str | None = None
+                    fk_delete_orphan: bool = False
+
+                    if isinstance(fk_value, str):
+                        fk_column = fk_value
+                    elif isinstance(fk_value, dict):
+                        fk_column = fk_value.get(NAME_KEY, None)
+                        if not isinstance(fk_column, str):
+                            print(
+                                f"\n\nError in config file. Invalid foreign key name in table {table} for reference {fk_table}: Used {fk_column}, expected a string."
+                            )
+                            exit(1)
+
+                        fk_delete_orphan = fk_value.get(DELETE_ORPHAN_KEY, False)
+                        if not isinstance(fk_delete_orphan, bool):
+                            print(
+                                f"\n\nError in config file. Invalid delete orphan value in FK {table}->{fk_table}: Used {fk_delete_orphan}, expected a boolean."
+                            )
+                            exit(1)
+                    else:
+                        print(
+                            f"\n\nError in config file. Invalid foreign key structure in table {table}: Used {fk_table}:{fk_value}, expected a string or a dictionary with keys '{NAME_KEY}' and optional '{DELETE_ORPHAN_KEY}'."
+                        )
+                        exit(1)
+
+                    if not fk_column:
+                        print(
+                            f"\n\nError in config file. Invalid foreign key name in table {table} for reference {fk_table}: Used {fk_column}, expected a non-empty string."
                         )
                         exit(1)
 
@@ -722,9 +757,16 @@ class Config:
                         )
                         exit(1)
 
+                    normalized_fk[fk_table] = {
+                        NAME_KEY: fk_column,
+                        DELETE_ORPHAN_KEY: fk_delete_orphan,
+                    }
+
                     # Create REFERENCED_BY_KEY key with the table back reference along with the primary key info
                     associations[fk_table][PK_KEY].setdefault(REFERENCED_BY_KEY, set())
                     associations[fk_table][PK_KEY][REFERENCED_BY_KEY].add(table)
+
+                assoc[FK_KEY] = normalized_fk
 
         return associations
 

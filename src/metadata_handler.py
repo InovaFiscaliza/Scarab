@@ -100,6 +100,77 @@ class DataHandler:
         """ Dictionary with the table name and key associated with the primary key in relative (in file) indexing and absolute (in reference data) indexing. """
 
     # --------------------------------------------------------------
+    def _get_fk_column_name(self, fk_config: Any) -> str | None:
+        """Get FK column name from FK config supporting legacy and normalized formats.
+
+        Args:
+            fk_config (Any): FK config value.
+
+        Returns:
+            str | None: FK column name if valid.
+        """
+
+        if isinstance(fk_config, str):
+            return fk_config
+        if isinstance(fk_config, dict):
+            fk_column = fk_config.get(cm.NAME_KEY, None)
+            return fk_column if isinstance(fk_column, str) else None
+        return None
+
+    # --------------------------------------------------------------
+    def _is_delete_orphan_enabled_for_fk(self, table: str, fk_table: str) -> bool:
+        """Check if orphan cleanup is enabled for a specific FK association.
+
+        Args:
+            table (str): Referencing table.
+            fk_table (str): Referenced table.
+
+        Returns:
+            bool: True if enabled.
+        """
+
+        fk_info = self.config.table_associations.get(table, {}).get(cm.FK_KEY, {})
+        fk_config = fk_info.get(fk_table, None)
+        if isinstance(fk_config, dict):
+            return bool(fk_config.get(cm.DELETE_ORPHAN_KEY, False))
+        return False
+
+    # --------------------------------------------------------------
+    def _is_delete_orphan_enabled_for_pk(self, table: str) -> bool:
+        """Check if orphan cleanup is enabled for a specific PK association.
+
+        Args:
+            table (str): Table with primary key configuration.
+
+        Returns:
+            bool: True if enabled.
+        """
+
+        pk_info = self.config.table_associations.get(table, {}).get(cm.PK_KEY, {})
+        return bool(pk_info.get(cm.DELETE_ORPHAN_KEY, False))
+
+    # --------------------------------------------------------------
+    def _is_orphan_cleanup_enabled(self) -> bool:
+        """Check whether orphan cleanup should run for any configured PK/FK association.
+
+        Returns:
+            bool: True if at least one PK or FK association has delete-orphan enabled.
+        """
+
+        pk_cleanup_enabled = any(
+            self._is_delete_orphan_enabled_for_pk(table)
+            for table in self.config.table_associations.keys()
+        )
+        if pk_cleanup_enabled:
+            return True
+
+        return any(
+            self._is_delete_orphan_enabled_for_fk(table, fk_table)
+            for table, assoc in self.config.table_associations.items()
+            for fk_table in assoc.get(cm.FK_KEY, {}).keys()
+        )
+
+    # --------------------------------------------------------------
     def _replace_empty_sorting_value(self) -> None:
         """Process the row sorting dictionary to ensure all values are lists.
 
@@ -385,9 +456,13 @@ class DataHandler:
                     df[pk_column] = df[pk_column].astype(int)
             fk_info = assoc.get(cm.FK_KEY, None)
             if fk_info:
-                for fk_table, fk_column in fk_info.items():
-                    if self.config.table_associations[fk_table][cm.PK_KEY].get(
-                        cm.INT_TYPE_KEY, False
+                for fk_table, fk_config in fk_info.items():
+                    fk_column = self._get_fk_column_name(fk_config)
+                    if (
+                        self.config.table_associations[fk_table][cm.PK_KEY].get(
+                            cm.INT_TYPE_KEY, False
+                        )
+                        and fk_column in df.columns
                     ):
                         df[fk_column] = df[fk_column].astype(int)
         else:
@@ -1107,7 +1182,6 @@ class DataHandler:
 
                 # process only tables with unchecked primary keys where all foreign keys are checked
                 if fk_info_to_check is not None:
-                    success_running_step = True
                     continue
                 else:
                     associations_to_check[table].pop(cm.FK_KEY, None)
@@ -1119,11 +1193,17 @@ class DataHandler:
                 )
 
                 pk_map[table] = {}
-                # apply changes to the PK in the update_dfs dataframes
-                pk_map, update_df = self._update_primary_keys(pk_map, update_df, table)
+                # If relative keys are used, update the PK in the update_df and add_df dataframes to match the reference DF and assign new PK values to the add_df dataframe, updating the pk_map with the changes. The pk_map will be used to update the corresponding FK in the other tables.
+                if self.config.table_associations.get(table, {}).get(
+                    cm.RELATIVE_VALUE_KEY, False
+                ):
+                    # apply changes to the PK in the update_dfs dataframes
+                    pk_map, update_df = self._update_primary_keys(
+                        pk_map, update_df, table
+                    )
 
-                # apply changes to the PK in the add_dfs dataframes
-                pk_map, add_df = self._assign_primary_keys(pk_map, add_df, table)
+                    # apply changes to the PK in the add_dfs dataframes
+                    pk_map, add_df = self._assign_primary_keys(pk_map, add_df, table)
 
                 self._apply_updates_to_reference_data(update_df, add_df, table)
 
@@ -1146,75 +1226,141 @@ class DataHandler:
                 f"Could not update all primary/foreign keys for metadata from file {file}. File will be moved to trash. Check configuration and metadata file before attempting to reprocess."
             )
 
-        # Delete orphan dimension rows if configured
-        self._delete_orphan_dimension_rows(file)
+        # Delete orphans after key updates only when configured in PK/FK associations
+        if self._is_orphan_cleanup_enabled():
+            orphans_found = True
+            while orphans_found:
+                orphans_found = False
+                orphans_found = (
+                    self._delete_child_rows_with_invalid_fk(file) or orphans_found
+                )
+                orphans_found = (
+                    self._delete_parent_rows_without_referenced_children(file)
+                    or orphans_found
+                )
 
         return
 
     # --------------------------------------------------------------
-    def _delete_orphan_dimension_rows(self, file: str) -> None:
-        """Delete orphan rows from dimension tables where no FK in any referencing table points to the PK.
-        Only applies to tables with 'delete orphan' set to True in the PK association config.
-        Loops until no more orphans are found (cascading cleanup).
+    def _delete_child_rows_with_invalid_fk(self, file: str) -> bool:
+        """Delete rows from child tables where FK points to a non-existing parent PK.
+
+        Applies only to FK associations configured with 'delete orphan': true.
 
         Args:
             file (str): The metadata file being processed (for logging).
 
         Returns:
-            None
+            bool: True if at least one row was deleted.
         """
 
-        orphans_found = True
-        while orphans_found:
-            orphans_found = False
+        orphans_found = False
 
-            for table, assoc in self.config.table_associations.items():
-                pk_info = assoc.get(cm.PK_KEY, {})
+        for table, assoc in self.config.table_associations.items():
+            fk_info = assoc.get(cm.FK_KEY, {})
+            if not fk_info:
+                continue
 
-                # Skip tables not configured for orphan deletion
-                if not pk_info.get(cm.DELETE_ORPHAN_KEY, False):
+            child_df = self.ref_df.get(table, pd.DataFrame())
+            if child_df.empty:
+                continue
+
+            for fk_table, fk_config in fk_info.items():
+                if not self._is_delete_orphan_enabled_for_fk(table, fk_table):
                     continue
 
-                referenced_by = pk_info.get(cm.REFERENCED_BY_KEY, set())
-                if not referenced_by:
+                fk_column = self._get_fk_column_name(fk_config)
+                if not fk_column or fk_column not in child_df.columns:
                     continue
 
-                pk_column = pk_info.get(cm.NAME_KEY, None)
-                if not pk_column:
+                parent_pk_column = (
+                    self.config.table_associations.get(fk_table, {})
+                    .get(cm.PK_KEY, {})
+                    .get(cm.NAME_KEY, None)
+                )
+                if not parent_pk_column:
                     continue
 
-                ref_table_df = self.ref_df.get(table, pd.DataFrame())
-                if ref_table_df.empty:
-                    continue
+                parent_df = self.ref_df.get(fk_table, pd.DataFrame())
+                if parent_df.empty:
+                    valid_pk_values = set()
+                else:
+                    valid_pk_values = set(parent_df[parent_pk_column].dropna().unique())
 
-                # Collect all FK values from all referencing tables
-                all_fk_values = set()
-                for ref_table in referenced_by:
-                    fk_column = (
-                        self.config.table_associations.get(ref_table, {})
-                        .get(cm.FK_KEY, {})
-                        .get(table, None)
-                    )
-                    if (
-                        fk_column
-                        and fk_column
-                        in self.ref_df.get(ref_table, pd.DataFrame()).columns
-                    ):
-                        all_fk_values.update(
-                            self.ref_df[ref_table][fk_column].dropna().unique()
-                        )
+                invalid_fk_mask = child_df[fk_column].notna() & (
+                    ~child_df[fk_column].isin(valid_pk_values)
+                )
+                invalid_fk_count = int(invalid_fk_mask.sum())
 
-                # Find PK values not referenced by any FK
-                pk_values = ref_table_df[pk_column]
-                orphan_mask = ~pk_values.isin(all_fk_values)
-                orphan_count = orphan_mask.sum()
-
-                if orphan_count > 0:
+                if invalid_fk_count > 0:
                     orphans_found = True
                     self.log.info(
-                        f"Deleting {orphan_count} orphan row(s) from table {table} after processing file {file}."
+                        f"Deleting {invalid_fk_count} row(s) from table {table} with invalid FK '{fk_column}' referencing missing PK in table {fk_table} after processing file {file}."
                     )
-                    self.ref_df[table] = ref_table_df[~orphan_mask]
+                    child_df = child_df[~invalid_fk_mask]
+
+            self.ref_df[table] = child_df
+
+        return orphans_found
+
+    # --------------------------------------------------------------
+    def _delete_parent_rows_without_referenced_children(self, file: str) -> bool:
+        """Delete parent rows with PK values not referenced by any configured child FK.
+
+        Applies only to PK associations configured with 'delete orphan': true.
+
+        Args:
+            file (str): The metadata file being processed (for logging).
+
+        Returns:
+            bool: True if at least one row was deleted.
+        """
+
+        orphans_found = False
+
+        for table, assoc in self.config.table_associations.items():
+            if not self._is_delete_orphan_enabled_for_pk(table):
+                continue
+
+            pk_info = assoc.get(cm.PK_KEY, {})
+            pk_column = pk_info.get(cm.NAME_KEY, None)
+            referenced_by = pk_info.get(cm.REFERENCED_BY_KEY, set())
+
+            if not pk_column or not referenced_by:
+                continue
+
+            parent_df = self.ref_df.get(table, pd.DataFrame())
+            if parent_df.empty:
+                continue
+
+            all_fk_values = set()
+            for child_table in referenced_by:
+                child_df = self.ref_df.get(child_table, pd.DataFrame())
+                if child_df.empty:
+                    continue
+
+                fk_config = (
+                    self.config.table_associations.get(child_table, {})
+                    .get(cm.FK_KEY, {})
+                    .get(table, None)
+                )
+                fk_column = self._get_fk_column_name(fk_config)
+                if not fk_column or fk_column not in child_df.columns:
+                    continue
+
+                all_fk_values.update(child_df[fk_column].dropna().unique())
+
+            orphan_mask = ~parent_df[pk_column].isin(all_fk_values)
+            orphan_count = int(orphan_mask.sum())
+
+            if orphan_count > 0:
+                orphans_found = True
+                self.log.info(
+                    f"Deleting {orphan_count} orphan row(s) from table {table} after processing file {file}."
+                )
+                self.ref_df[table] = parent_df[~orphan_mask]
+
+        return orphans_found
 
     # --------------------------------------------------------------
     def split_df_rows_add_update(
@@ -1415,26 +1561,31 @@ class DataHandler:
 
         # Update foreign keys in all referencing tables using the pk_map
         for ref_table in referenced_by:
-            fk_column = (
+            # get the FK column for the referencing table
+            fk_config = (
                 self.config.table_associations.get(ref_table, {})
                 .get(cm.FK_KEY, {})
                 .get(table, None)
             )
+            fk_column = self._get_fk_column_name(fk_config)
 
+            # if FK is not defined/not present in the referencing table dataframe, the FK update cannot be applied, move to the next
             if (
                 not fk_column
                 or fk_column not in new_data_df.get(ref_table, pd.DataFrame()).columns
             ):
                 continue
 
-            new_data_df[ref_table][fk_column] = new_data_df[ref_table][
-                fk_column
-            ].replace(mappings)
+            # if FK mapping from old to new exist, apply the mapping to the FK column in the referencing table dataframe
+            if mappings:
+                new_data_df[ref_table][fk_column] = new_data_df[ref_table][
+                    fk_column
+                ].replace(mappings)
 
-            # Rebuild index for the table. Index includes the updated foreign key column.
-            new_data_df[ref_table] = self._create_index(
-                new_data_df[ref_table], ref_table, file
-            )
+                # Rebuild index for the table. Index may include the updated foreign key column.
+                new_data_df[ref_table] = self._create_index(
+                    new_data_df[ref_table], ref_table, file
+                )
 
             # Remove processed foreign keys from associations_to_check
             associations_to_check[ref_table][cm.FK_KEY].pop(table, None)
