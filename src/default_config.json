@@ -80,6 +80,7 @@
         "required tables": [
             "_"
         ],
+        "force table identification": false,
         "key": {
             "_": []
         },

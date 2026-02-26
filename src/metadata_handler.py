@@ -856,7 +856,7 @@ class DataHandler:
                                 if (
                                     self.config.default_worksheet_key
                                     in self.config.table_names.keys()
-                                ):
+                                ) or self.config.force_table_identification:
                                     self.log.debug(
                                         f"Remaining data in file {file} will be added default table."
                                     )
@@ -924,7 +924,7 @@ class DataHandler:
                         if (
                             self.config.default_worksheet_key
                             in self.config.table_names.keys()
-                        ):
+                        ) or self.config.force_table_identification:
                             self.log.debug(
                                 f"Remaining data in file {file} will be added default table."
                             )
@@ -949,8 +949,8 @@ class DataHandler:
                     df=new_df, table=table, file=file
                 )
 
-                new_data_df[table] = new_df
-                new_data_columns[table] = columns
+                new_data_df[assigned_table] = new_df
+                new_data_columns[assigned_table] = columns
 
             if not self.config.required_tables.issubset(set(new_data_df.keys())):
                 self.log.warning(

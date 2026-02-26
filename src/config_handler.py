@@ -334,6 +334,12 @@ class Config:
             ).difference(set(self.table_associations.keys()))
             """ Tables that are not associated with any other table."""
 
+            self.force_table_identification: bool = config["metadata"].pop(
+                "force table identification",
+                default_conf["metadata"]["force table identification"],
+            )
+            """ Flag to enforce explicit table identification when processing metadata inputs."""
+
             self.required_columns = self._merge_dict_set(
                 config["metadata"].pop(
                     "in columns", default_conf["metadata"]["in columns"]
@@ -701,12 +707,12 @@ class Config:
             if assoc.get(FK_KEY, False):
                 if not isinstance(assoc[FK_KEY], dict):
                     print(
-                        f"\n\nError in config file. Invalid foreign key structure in table {table}: Used {assoc[FK_KEY]}, expected a dictionary with table names as keys and column names as values."
+                        f"\n\nError in config file. Invalid foreign key structure in table {table}: Used {assoc[FK_KEY]}, expected a dictionary."
                     )
                     exit(1)
                 elif assoc[FK_KEY] == {}:
                     print(
-                        f"\n\nError in config file. Foreign key structure in table {table} is empty: Used {assoc[FK_KEY]}, expected a dictionary with table names as keys and column names as values."
+                        f"\n\nError in config file. Foreign key structure in table {table} is empty: Used {assoc[FK_KEY]}, expected a dictionary."
                     )
                     exit(1)
 
@@ -723,6 +729,7 @@ class Config:
                     fk_delete_orphan: bool = False
 
                     if isinstance(fk_value, str):
+                        # Backwards compatibility: if the value is a string, treat it as the column name and set delete orphan to False
                         fk_column = fk_value
                     elif isinstance(fk_value, dict):
                         fk_column = fk_value.get(NAME_KEY, None)
