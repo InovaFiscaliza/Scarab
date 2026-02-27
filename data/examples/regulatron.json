@@ -20,6 +20,9 @@
             "pdf": [
                 "Z:/sp/GET/Regulatron/Screenshots",
                 "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Screenshots"
+            ],
+            "teams": [
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
             ]
         },
         "temp": "C:/ProgramData/Anatel/scarab/temp/Regulatron",
@@ -34,10 +37,12 @@
             "*": ".*\\.xlsx$"
         },
         "data file regex": {
-            "pdf": ".*\\.pdf$"
+            "pdf": ".*\\.pdf$",
+            "teams": ".*\\.teams$"
         },
         "catalog names": [
             "Z:/sp/GET/Regulatron/Anuncios.xlsx",
+            "Y:/Regulatron.parquet",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Anuncios.xlsx"
         ],
         "table names": {

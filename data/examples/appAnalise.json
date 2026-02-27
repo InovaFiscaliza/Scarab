@@ -16,6 +16,11 @@
             "Z:/sp/POST/appAnalise",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/appAnalise"
         ],
+        "get": {
+            "teams": [
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
+            ]
+        },
         "temp": "C:/ProgramData/Anatel/scarab/temp/appAnalise",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/appAnalise",
         "store": [
@@ -27,12 +32,12 @@
         "metadata file regex": {
             "*": ".*\\.json$"
         },
+        "data file regex": {
+            "teams": ".*\\.teams$"
+        },
         "catalog names": [
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.xlsx",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.qvd",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.parquet",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.csv",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.json",
+            "Y:/appAnalise.parquet",
             "Z:/sp/GET/appAnalise/appAnalise.xlsx"
         ],
         "table names": {

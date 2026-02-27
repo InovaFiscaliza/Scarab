@@ -26,6 +26,9 @@
             "parquet": [
                 "Z:/sp/GET/SCH",
                 "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH"
+            ],
+            "teams": [
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
             ]
         }
     },
@@ -34,14 +37,16 @@
             "*": ".*\\.xlsx$"
         },
         "data file regex": {
-            "parquet": ".*\\.parquet$"
+            "parquet": ".*\\.parquet$",
+            "teams": ".*\\.teams$"
         },
         "catalog names": [
             "Z:/sp/GET/SCH/Annotation.xlsx",
+            "Y:/SCH.parquet",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH/Annotation.xlsx"
         ],
         "table names": {
-            "_": "Anota\u00e7\u00f5es SCH"
+            "_": "Anotações SCH"
         },
         "input to ignore": [
             "Z:/sp/POST/SCH/.sch_post",
@@ -51,15 +56,92 @@
     "metadata": {
         "in columns": {
             "_": [
-                "Homologa\u00e7\u00e3o"
+                "clientName",
+                "auditorName",
+                "auditorEmail"
+            ],
+            "project": [
+                "correlationKey"
+            ],
+            "inspectedProducts": [
+                "rf",
+                "emUso",
+                "interferencia",
+                "valorUnitario",
+                "fonteValor",
+                "quantidadeUso",
+                "quantidadeVendida",
+                "quantidadeEstoqueOuAduana",
+                "quatidadeAnunciada",
+                "quantidadeLacradas",
+                "quantidadeApreendidas",
+                "quantidadeRetidas",
+                "lacre",
+                "plai",
+                "situacao",
+                "infracao",
+                "sanavel",
+                "informacoesAdicionais"
             ]
         },
         "key": {
             "_": [
-                "Homologa\u00e7\u00e3o",
-                "Atributo",
-                "Valor"
+                "correlationKey",
+                "jsonFileName"
+            ],
+            "project": [
+                "system",
+                "issue",
+                "context",
+                "entityGroupName",
+                "entityGroupId",
+                "unit"
+            ],
+            "inspectedProducts": [
+                "correlationKey",
+                "homologacao",
+                "importador",
+                "codigoAduaneiro",
+                "tipo",
+                "subtipo",
+                "fabricante",
+                "modelo"
             ]
+        },
+        "association": {
+            "project": {
+                "PK": {
+                    "name": "correlationKey",
+                    "int type": false,
+                    "relative value": false,
+                    "delete orphan": true
+                }
+            },
+            "inspectedProducts": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "_": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            }
+        },
+        "add filename": {
+            "_": "jsonFileName"
+        },
+        "add file timestamp": {
+            "_": "createdAt"
+        },
+        "filename data format": {
+            "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
     "last clean": "2025-07-07 14:25:37"

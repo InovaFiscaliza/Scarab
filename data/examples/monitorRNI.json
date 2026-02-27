@@ -21,6 +21,9 @@
             "txt": [
                 "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/raw",
                 "Z:/sp/GET/monitorRNI/raw"
+            ],
+            "teams": [
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
             ]
         },
         "temp": "C:/ProgramData/Anatel/scarab/temp/monitorRNI",
@@ -32,19 +35,23 @@
     },
     "files": {
         "metadata file regex": {
-            "files": ".*\\.json$",
-            "measures": ".*\\.xlsx$"
+            "*": ".*\\.json$"
         },
         "data file regex": {
-            "txt": ".*\\.txt$"
+            "txt": ".*\\.txt$",
+            "teams": ".*\\.teams$"
         },
         "catalog names": [
             "Z:/sp/GET/monitorRNI/monitorRNI.xlsx",
+            "Y:/monitorRNI.parquet",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorRNI/monitorRNI.xlsx"
         ],
         "table names": {
-            "files": "Arquivos Monitoramento RNI",
-            "measures": "Dados Monitoramento RNI"
+            "project": "PROJETO",
+            "rawFiles": "ARQUIVOS",
+            "stationTable": "PM-RNI",
+            "pointsTable": "DEMANDA EXTERNA",
+            "_": "PUBLICAÇÃO"
         },
         "input to ignore": [
             "Z:/sp/POST/monitorRNI/.monitorrni_post"
@@ -52,37 +59,154 @@
     },
     "metadata": {
         "in columns": {
-            "files": [],
-            "measures": [
-                "Qtd. Medidas",
-                "Emax (V/m)"
+            "_": [
+                "clientName",
+                "auditorName",
+                "auditorEmail"
+            ],
+            "project": [
+                "correlationKey"
+            ],
+            "rawFiles": [
+                "sensorManufacturer",
+                "sensorModel",
+                "sensorSerialNumber",
+                "measurementCount",
+                "electricFieldMin",
+                "electricFieldMax",
+                "coveredDistanceKm",
+                "centralPointLat",
+                "centralPointLng",
+                "boundingBoxLatMin",
+                "boundingBoxLatMax",
+                "boundingBoxLngMin",
+                "boundingBoxLngMax"
+            ],
+            "stationTable": [
+                "stationService",
+                "stationCompanyName",
+                "stationAddress",
+                "criticalAreas",
+                "measurementCount",
+                "measurementsAboveLimit",
+                "nearestMeasurementDistanceKm",
+                "electricFieldLimit",
+                "electricFieldMin",
+                "electricFieldMean",
+                "electricFieldMax",
+                "maxElectricFieldInstant",
+                "maxElectricFieldLat",
+                "maxElectricFieldLng",
+                "dataSources"
+            ],
+            "pointsTable": [
+                "measurementCount",
+                "measurementsAboveLimit",
+                "nearestMeasurementDistanceKm",
+                "electricFieldLimit",
+                "electricFieldMin",
+                "electricFieldMean",
+                "electricFieldMax",
+                "maxElectricFieldLat",
+                "maxElectricFieldLng",
+                "dataSources",
+                "auditorReason",
+                "auditorComment"
             ]
         },
-        "required tables": [
-            "files",
-            "measures"
-        ],
         "key": {
-            "files": [
-                "Filename"
+            "_": [
+                "jsonFileName"
             ],
-            "measures": [
-                "Fistel",
-                "Esta\u00e7\u00e3o",
-                "Emax - Latitude",
-                "Emax - Longitude",
-                "Emax - Data da Medi\u00e7\u00e3o"
+            "project": [
+                "system",
+                "issue",
+                "context",
+                "entityGroupName",
+                "entityGroupId",
+                "unit"
+            ],
+            "rawFiles": [
+                "correlationKey",
+                "fileName",
+                "measurementStartTime",
+                "measurementEndTime",
+                "centralPointLat",
+                "centralPointLng"
+            ],
+            "stationTable": [
+                "correlationKey",
+                "id",
+                "stationFistel",
+                "stationId",
+                "stationLat",
+                "stationLng"
+            ],
+            "pointsTable": [
+                "correlationKey",
+                "id"
             ]
+        },
+        "association": {
+            "project": {
+                "PK": {
+                    "name": "correlationKey",
+                    "int type": false,
+                    "relative value": false,
+                    "delete orphan": false
+                }
+            },
+            "rawFiles": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "stationTable": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "pointsTable": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "_": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            }
         },
         "data filenames": {
-            "files": [
+            "rawFiles": [
                 "Filename"
             ]
         },
         "data published flag": {
-            "files": [
-                "File Published"
+            "rawFiles": [
+                "rawFilesPublished"
             ]
+        },
+        "add filename": {
+            "_": "jsonFileName"
+        },
+        "add file timestamp": {
+            "_": "createdAt"
+        },
+        "filename data format": {
+            "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
     "last clean": "2025-07-07 14:14:07"

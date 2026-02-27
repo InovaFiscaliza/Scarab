@@ -17,6 +17,11 @@
             "Z:/sp/POST/monitorSPED",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/monitorSPED"
         ],
+        "get": {
+            "teams": [
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
+            ]
+        },
         "temp": "C:/ProgramData/Anatel/scarab/temp/monitorSPED",
         "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/monitorSPED",
         "store": [
@@ -28,12 +33,13 @@
         "metadata file regex": {
             "*": ".*\\.json$"
         },
+        "data file regex": {
+            "teams": ".*\\.teams$"
+        },
         "catalog names": [
             "Z:/sp/GET/monitorSPED/appMonitorSPED.xlsx",
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.xlsx",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.csv",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.parquet",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/monitorSPED/appMonitorSPED.qvd"
+            "Y:/appMonitorSPED.parquet"
         ],
         "table names": {
             "project": "PROJETO",
@@ -127,6 +133,48 @@
                     "accountCode"
                 ],
                 "ascending": true
+            }
+        },
+        "association": {
+            "project": {
+                "PK": {
+                    "name": "correlationKey",
+                    "int type": false,
+                    "relative value": false,
+                    "delete orphan": false
+                }
+            },
+            "taxEstimateSummary": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "files": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "accounts": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "_": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": false
+                    }
+                }
             }
         },
         "add filename": {
