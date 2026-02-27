@@ -26,6 +26,7 @@
         <li><a href="#Multitable_update_fact_test">Multitable update fact test</a></li>
         <li><a href="#Multitable_orphan_handling_test">Multitable orphan handling test</a></li>
         <li><a href="#monitorRNI_multiple_scenario_test">monitorRNI multiple scenario test</a></li>
+        <li><a href="#SCH_multiple_scenario_test">SCH multiple scenario test</a></li>
     </ol>
 </details>
 
@@ -56,6 +57,55 @@ tar -czvf TEST_NAME.tgz sandbox
 Where `TEST_NAME` is the name of the test to be used in the batch file.
 
 Create the new test modifying the `xtest_TEST_NAME.bat` file, using the TEST_NAME where required and using the number of the test as prefix for convienience.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## SCH multiple scenario test
+
+Use `Ntest_SCH.bat` to set the sandbox folder structure for the test.
+
+This test validates the `SCH` flow through multiple scenarios, including initial consolidation and retification behavior, and validates expected outputs against reference files under `sandbox\results\Scenario1` to `Scenario3`.
+
+The script supports the following options:
+
+* `Ntest_SCH.bat`: Runs all scenarios (Scenario1 to Scenario3).
+* `Ntest_SCH.bat 0`: Extracts sandbox and only displays setup instructions (does not run Scarab).
+* `Ntest_SCH.bat 1`: Runs Scenario1 and stops.
+* `Ntest_SCH.bat 2`: Runs Scenario2, then stops.
+* `Ntest_SCH.bat 3`: Runs Scenario3, then stops.
+* `Ntest_SCH.bat <2`: Runs all scenarios below 2 (Scenario1 only).
+* `Ntest_SCH.bat <3`: Runs all scenarios below 3 (Scenario1 and Scenario2).
+
+After `uv run ..\src\scarab.py .\sandbox\config.json` is executed by the batch script, the following behavior is expected:
+
+> * The output files `sch.xlsx` and `sch.json` are generated in `get` with consolidated tables `PUBLICAÇÃO`, `PROJETO`, and `PRODUTOS INSPECIONADOS`.
+> * `PUBLICAÇÃO` works as a wildcard table for root JSON keys not consolidated in other tables, with `correlationKey` extracted from filename.
+> * `PROJETO` is the parent table and uses the key composed by `system`, `issue`, `context`, `entityGroupName`, `entityGroupId`, and `unit`; this key drives inclusion/replacement logic in dependent tables.
+> * Metadata JSON output is generated in `get\sch.json` and compared with the expected reference for each scenario.
+> * Input metadata files are moved to `store`, Teams notification files are generated in `teams`, and only `.SCH_post` remains in `post`.
+
+Scenario progression validated by the script:
+
+> * **Scenario1**: initial consolidation using the first SCH package; output is compared with `results\Scenario1`.
+> * **Scenario2**: incremental update using additional posted data; output is compared with `results\Scenario2`.
+> * **Scenario3 (retification)**: update flow where data associated with `oldCorrelationKey` is replaced by records associated with `newCorrelationKey` in all tabs except `PUBLICAÇÃO`; output is compared with `results\Scenario3`.
+
+Notification expectation for this flow:
+
+> * During the initial consolidation flow, notifications are expected for the servers **Eric** and **Lobão**.
+> * In the retification scenario, notification is expected for **Eric**.
+
+If a scenario comparison fails, the script opens VS Code diff (`code -d`) between obtained and expected `sch.json` and pauses execution for inspection.
+
+To finish running the Scarab process manually, use `ctrl+c`.
 
 <div>
     <a href="https://github.com/InovaFiscaliza/Scarab">
