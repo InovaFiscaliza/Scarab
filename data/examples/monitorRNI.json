@@ -191,7 +191,7 @@
         },
         "data filenames": {
             "rawFiles": [
-                "Filename"
+                "fileName"
             ]
         },
         "data published flag": {
