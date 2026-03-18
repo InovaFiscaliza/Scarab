@@ -51,7 +51,7 @@
             "rawFiles": "ARQUIVOS",
             "stationTable": "PM-RNI",
             "pointsTable": "DEMANDA EXTERNA",
-            "_": "PUBLICAÇÃO"
+            "_": "PUBLICA\u00c7\u00c3O"
         },
         "input to ignore": [
             "Z:/sp/POST/monitorRNI/.monitorrni_post"
@@ -59,14 +59,8 @@
     },
     "metadata": {
         "in columns": {
-            "_": [
-                "clientName",
-                "auditorName",
-                "auditorEmail"
-            ],
-            "project": [
-                "correlationKey"
-            ],
+            "_": [],
+            "project": [],
             "rawFiles": [
                 "sensorManufacturer",
                 "sensorModel",
@@ -119,6 +113,7 @@
                 "jsonFileName"
             ],
             "project": [
+                "correlationKey",
                 "system",
                 "issue",
                 "context",
@@ -153,14 +148,14 @@
                     "name": "correlationKey",
                     "int type": false,
                     "relative value": false,
-                    "delete orphan": false
+                    "delete orphan": true
                 }
             },
             "rawFiles": {
                 "FK": {
                     "project": {
                         "name": "correlationKey",
-                        "delete orphan": true
+                        "delete orphan": false
                     }
                 }
             },
@@ -168,7 +163,7 @@
                 "FK": {
                     "project": {
                         "name": "correlationKey",
-                        "delete orphan": true
+                        "delete orphan": false
                     }
                 }
             },
@@ -176,7 +171,7 @@
                 "FK": {
                     "project": {
                         "name": "correlationKey",
-                        "delete orphan": true
+                        "delete orphan": false
                     }
                 }
             },
@@ -184,7 +179,7 @@
                 "FK": {
                     "project": {
                         "name": "correlationKey",
-                        "delete orphan": true
+                        "delete orphan": false
                     }
                 }
             }
@@ -209,5 +204,5 @@
             "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
-    "last clean": "2025-07-07 14:14:07"
+    "last clean": "2026-03-18 11:17:19"
 }
