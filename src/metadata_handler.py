@@ -2066,25 +2066,24 @@ class DataHandler:
         df = {}
         for table in self.ref_df.keys():
             try:
-                # if table has data, sort the reference DataFrame by the columns defined in the config file
-                if (not self.ref_df[table].empty) and (
-                    table in self.config.rows_sort_by.keys()
-                ):
-                    df[table] = self.ref_df[table].sort_values(
-                        by=self.config.rows_sort_by[table][cm.SORT_BY_KEY],
-                        ascending=self.config.rows_sort_by[table][
-                            cm.ASCENDING_SORT_KEY
-                        ],
-                        ignore_index=True,
-                    )
+                df[table] = self.ref_df[table].sort_values(
+                    by=self.config.rows_sort_by[table][cm.SORT_BY_KEY],
+                    ascending=self.config.rows_sort_by[table][cm.ASCENDING_SORT_KEY],
+                    ignore_index=True,
+                )
 
-                # get selected columns in the defined order
                 df[table] = df[table][self.ref_cols[table]]
             except Exception as e:
-                self.log.error(
-                    f"Error sorting or selecting columns for table '{table}': {e}"
-                )
-                df[table] = self.ref_df[table]
+                if self.ref_df[table].empty:
+                    self.log.debug(f"Table '{table}' is empty. Will not be saved.")
+                    continue
+                if not self.ref_cols.get(
+                    table, None
+                ) or not self.config.rows_sort_by.get(table, None):
+                    self.log.warning(
+                        f"Table '{table}' has has no sorting or ordering defined. Will be kept as it is."
+                    )
+                    df[table] = self.ref_df[table]
 
         # loop through the target catalog files and save the reference data,
         # ensuring that at least one file is saved successfully before returning True
@@ -2112,7 +2111,9 @@ class DataHandler:
                         )
                         save_at_least_one = True
                     except Exception as e:
-                        self.log.error(f"Error saving reference data in Excel: {e}")
+                        self.log.error(
+                            f"Error saving reference data in {catalog_file}: {e}"
+                        )
 
                 case ".csv":
                     base_name = os.path.splitext(catalog_file)[0]
