@@ -142,6 +142,11 @@ class Config:
             self.character_scope: str = config.pop(
                 "character scope", default_conf["character scope"]
             )
+            """ Languages that may be used for the input data"""
+            self.languages: set[str] = set(
+                config.pop("languages", default_conf["languages"])
+            )
+
             """ characters that will be retained from the column names. Characters not in the scope will be removed"""
             self.null_string_values: list[str] = self._ensure_list(
                 config.pop("null string values", default_conf["null string values"])

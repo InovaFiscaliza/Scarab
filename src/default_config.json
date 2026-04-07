@@ -9,6 +9,7 @@
     "maximum errors before exit": 5,
     "maximum file variations": 100,
     "character scope": "[^A-Za-z0-9çÇãÃõÕáÁéÉíÍóÓúÚàÀèÈìÌòÒùÙâÂêÊîÎôÔûÛäÄëËïÏöÖüÜÿŒœÆæ%|?!.,><°\"-_ ]+",
+    "languages": [],
     "null string values": [
         "<NA>",
         "NA",
