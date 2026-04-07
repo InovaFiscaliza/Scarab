@@ -46,7 +46,10 @@
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Anuncios.xlsx"
         ],
         "table names": {
-            "_": "Anúncios"
+            "_": "Publicação",
+            "LLM": "LLM",
+            "SCH": "SCH",
+            "Anúncio": "Anúncio"
         },
         "input to ignore": [
             "Z:/sp/POST/Regulatron/.regulatron_post",
@@ -55,52 +58,87 @@
     },
     "metadata": {
         "in columns": {
-            "_": [
-                "nome",
-                "pre\u00e7o",
-                "avalia\u00e7\u00f5es",
-                "imagem",
+            "_": [],
+            "LLM": [
+                "llm_schema",
+                "llm_model"
+            ],
+            "SCH": [
+                "data_validade",
+                "correspondencia_modelo",
+                "correspondencia_nome_comercial",
+                "correspondencia_fabricante"
+            ],
+            "Anúncio": [
                 "url",
-                "data",
-                "palavra_busca",
-                "p\u00e1gina_de_busca",
-                "certificado",
-                "caracter\u00edsticas",
-                "descri\u00e7\u00e3o",
-                "ean_gtin",
-                "estado",
-                "estoque",
-                "imagens",
-                "fabricante",
-                "modelo",
-                "nota",
-                "product_id",
-                "vendas",
-                "vendedor",
-                "screenshot",
-                "indice",
-                "subcategoria",
-                "nome_sch",
-                "fabricante_sch",
-                "modelo_sch",
-                "tipo_sch",
-                "marketplace"
+                "screenshot"
             ]
         },
         "key": {
             "_": [
-                "screenshot",
-                "url"
+                "key"
+            ],
+            "LLM": [
+                "key"
+            ],
+            "SCH": [
+                "key",
+                "nome",
+                "modelo",
+                "tipo",
+                "fabricante",
+                "tipo"
+            ],
+            "Anúncio": [
+                "key"
             ]
         },
-        "data filenames": {
-            "_": [
-                "screenshot"
-            ]
+        "association": {
+            "_": {
+                "PK": {
+                    "name": "key",
+                    "int type": false,
+                    "relative value": false,
+                    "delete orphan": true
+                }
+            },
+            "LLM": {
+                "FK": {
+                    "_": {
+                        "name": "key",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "SCH": {
+                "FK": {
+                    "_": {
+                        "name": "key",
+                        "delete orphan": true
+                    }
+                }
+            },
+            "Anúncio": {
+                "FK": {
+                    "_": {
+                        "name": "key",
+                        "delete orphan": true
+                    }
+                }
+            }
+        },
+        "add filename": {
+            "_": "jsonFileName"
+        },
+        "add file timestamp": {
+            "_": "createdAt"
+        },
+        "filename data format": {
+            "_": "(\\w+)_(\\w+)_(?P<key>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         },
         "data published flag": {
-            "_": [
-                "status_screenshot"
+            "rawFiles": [
+                "screenshotsPublished"
             ]
         }
     }
