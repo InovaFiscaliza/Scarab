@@ -663,6 +663,7 @@ class FileHandler:
 
     def test_file_encoding(self, file_path: str) -> str:
         """Test the encoding of a file and return the encoding type.
+            If the encoding cannot be determined, return 'utf-8' as default.
 
         Args:
             file_path (str): Path to the file to test.
@@ -673,11 +674,30 @@ class FileHandler:
 
         with open(file_path, "rb") as f:
             raw_data = f.read()
-            result = from_bytes(raw_data).best()
-            if result:
-                return result.encoding
-            else:
-                self.log.warning(
-                    f"Could not determine encoding for {file_path}. Defaulting to 'utf-8'."
+
+            chunk_size = 512
+            steps = 10
+            limit = 2 * len(raw_data)
+            while True:
+                results = from_bytes(raw_data, chunk_size=chunk_size, steps=steps)
+
+                # test if the matching is unique and if the most probable languages are in the config languages, if so return the encoding without further testing
+                if results.__len__() == 1:
+                    if (self.config.languages.__len__() == 0) or (
+                        not set(results[0].languages[0:5]).isdisjoint(
+                            self.config.languages
+                        )
+                    ):
+                        return results[0].encoding
+
+                self.log.debug(
+                    f"Could not determine encoding for {file_path} using chunk size {chunk_size}. Trying to increase it."
                 )
-                return "utf-8"
+
+                chunk_size *= 2
+
+                if chunk_size > limit:
+                    self.log.warning(
+                        f"Could not determine encoding for {file_path}. Defaulting to 'utf-8'."
+                    )
+                    return "utf-8"
