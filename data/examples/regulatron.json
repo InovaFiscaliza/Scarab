@@ -76,7 +76,7 @@
         },
         "key": {
             "_": [
-                "key"
+                "jsonFileName"
             ],
             "LLM": [
                 "key"
@@ -134,7 +134,7 @@
             "_": "createdAt"
         },
         "filename data format": {
-            "_": "(\\w+)_(\\w+)_(?P<key>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
+            "_": "^(?!sp_meta_)[^_]+(?:_[^_]+)+_(?P<key>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         },
         "data published flag": {
             "rawFiles": [
