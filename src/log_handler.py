@@ -75,6 +75,6 @@ def start_logging(config: cm.Config) -> logging.Logger:
             fh.setFormatter(file_formatter)
             log.addHandler(fh)
 
-    log.info(f"Scarab v{config.scarab_version} starts rolling ({config.name})...")
+    log.critical(f"Scarab v{config.scarab_version} starts rolling ({config.name})...")
 
     return log
