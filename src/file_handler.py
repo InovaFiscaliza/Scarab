@@ -664,6 +664,7 @@ class FileHandler:
     def test_file_encoding(self, file_path: str) -> str:
         """Test the encoding of a file and return the encoding type.
             If the encoding cannot be determined, return 'utf-8' as default.
+            Detects BOM (Byte Order Mark) and returns appropriate encoding variant.
 
         Args:
             file_path (str): Path to the file to test.
@@ -674,6 +675,31 @@ class FileHandler:
 
         with open(file_path, "rb") as f:
             raw_data = f.read()
+
+            # Check for common BOMs and return appropriate encoding
+            if raw_data.startswith(b"\xef\xbb\xbf"):
+                self.log.debug(f"UTF-8 BOM detected in {file_path}. Using 'utf-8-sig'.")
+                return "utf-8-sig"
+            elif raw_data.startswith(b"\xff\xfe\x00\x00"):
+                self.log.debug(
+                    f"UTF-32 LE BOM detected in {file_path}. Using 'utf-32'."
+                )
+                return "utf-32"
+            elif raw_data.startswith(b"\x00\x00\xfe\xff"):
+                self.log.debug(
+                    f"UTF-32 BE BOM detected in {file_path}. Using 'utf-32'."
+                )
+                return "utf-32"
+            elif raw_data.startswith(b"\xff\xfe"):
+                self.log.debug(
+                    f"UTF-16 LE BOM detected in {file_path}. Using 'utf-16'."
+                )
+                return "utf-16"
+            elif raw_data.startswith(b"\xfe\xff"):
+                self.log.debug(
+                    f"UTF-16 BE BOM detected in {file_path}. Using 'utf-16'."
+                )
+                return "utf-16"
 
             chunk_size = 512
             steps = 10
