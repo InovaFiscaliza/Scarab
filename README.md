@@ -11,6 +11,7 @@
         <li><a href="#setup">Setup</a></li>
         <li><a href="#roadmap">Roadmap</a></li>
         <li><a href="#contributing">Contributing</a></li>
+        <li><a href="#support">Support</a></li>
         <li><a href="#license">License</a></li>
     </ol>
 </details>
@@ -194,6 +195,20 @@ Contributions are what make the open source community such an amazing place to l
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 
+For detailed contribution guidelines, please see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+<div>
+    <a href="#about-scarab">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+<!-- SUPPORT -->
+# Support
+
+For support, please see [SUPPORT.md](./SUPPORT.md) for available resources and how to get help.
+
 <div>
     <a href="#about-scarab">
         <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
@@ -204,19 +219,9 @@ If you have a suggestion that would make this better, please fork the repo and c
 <!-- LICENSE -->
 # License
 
-Distributed under the GNU General Public License (GPL), version 3. See [`LICENSE.txt`](../../LICENSE).
+Distributed under the GNU General Public License (GPL), version 3. See [LICENSE](./LICENSE) for more information.
 
-For additional information, please check <https://www.gnu.org/licenses/quick-guide-gplv3.html>
-
-This license model was selected with the idea of enabling collaboration of anyone interested in projects listed within this group.
-
-It is in line with the Brazilian Public Software directives, as published at: <https://softwarepublico.gov.br/social/articles/0004/5936/Manual_do_Ofertante_Temporario_04.10.2016.pdf>
-
-Further reading material can be found at:
-
-* <http://copyfree.org/policy/copyleft>
-* <https://opensource.stackexchange.com/questions/9805/can-i-license-my-project-with-an-open-source-license-but-disallow-commercial-use>
-* <https://opensource.stackexchange.com/questions/21/whats-the-difference-between-permissive-and-copyleft-licenses/42#42>
+For detailed license information, please see [LICENSE.md](./LICENSE.md).
 
 <div>
     <a href="#about-scarab">
