@@ -34,7 +34,7 @@
     },
     "files": {
         "metadata file regex": {
-            "*": ".*\\.xlsx$"
+            "*": ".*\\.json$"
         },
         "data file regex": {
             "pdf": ".*\\.pdf$",
