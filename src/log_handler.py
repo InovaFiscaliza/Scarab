@@ -15,6 +15,26 @@ import coloredlogs
 import shutil
 
 
+class ResilientStreamHandler(logging.StreamHandler):
+    """Stream handler that degrades gracefully if the target stream becomes invalid."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            super().emit(record)
+        except (OSError, ValueError):
+            fallback_stream = getattr(sys, "__stderr__", None)
+            if fallback_stream is not None:
+                try:
+                    self.setStream(fallback_stream)
+                    super().emit(record)
+                    return
+                except (OSError, ValueError):
+                    pass
+
+            # Final fallback: sink logs for this handler to avoid repeated traceback spam.
+            self.setStream(open(os.devnull, "w", encoding="utf-8"))
+
+
 # --------------------------------------------------------------
 def start_logging(config: cm.Config) -> logging.Logger:
     """Start the logging system with the configuration values from the config file.
@@ -51,9 +71,8 @@ def start_logging(config: cm.Config) -> logging.Logger:
         print(f"\n{'~' * terminal_width}")
         print(config.log_title)
 
-        coloredlogs.install()
         screen_formatter = coloredlogs.ColoredFormatter(fmt=config.log_screen_format)
-        ch = logging.StreamHandler(stream=sys.stdout)
+        ch = ResilientStreamHandler(stream=sys.stdout)
         ch.setFormatter(screen_formatter)
         log.addHandler(ch)
 
