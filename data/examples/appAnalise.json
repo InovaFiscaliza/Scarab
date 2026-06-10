@@ -36,9 +36,9 @@
             "teams": ".*\\.teams$"
         },
         "catalog names": [
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise_2026.xlsx",
-            "Y:/appAnalise_2026.parquet",
-            "Z:/sp/GET/appAnalise/appAnalise_2026.xlsx"
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/appAnalise/appAnalise.xlsx",
+            "Y:/appAnalise.parquet",
+            "Z:/sp/GET/appAnalise/appAnalise.xlsx"
         ],
         "table names": {
             "project": "PROJETO",
