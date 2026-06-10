@@ -21,24 +21,36 @@ Copy these sections from reference config to target config:
 3. `folders.trash` (trash/archive folder)
 4. `folders.store` (metadata storage folder)
 5. `folders.get` (output folders dict with routing keys)
+6. `files.catalog names` (output catalog file paths)
+7. `files.input to ignore` (files/folders to ignore in input)
+8. `log.file output` (set to `true` following reference config)
+9. `log.file path` (copy list of log output paths from reference config)
 
 All other config sections remain unchanged.
 
 ## Update procedure
 1. Read the target config file (to be edited).
 2. Read the reference config file (source of folder structure).
-3. Extract `folders` object from reference config.
-4. Replace the `folders` object in target config with the reference version.
-5. Preserve all other config sections unchanged.
-6. Write the updated target config back to disk.
+3. Extract from reference config:
+   1. Complete `folders` object (all sub-keys)
+   2. `files.catalog names` list
+   3. `files.input to ignore` list
+   4. `log.file output` boolean
+   5. `log.file path` list
+4. Replace these sections in target config with the reference versions.
+5. Ensure `log.file output` is set to `true` in target after sync.
+6. Preserve all other config sections unchanged.
+7. Write the updated target config back to disk.
 
 ## Validation checklist
 After editing:
 1. Parse the updated target config as JSON.
 2. Confirm that:
    1. All folder sections from reference are now in target.
-   2. All non-folder sections in target remain unchanged.
-   3. No keys are missing in the updated `folders` object.
+   2. `files.catalog names` and `files.input to ignore` match reference.
+   3. `log.file output` is `true` and `log.file path` matches reference.
+   4. All other non-targeted sections in target remain unchanged.
+   5. No keys are missing in updated `folders`, `files`, and `log` sync targets.
 3. Optionally run Scarab once in test mode against the updated config (if feasible).
 
 ## Output format to user
