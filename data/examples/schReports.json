@@ -1,5 +1,5 @@
 {
-    "name": "SCH",
+    "name": "SCH Reports",
     "check period in seconds": 10,
     "clean period in hours": 1,
     "log": {
@@ -7,8 +7,8 @@
         "screen output": true,
         "file output": true,
         "file path": [
-            "Z:/sp/GET/log/SCH/log_SCH.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/log/SCH/log_SCH.txt"
+            "Z:/sp/GET/log/SCH/log_SCHReports.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/log/SCH/log_SCHReports.txt"
         ]
     },
     "folders": {
@@ -34,34 +34,68 @@
     },
     "files": {
         "metadata file regex": {
-            "*": ".*\\.xlsx$"
+            "*": ".*\\.json$"
         },
         "data file regex": {
             "parquet": ".*\\.parquet$",
             "teams": ".*\\.teams$"
         },
         "catalog names": [
-            "Z:/sp/GET/SCH/Annotation.xlsx",
-            "Y:/SCH.parquet",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH/Annotation.xlsx"
+            "Z:/sp/GET/SCH/relatos.xlsx",
+            "Y:/SCH_relatos.parquet",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH/relatos.xlsx"
         ],
         "table names": {
-            "_": "Anotações SCH"
+            "project": "PROJETO",
+            "inspectedProducts": "PRODUTOS INSPECIONADOS",
+            "_": "PUBLICA\u00c7\u00c3O"
         },
         "input to ignore": [
             "Z:/sp/POST/SCH/.sch_post",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/SCH/.sch_post"
+            "re:Z:/sp/POST/SCH/.*\\.xlsx$",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/SCH/.sch_post",
+            "re:C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/SCH/.*\\.xlsx$"
         ]
     },
     "metadata": {
+        "required tables": [
+            "project",
+            "inspectedProducts",
+            "_"
+        ],
+        "key": {
+            "_": [
+                "jsonFileName"
+            ],
+            "project": [
+                "correlationKey",
+                "issue",
+                "entityGroupName",
+                "entityGroupId",
+                "unit"
+            ],
+            "inspectedProducts": [
+                "correlationKey",
+                "homologacao",
+                "importador",
+                "codigoAduaneiro",
+                "tipo",
+                "subtipo",
+                "fabricante",
+                "modelo"
+            ]
+        },
         "in columns": {
             "_": [
                 "clientName",
                 "auditorName",
-                "auditorEmail"
+                "auditorEmail",
+                "auditorDepartment",
+                "auditorJobTitle"
             ],
             "project": [
-                "correlationKey"
+                "system",
+                "context"
             ],
             "inspectedProducts": [
                 "rf",
@@ -84,44 +118,20 @@
                 "informacoesAdicionais"
             ]
         },
-        "key": {
-            "_": [
-                "correlationKey",
-                "jsonFileName"
-            ],
-            "project": [
-                "system",
-                "issue",
-                "context",
-                "entityGroupName",
-                "entityGroupId",
-                "unit"
-            ],
-            "inspectedProducts": [
-                "correlationKey",
-                "homologacao",
-                "importador",
-                "codigoAduaneiro",
-                "tipo",
-                "subtipo",
-                "fabricante",
-                "modelo"
-            ]
-        },
         "association": {
             "project": {
                 "PK": {
                     "name": "correlationKey",
                     "int type": false,
                     "relative value": false,
-                    "delete orphan": true
+                    "delete orphan": false
                 }
             },
             "inspectedProducts": {
                 "FK": {
                     "project": {
                         "name": "correlationKey",
-                        "delete orphan": true
+                        "delete orphan": false
                     }
                 }
             },
@@ -129,7 +139,7 @@
                 "FK": {
                     "project": {
                         "name": "correlationKey",
-                        "delete orphan": true
+                        "delete orphan": false
                     }
                 }
             }
@@ -144,5 +154,5 @@
             "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
-    "last clean": "2025-07-07 14:25:37"
+    "last clean": "2026-08-06 09:00:25"
 }
