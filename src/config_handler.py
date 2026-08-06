@@ -274,6 +274,15 @@ class Config:
                 "data file regex",
             )
             """ Dictionary with regex formatting to be used to select filenames to be processed as raw data files"""
+            self.filename_replacement_regex: list[tuple[re.Pattern[str], str]] = (
+                self._build_filename_replacement_regex(
+                    config["files"].pop(
+                        "filename replacement regex",
+                        default_conf["files"].get("filename replacement regex", []),
+                    )
+                )
+            )
+            """ Ordered regex replacement rules used to sanitize generated output filename parts."""
             self.catalog_extension: str = os.path.splitext(self.catalog_files[0])[1]
             """ Extension used to identify the catalog files"""
             self.input_to_ignore: list[re.Pattern[str]] = self._build_ignore_patterns(
@@ -515,6 +524,52 @@ class Config:
             config.setdefault(key, {})
 
         return config
+
+    # --------------------------------------------------------------
+    def _build_filename_replacement_regex(
+        self, replacements: Any
+    ) -> list[tuple[re.Pattern[str], str]]:
+        """Build and validate regex replacement rules used for filename sanitization.
+
+        Args:
+            replacements (Any): List of replacement dicts, each with 'old' and 'new'.
+
+        Returns:
+            list[tuple[re.Pattern[str], str]]: Ordered compiled regex and replacement pairs.
+        """
+
+        if not isinstance(replacements, list):
+            print(
+                "\n\nError: Invalid type for 'filename replacement regex'. Expected a list of dictionaries."
+            )
+            exit(1)
+
+        output: list[tuple[re.Pattern[str], str]] = []
+        for i, replacement in enumerate(replacements):
+            if not isinstance(replacement, dict):
+                print(
+                    f"\n\nError: Invalid item at index {i} in 'filename replacement regex'. Expected a dictionary."
+                )
+                exit(1)
+
+            old_pattern = replacement.get(OLD_KEY, None)
+            new_value = replacement.get(NEW_KEY, None)
+
+            if not isinstance(old_pattern, str) or not isinstance(new_value, str):
+                print(
+                    f"\n\nError: Invalid replacement rule at index {i} in 'filename replacement regex'. Expected string keys '{OLD_KEY}' and '{NEW_KEY}'."
+                )
+                exit(1)
+
+            try:
+                output.append((re.compile(old_pattern), new_value))
+            except re.error as e:
+                print(
+                    f"\n\nError: Invalid regex in 'filename replacement regex' at index {i}: {old_pattern}. {e}"
+                )
+                exit(1)
+
+        return output
 
     # --------------------------------------------------------------
     def _get_expected_columns_in_files(

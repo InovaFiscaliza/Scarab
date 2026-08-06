@@ -15,6 +15,7 @@ import file_handler as fm
 
 import logging
 import os
+import re
 import pandas as pd
 import numpy as np
 import uuid
@@ -116,6 +117,32 @@ class DataHandler:
             fk_column = fk_config.get(cm.NAME_KEY, None)
             return fk_column if isinstance(fk_column, str) else None
         return None
+
+    # --------------------------------------------------------------
+    def _sanitize_filename(self, value: Any) -> str:
+        """Sanitize a generated filename component using config-defined replacement rules.
+
+        Applies the configured regex substitutions, collapses repeated underscores,
+        and removes leading/trailing underscores.
+
+        Args:
+            value (Any): Filename component candidate.
+
+        Returns:
+            str: Sanitized filename component. Returns "_" if sanitization results in an empty string.
+        """
+
+        if not isinstance(value, str):
+            value = str(value)
+
+        sanitized = value
+        for pattern, replacement in self.config.filename_replacement_regex:
+            sanitized = pattern.sub(replacement, sanitized)
+
+        # Normalize underscore artifacts produced by replacement rules
+        sanitized = re.sub(r"_+", "_", sanitized)
+        sanitized = sanitized.strip("_")
+        return sanitized if sanitized else "_"
 
     # --------------------------------------------------------------
     def _is_delete_orphan_enabled_for_fk(self, table: str, fk_table: str) -> bool:
@@ -2126,7 +2153,9 @@ class DataHandler:
                             if len(tables) == 1:
                                 csv_file = f"{base_name}.csv"
                             else:
-                                csv_file = f"{base_name}_{table}.csv"
+                                table_name = self.config.table_names.get(table, table)
+                                csv_file = f"{base_name}_{table_name}.csv"
+                                csv_file = self._sanitize_filename(csv_file)
 
                             df[table].to_csv(
                                 csv_file, index=False, sep=self.config.csv_separator
@@ -2168,11 +2197,12 @@ class DataHandler:
                                 qvd_file = f"{base_name}.qvd"
                                 table_name = base_name
                             else:
-                                qvd_file = f"{base_name}_{table}.qvd"
-                                table_name = table
+                                table_name = self.config.table_names.get(table, table)
+                                qvd_file = f"{base_name}_{table_name}.qvd"
+                                qvd_file = self._sanitize_filename(qvd_file)
 
                             qvd_table = QvdTable.from_pandas(df[table])
-                            options = QvdFileWriterOptions(table_name=table_name)
+                            options = QvdFileWriterOptions(table_name=table_name)  # type: ignore
                             qvd_table.to_qvd(qvd_file, options=options)
 
                             self.log.info(f"Reference data file updated: {qvd_file}")
@@ -2191,7 +2221,9 @@ class DataHandler:
                             if len(tables) == 1:
                                 parquet_file = f"{base_name}.parquet"
                             else:
-                                parquet_file = f"{base_name}_{table}.parquet"
+                                table_name = self.config.table_names.get(table, table)
+                                parquet_file = f"{base_name}_{table_name}.parquet"
+                                parquet_file = self._sanitize_filename(parquet_file)
 
                             df[table].to_parquet(parquet_file, index=False)
                             self.log.info(

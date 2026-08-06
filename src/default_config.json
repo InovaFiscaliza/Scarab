@@ -68,6 +68,16 @@
     "files": {
         "metadata file regex": {},
         "data file regex": {},
+        "filename replacement regex": [
+            {
+                "old": "\\s+",
+                "new": "_"
+            },
+            {
+                "old": "[\\\\/:*?\"<>|]+",
+                "new": "_"
+            }
+        ],
         "catalog names": [],
         "table names": {
             "_": "<name>"
