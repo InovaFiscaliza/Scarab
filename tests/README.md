@@ -27,6 +27,7 @@
         <li><a href="#Multitable_orphan_handling_test">Multitable orphan handling test</a></li>
         <li><a href="#monitorRNI_multiple_scenario_test">monitorRNI multiple scenario test</a></li>
         <li><a href="#SCH_multiple_scenario_test">SCH multiple scenario test</a></li>
+        <li><a href="#Incompatible_charset_test">Incompatible charset test</a></li>
     </ol>
 </details>
 
@@ -669,6 +670,24 @@ Notification expectation for this flow:
 If a scenario comparison fails, the script opens VS Code diff (`code -d`) between obtained and expected `monitorRNI.json` and pauses execution for inspection.
 
 To finish running the Scarab process manually, use `ctrl+c`.
+
+<div>
+    <a href="https://github.com/InovaFiscaliza/Scarab">
+        <img align="left" width="50" height="50" src="../docs/images/scarab_glyph.svg" style="transform: rotate(-90deg);" title="Go back to Scarab main repo page">
+    </a>
+    <a href="#about-scarab-tests">
+        <img align="right" width="40" height="40" src="../docs/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
+
+## Incompatible charset test
+
+Use `Otest_incompatible_charset.bat` to set the sandbox folder structure for the test.
+
+This test validates the behavior of Scarab when processing metadata files with incompatible character sets. This usually includes signaling characters that may be incompatible with some formats, specially XLSX.
+
+If the test is successful, all metadata will be processed and incompatible characters will be removed.
 
 <div>
     <a href="https://github.com/InovaFiscaliza/Scarab">

@@ -86,13 +86,12 @@ class DataHandler:
             if df.empty:
                 persist_ref_df = False
 
-        if persist_ref_df:
-            if not self.persist_reference():
-                raise (
-                    RuntimeError(
-                        "Error saving the reference data after loading. Check configuration and file permissions."
-                    )
+        if persist_ref_df and not self.persist_reference():
+            raise (
+                RuntimeError(
+                    "Error saving the reference data after loading. Check configuration and file permissions."
                 )
+            )
 
         self.next_pk_counter: dict[str, int] = self._initialize_next_pk_counter()
         """ Dictionary with initial number to be used as primary keys in each table. The key is the table name and the value is the number of free primary keys. """
@@ -273,6 +272,29 @@ class DataHandler:
         # Replace all configured null-equivalent string values with pd.NA
         # This is vectorized - pandas applies the operation to all columns at once
         return df.replace(self.config.null_string_values, pd.NA)
+
+    # --------------------------------------------------------------
+    def _remove_incompatible_characters(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Remove configured characters that are not supported by Excel worksheets.
+
+        Args:
+            df (pd.DataFrame): DataFrame to clean.
+
+        Returns:
+            pd.DataFrame: DataFrame without incompatible characters in string values.
+        """
+
+        if not self.config.incompatible_characters:
+            return df
+
+        translation_table = str.maketrans(
+            "", "", "".join(self.config.incompatible_characters)
+        )
+        return df.map(
+            lambda value: (
+                value.translate(translation_table) if isinstance(value, str) else value
+            )
+        )
 
     # --------------------------------------------------------------
     def _custom_agg(self, series: pd.Series) -> str | None:
@@ -689,6 +711,7 @@ class DataHandler:
         # Perform additional table transformation considering existing data and add control columns (not to be included in the output)
         transformations = [
             lambda df: self._normalize_null_in_dataframe(df),
+            lambda df: self._remove_incompatible_characters(df),
             lambda df: self._create_data_file_control_column(df, table),
             lambda df: self._create_index(df, table, file),
             lambda df: self._set_types(df, table, file),

@@ -152,6 +152,13 @@ class Config:
                 config.pop("null string values", default_conf["null string values"])
             )
             """ List of strings that will be considered as null values in the metadata file"""
+            self.incompatible_characters: list[str] = self._ensure_list(
+                config.pop(
+                    "incompatible characters",
+                    default_conf["incompatible characters"],
+                )
+            )
+            """ Characters that cannot be saved in Excel worksheets"""
             self.default_worksheet_key: str = config.pop(
                 "default worksheet key", default_conf["default worksheet key"]
             )
