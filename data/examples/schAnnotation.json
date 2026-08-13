@@ -1,0 +1,78 @@
+{
+    "name": "SCH Annotation",
+    "check period in seconds": 10,
+    "clean period in hours": 1,
+    "log": {
+        "level": "INFO",
+        "screen output": true,
+        "file output": true,
+        "file path": [
+            "Z:/sp/GET/log/SCH/log_SCH.txt",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/log/SCH/log_SCH.txt"
+        ]
+    },
+    "folders": {
+        "post": [
+            "Z:/sp/POST/SCH",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TEMP/SCH"
+        ],
+        "temp": "C:/ProgramData/Anatel/scarab/temp/SCH",
+        "trash": "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - TRASH/SCH",
+        "store": [
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - STORE/SCH",
+            "Z:/sp/STORE/SCH"
+        ],
+        "get": {
+            "parquet": [
+                "Z:/sp/GET/SCH",
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH"
+            ],
+            "teams": [
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
+            ]
+        }
+    },
+    "files": {
+        "metadata file regex": {
+            "*": ".*\\.xlsx$"
+        },
+        "data file regex": {
+            "parquet": ".*\\.parquet$",
+            "teams": ".*\\.teams$"
+        },
+        "catalog names": [
+            "Z:/sp/GET/SCH/Annotation.xlsx",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/SCH/Annotation.xlsx"
+        ],
+        "table names": {
+            "_": "Anota\u00e7\u00f5es SCH"
+        },
+        "input to ignore": [
+            "Z:/sp/POST/SCH/.sch_post",
+            "re:Z:/sp/POST/SCH/.*\\.json$",
+            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/SCH/.sch_post",
+            "re:C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - POST/SCH/.*\\.json$"
+        ]
+    },
+    "metadata": {
+        "in columns": {
+            "_": [
+                "Homologa\u00e7\u00e3o",
+                "Valor"
+            ]
+        },
+        "key": {
+            "_": [
+                "ID",
+                "DataHora"
+            ]
+        },
+        "add filename": {
+            "_": "xlsxFileName"
+        },
+        "add file timestamp": {
+            "_": "createdAt"
+        }
+    },
+    "last clean": "2026-08-06 09:35:25"
+}

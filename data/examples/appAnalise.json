@@ -43,11 +43,11 @@
         "table names": {
             "project": "PROJETO",
             "tasks": "TAREFAS",
-            "emissions": "EMISSÕES",
-            "_": "PUBLICAÇÃO"
+            "emissions": "EMISS\u00d5ES",
+            "_": "PUBLICA\u00c7\u00c3O"
         },
         "input to ignore": [
-            "Z:/sp/POST/monitorRNI/.appanalise_post"
+            "Z:/sp/POST/appAnalise/.appanalise_post"
         ]
     },
     "metadata": {
@@ -163,5 +163,6 @@
         "filename data format": {
             "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
-    }
+    },
+    "last clean": "2026-08-06 06:38:40"
 }
