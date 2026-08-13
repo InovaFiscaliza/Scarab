@@ -58,7 +58,10 @@
     },
     "metadata": {
         "in columns": {
-            "_": [],
+            "_": [
+                "jsonFileName",
+                "createdAt"
+            ],
             "LLM": [
                 "llm_schema",
                 "llm_model"
@@ -79,15 +82,14 @@
                 "jsonFileName"
             ],
             "LLM": [
-                "key"
+                "key",
+                "llm_model"
             ],
             "SCH": [
                 "key",
-                "nome",
                 "modelo",
-                "tipo",
                 "fabricante",
-                "tipo"
+                "nome"
             ],
             "Anúncio": [
                 "key"
@@ -141,5 +143,6 @@
                 "screenshotsPublished"
             ]
         }
-    }
+    },
+    "last clean": "2026-08-11 12:19:10"
 }
