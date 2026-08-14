@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  db:
+    build:
+      context: ..
+      dockerfile: containers/Containerfile.db
+    env_file:
+      - ../.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build:
+      context: ..
+      dockerfile: containers/Containerfile.app
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Application config (read-only): supply repo-local config/config.json via host .env/.local
+      - ../config:/app/config:ro
+      # Map an inbound folder on the host to the container's configured input path.
+      - ../sandbox/post:/app/data/inbound:Z
+      # Map a local trash folder for rejected/orphaned media
+      - ../sandbox/trash:/app/data/trash:Z
+      # Optional: local storage_media mount for testing/config overrides (default_config.json uses SharePoint).
+      # - ../sandbox/get:/app/data/storage_media:Z
+    restart: unless-stopped
+
+volumes:
+  db_data:

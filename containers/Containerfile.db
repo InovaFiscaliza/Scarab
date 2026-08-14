@@ -1,0 +1,10 @@
+FROM postgres:16-alpine
+
+# Copy DB initialization scripts into the Postgres init directory. Scripts are
+# executed in alphabetical order by the official Postgres docker-entrypoint.
+COPY db/init.sql /docker-entrypoint-initdb.d/01-init.sql
+COPY db/procedures.sql /docker-entrypoint-initdb.d/02-procedures.sql
+
+# Ensure SQL files are world-readable (the entrypoint runs them as the
+# postgres user inside the container).
+RUN chmod a+r /docker-entrypoint-initdb.d/*.sql || true
