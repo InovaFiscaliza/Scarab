@@ -30,12 +30,8 @@ services:
     volumes:
       # Application config (read-only): supply repo-local config/config.json via host .env/.local
       - ../config:/app/config:ro
-      # Map an inbound folder on the host to the container's configured input path.
-      - ../sandbox/post:/app/data/inbound:Z
-      # Map a local trash folder for rejected/orphaned media
-      - ../sandbox/trash:/app/data/trash:Z
-      # Optional: local storage_media mount for testing/config overrides (default_config.json uses SharePoint).
-      # - ../sandbox/get:/app/data/storage_media:Z
+      # Keep the example's relative paths valid inside the container.
+      - ../examples/sandbox:/app/examples/sandbox:Z
     restart: unless-stopped
 
 volumes:
