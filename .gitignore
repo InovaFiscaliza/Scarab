@@ -6,6 +6,17 @@ dist/
 wheels/
 *.egg-info
 
+# Project config and secrets
+config/config.json
+.env
+
+# Test and cache
+.pytest_cache/
+.mypy_cache/
+
+# Bytecode
+*.pyc
+
 # Virtual environments and ide
 .venv
 .vscode/settings.json

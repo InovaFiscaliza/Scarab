@@ -1,16 +1,22 @@
 [project]
 name = "scarab"
-version = "1.0.0"
-description = "Move your shit around"
-readme = "https://github.com/InovaFiscaliza/Scarab/blob/main/README.md"
+version = "0.0.0"
+description = "Scarab - PostgreSQL/Podman architecture (rewrite)"
 requires-python = ">=3.13"
+
 dependencies = [
-    "base58>=2.1.1",
-    "charset-normalizer>=3.4.3",
-    "coloredlogs>=15.0.1",
-    "logging>=0.4.9.6",
-    "openpyxl>=3.1.5",
-    "pandas>=2.2.3",
-    "pyarrow>=23.0.0",
-    "pyqvd>=2.3.0",
+    "psycopg[binary]>=3.2",
+    "psycopg-pool>=3.2",
+    "pydantic>=2",
+    "Office365-REST-Python-Client>=2.3"
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.11"
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
