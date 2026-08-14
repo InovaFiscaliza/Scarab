@@ -10,9 +10,9 @@ wheels/
 .venv
 .vscode/settings.json
 
-# Test areas
-tests/sandbox
-tests/bkp
+# Test areas (legacy Scarab implementation, archived under legacy/)
+legacy/tests/sandbox
+legacy/tests/bkp
 test_regulatron_full.tgz
 
 # Related files
