@@ -10,6 +10,7 @@ backend.
 
 import logging
 import os
+import shutil
 import time
 import zipfile
 from datetime import UTC, datetime
@@ -75,6 +76,10 @@ class StorageBackend(Protocol):
 
     def file_age_hours(self, path: str, filename: str) -> float:
         """Return how many hours have passed since `filename` was last modified."""
+        ...
+
+    def file_size_bytes(self, path: str, filename: str) -> int:
+        """Return the size of `filename` in bytes without reading its content."""
         ...
 
 
@@ -157,6 +162,10 @@ class _LocalBackend:
         """Return how many hours have passed since `filename` was last modified."""
         mtime = (Path(path) / filename).stat().st_mtime
         return (time.time() - mtime) / 3600
+
+    def file_size_bytes(self, path: str, filename: str) -> int:
+        """Return the file size without loading the file into memory."""
+        return (Path(path) / filename).stat().st_size
 
 
 class _SharePointBackend:
@@ -290,6 +299,33 @@ class _SharePointBackend:
             modified = modified.replace(tzinfo=UTC)
         return (datetime.now(UTC) - modified).total_seconds() / 3600
 
+    def file_size_bytes(self, path: str, filename: str) -> int:
+        """Return the remote SharePoint file size without downloading it.
+
+        Raises:
+            SharePointOperationError: If the SharePoint request fails or does
+                not return a numeric file length.
+        """
+        server_relative_url = self._server_relative_url(path, filename)
+        try:
+            ctx = self._get_context()
+            file_obj = ctx.web.get_file_by_server_relative_path(server_relative_url)
+            ctx.load(file_obj, ["Length"])
+            ctx.execute_query()
+            size = getattr(file_obj, "length", None)
+        except RequestException:
+            logger.exception(
+                "Failed to read SharePoint size for %r", server_relative_url
+            )
+            raise SharePointOperationError(
+                f"Failed to read size for {server_relative_url!r}"
+            ) from None
+        if not isinstance(size, int):
+            raise SharePointOperationError(
+                f"SharePoint returned no numeric size for {server_relative_url!r}"
+            )
+        return size
+
 
 class StorageManager:
     """Public facade: selects the right backend per repository and sanitizes filenames."""
@@ -353,6 +389,11 @@ class StorageManager:
             _ensure_within_root(repository.path, safe_name)
         return safe_name
 
+    def validate_filename(self, repository_name: str, filename: str) -> str:
+        """Validate and return a filename without performing storage I/O."""
+        repository = self._get_repository(repository_name)
+        return self._safe_filename(repository, filename)
+
     def list_files(self, repository_name: str) -> list[str]:
         """List the file names currently present in `repository_name`."""
         repository = self._get_repository(repository_name)
@@ -393,7 +434,18 @@ class StorageManager:
         repository = self._get_repository(repository_name)
         backend = self._get_backend(repository)
         safe_name = self._safe_filename(repository, filename)
-        _ensure_within_root(trash_path, safe_name)
+        source_path = (
+            _ensure_within_root(repository.path, safe_name)
+            if repository.type == "local"
+            else None
+        )
+        target_path = _ensure_within_root(trash_path, safe_name)
+        if source_path is not None:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            if target_path.exists():
+                target_path.unlink()
+            shutil.move(str(source_path), str(target_path))
+            return
         content = backend.read_file(repository.path, safe_name)
         self._local_backend.write_file(trash_path, safe_name, content)
         backend.delete_file(repository.path, safe_name)
@@ -404,6 +456,13 @@ class StorageManager:
         backend = self._get_backend(repository)
         safe_name = self._safe_filename(repository, filename)
         return backend.file_age_hours(repository.path, safe_name)
+
+    def file_size_bytes(self, repository_name: str, filename: str) -> int:
+        """Return a file size without reading its content into memory."""
+        repository = self._get_repository(repository_name)
+        backend = self._get_backend(repository)
+        safe_name = self._safe_filename(repository, filename)
+        return backend.file_size_bytes(repository.path, safe_name)
 
     def compress_trash(self, trash_path: str) -> None:
         """Compress every loose file directly inside `trash_path` into one archive.

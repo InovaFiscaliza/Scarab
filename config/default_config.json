@@ -41,6 +41,8 @@
         "max_pool_size": 5
     },
     "sharepoint": null,
+    "trash_path": "/app/data/trash",
+    "max_file_size_bytes": 52428800,
     "log": {
         "level": "DEBUG",
         "screen_output": true,

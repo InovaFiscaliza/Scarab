@@ -30,6 +30,8 @@
     "orphaned_media_hours": 24,
     "trash_cleanup_days": 7
   },
+  "trash_path": "/app/data/trash",
+  "max_file_size_bytes": 52428800,
   "database": {
     "host": "localhost",
     "port": 5432,
@@ -77,6 +79,8 @@ Ver §3.4 e §6 para o algoritmo exato.
 | `repositories` | `list[RepositoryConfig]` | generaliza `folders.post`/`folders.get` | Repositórios de entrada/armazenamento de mídia |
 | `prazos.orphaned_media_hours` | `int` | novo (inspirado em `clean period in hours`) | Tempo de espera por descritor JSON antes de mover mídia órfã para `/trash` |
 | `prazos.trash_cleanup_days` | `int` | generaliza `clean period in hours` | Idade máxima de arquivos compactados em `/trash` |
+| `trash_path` | `str` | novo | Diretório local usado para arquivos rejeitados e mídias órfãs |
+| `max_file_size_bytes` | `int` | novo | Limite aplicado antes de carregar JSON/mídia em memória |
 | `database.*` | — | novo | Conexão PostgreSQL (psycopg3) |
 | `sharepoint` | `SharePointConfig \| None` | novo | Credenciais Client Credentials para repositórios `type: "sharepoint"` |
 | `log.*` | — | sim, mesma filosofia | Nível, saída tela/arquivo, formato |
@@ -276,6 +280,8 @@ class AppConfig(_Frozen):
     database: DatabaseConfig
     sharepoint: SharePointConfig | None
     log: LogConfig
+    trash_path: str
+    max_file_size_bytes: int
 
 def load_config(config_dir: str) -> AppConfig: ...
 def get_config(config_dir: str | None = None) -> AppConfig: ...  # cached singleton (functools.lru_cache ou equivalente)
@@ -328,6 +334,7 @@ class StorageBackend(Protocol):
     def write_file(self, path: str, filename: str, content: bytes) -> None: ...
     def delete_file(self, path: str, filename: str) -> None: ...
     def file_age_hours(self, path: str, filename: str) -> float: ...
+    def file_size_bytes(self, path: str, filename: str) -> int: ...
 
 class StorageManager:
     def __init__(self, repositories: list[RepositoryConfig], sharepoint: SharePointConfig | None) -> None: ...
@@ -337,6 +344,8 @@ class StorageManager:
     def delete_file(self, repository_name: str, filename: str) -> None: ...
     def move_to_trash(self, repository_name: str, filename: str, trash_path: str) -> None: ...
     def file_age_hours(self, repository_name: str, filename: str) -> float: ...
+    def file_size_bytes(self, repository_name: str, filename: str) -> int: ...
+    def validate_filename(self, repository_name: str, filename: str) -> str: ...
     def compress_trash(self, trash_path: str) -> None: ...
     def purge_old_trash_archives(self, trash_path: str, older_than_days: int) -> None: ...
 ```
@@ -368,7 +377,14 @@ def compute_uuid5(source: str, namespace: uuid.UUID) -> uuid.UUID: ...
     # uuid.uuid5(namespace, source)
 
 class IngestionPipeline:
-    def __init__(self, config: AppConfig, storage: StorageManager, db: Database) -> None: ...
+    def __init__(
+        self,
+        config: AppConfig,
+        storage: StorageManager,
+        db: Database,
+        trash_path: str | None = None,
+        max_file_size_bytes: int | None = None,
+    ) -> None: ...
     def run_once(self) -> None: ...              # um ciclo completo de varredura/processamento
     def run_trash_maintenance(self) -> None: ...  # compactação + purga da lixeira
 ```

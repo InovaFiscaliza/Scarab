@@ -117,6 +117,8 @@ Observação: segredos como a senha do banco devem ser fornecidos via variável 
 O arquivo `config/default_config.json` concentra os parâmetros principais:
 - `repositories`: lista de repositórios com `type` (`local` | `sharepoint`) e `role` (`input` | `storage_media`).
 - `prazos`: `orphaned_media_hours` (horas para considerar mídia órfã) e `trash_cleanup_days` (idade para compactação/purge).
+- `trash_path`: diretório local da lixeira para arquivos rejeitados e mídias órfãs.
+- `max_file_size_bytes`: limite verificado antes de carregar descritores ou mídias em memória.
 - `database`: parâmetros de conexão (host, port, dbname, user) e `password_env` (nome da variável de ambiente que guarda a senha).
 - `uuid_namespace`: UUID literal usado como namespace para `uuid.uuid5()` (não recalculado em runtime).
 - `business_key_field`: se vazio (`""`), o UUIDv5 é calculado a partir de todo o payload (excluindo campos de controle); se preenchido, o campo indicado é usado como fonte limpa para o hash.

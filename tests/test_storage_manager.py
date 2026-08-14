@@ -378,6 +378,10 @@ class _FakeBackend:
         self.calls.append(("file_age_hours", path, filename))
         return 1.5
 
+    def file_size_bytes(self, path: str, filename: str) -> int:
+        self.calls.append(("file_size_bytes", path, filename))
+        return len(self.files[filename])
+
 
 def test_storage_manager_delegates_to_sharepoint_backend(monkeypatch) -> None:
     """`StorageManager` routes `type: "sharepoint"` repositories to the SharePoint backend."""
@@ -437,9 +441,15 @@ def test_sharepoint_backend_context_is_built_lazily_and_cached() -> None:
 class _FakeSPFile:
     """Minimal stand-in for an `office365` `File` object."""
 
-    def __init__(self, name: str, time_last_modified: datetime | None = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        time_last_modified: datetime | None = None,
+        length: int = 0,
+    ) -> None:
         self.name = name
         self.time_last_modified = time_last_modified
+        self.length = length
         self.deleted = False
 
     def delete_object(self) -> None:
@@ -584,6 +594,17 @@ def test_sharepoint_backend_file_age_hours_raises_when_no_timestamp(
 
     with pytest.raises(SharePointOperationError):
         backend.file_age_hours("/sites/Dev/Docs", "a.json")
+
+
+def test_sharepoint_backend_file_size_bytes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`file_size_bytes` reads SharePoint metadata without downloading content."""
+    file_obj = _FakeSPFile("a.json", length=1234)
+    ctx = _FakeSPContext(_FakeSPWeb(file=file_obj))
+    backend = _SharePointBackend(_sharepoint_config())
+    monkeypatch.setattr(backend, "_get_context", lambda: ctx)
+
+    assert backend.file_size_bytes("/sites/Dev/Docs", "a.json") == 1234
+    assert ctx.execute_count == 1
 
 
 def test_sharepoint_backend_read_file_returns_content(
