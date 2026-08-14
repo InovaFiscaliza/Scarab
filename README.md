@@ -23,7 +23,7 @@ flowchart LR
     C -->|classifica arquivo| D{JSON descritor\nou mídia?}
     D -->|mídia sem JSON par| F{órfã há mais de\norphaned_media_hours?}
     F -->|não| B
-    F -->|sim| G[/trash]
+    F -->|sim| G["/trash"]
     D -->|JSON| E[pipeline.py: valida\n+ gera UUIDv5]
     E --> H[database.py: chama\nprocessar_operacao_json]
     H --> I[(PostgreSQL\nclientes_docs + carga_historico)]
