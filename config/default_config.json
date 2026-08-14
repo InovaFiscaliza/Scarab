@@ -1,0 +1,58 @@
+{
+    "name": "scarab",
+    "check_period_seconds": 10,
+    "maximum_errors_before_exit": 5,
+    "uuid_namespace": "38d60acc-fe97-5757-be97-834773f507f2",
+    "business_key_field": "",
+    "media_reference_json_path": "midia.arquivo",
+    "null_string_values": [
+        "",
+        "NA",
+        "N/A",
+        "null",
+        "None"
+    ],
+    "repositories": [
+        {
+            "name": "local_inbound",
+            "type": "local",
+            "path": "/app/data/inbound",
+            "role": "input"
+        },
+        {
+            "name": "sharepoint_media",
+            "type": "sharepoint",
+            "path": "/sites/Dev/Docs",
+            "role": "storage_media"
+        }
+    ],
+    "prazos": {
+        "orphaned_media_hours": 24,
+        "trash_cleanup_days": 7
+    },
+    "database": {
+        "host": "localhost",
+        "port": 5432,
+        "dbname": "scarab",
+        "user": "scarab_app",
+        "password_env": "SCARAB_DB_PASSWORD",
+        "sslmode": "prefer",
+        "min_pool_size": 1,
+        "max_pool_size": 5
+    },
+    "sharepoint": null,
+    "log": {
+        "level": "DEBUG",
+        "screen_output": true,
+        "file_output": false,
+        "file_path": [],
+        "format": [
+            "%(asctime)s",
+            "%(module)s: %(funcName)s:%(lineno)d",
+            "%(name)s[%(process)d]",
+            "%(levelname)s",
+            "%(message)s"
+        ],
+        "separator": " | "
+    }
+}
