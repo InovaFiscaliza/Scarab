@@ -1,244 +1,150 @@
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/InovaFiscaliza/Scarab)
+# Scarab — Nova Arquitetura (PostgreSQL + Podman)
+
+## Visão geral
+
+O Scarab é um serviço de ingestão e persistência de documentos e metadados. A nova arquitetura
+substitui a saída em arquivos por um armazenamento centralizado em PostgreSQL: o serviço recebe
+descritores JSON (com ou sem mídia), valida e normaliza o payload, calcula um identificador
+determinístico (UUIDv5) e delega a persistência a funções armazenadas no banco. Mídias são
+armazenadas em repositórios configuráveis (local ou SharePoint) e vinculadas ao registro no banco.
+
+O objetivo é tornar a ingestão robusta, audível e compatível com orquestração via containers
+(Podman), mantendo políticas de segurança para segredos, limpeza de arquivos órfãos e proteção
+contra path traversal e injeção SQL.
+
+## Arquitetura
+
+Diagrama de alto nível do fluxo de dados (Mermaid):
+
+```mermaid
+flowchart LR
+    A[Front-end / Usuário] -->|deposita arquivos| B[Repositório input\nlocal ou SharePoint]
+    B --> C{main.py: loop de varredura}
+    C -->|classifica arquivo| D{JSON descritor\nou mídia?}
+    D -->|mídia sem JSON par| F{órfã há mais de\norphaned_media_hours?}
+    F -->|não| B
+    F -->|sim| G[/trash]
+    D -->|JSON| E[pipeline.py: valida\n+ gera UUIDv5]
+    E --> H[database.py: chama\nprocessar_operacao_json]
+    H --> I[(PostgreSQL\nclientes_docs + carga_historico)]
+    H -->|sucesso| J[move mídia -> storage_media\nremove JSON do disco]
+    H -->|erro| G
+    J --> K[Repositório storage_media\nlocal ou SharePoint]
+```
+
+Principais componentes:
+- `src/main.py`: loop principal e tratamento de sinais.
+- `src/pipeline.py`: validação, cálculo de UUIDv5 e orquestração por carga.
+- `src/database.py`: conexão com PostgreSQL e chamada à função `processar_operacao_json`.
+- `src/storage_manager.py`: abstração de repositórios (local / SharePoint) e sanitização de nomes.
+- `db/`: scripts SQL com `clientes_docs`, `carga_historico` e `processar_operacao_json`.
+
+## Estrutura do repositório
+
+Árvore principal (resumida):
+
+```
+.
+├── containers/
+│   ├── Containerfile.app
+│   ├── Containerfile.db
+│   └── podman-compose.yml
+├── config/
+│   ├── default_config.json
+│   └── config.json      # gitignored, overrides locais
+├── db/
+│   ├── init.sql
+│   └── procedures.sql
+├── src/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config_loader.py
+│   ├── database.py
+│   ├── storage_manager.py
+│   └── pipeline.py
+├── tests/
+├── pyproject.toml
+├── README.md
+└── .gitignore
+```
+
+O código legado encontra-se arquivado em `legacy/` e não é usado pela nova arquitetura.
+
+## Pré-requisitos
+
+- Podman (para orquestrar containers com `podman-compose`).
+- UV (gerenciador de ambiente usado no desenvolvimento): `uv sync` para instalar dependências.
+- Acesso a um PostgreSQL (pode ser provisionado via `containers/podman-compose.yml`).
+
+## Como rodar localmente
+
+1. Clone o repositório:
+
+```powershell
+git clone <repo> && cd Scarab
+```
+
+2. Instale dependências de desenvolvimento com UV:
+
+```powershell
+uv sync
+```
+
+3. Copie o arquivo de configuração e ajuste conforme necessário:
+
+```powershell
+mkdir -Force config; copy-file config/default_config.json config/config.json
+# editar config/config.json (senha do banco via variável de ambiente)
+```
+
+4. Suba os containers (aplica-se quando `containers/podman-compose.yml` estiver presente):
+
+```powershell
+podman compose -f containers/podman-compose.yml up
+```
 
-<details>
-    <summary>Table of Contents</summary>
-    <ol>
-        <li><a href="#about-scarab">About Scarab</a></li>
-        <li><a href="#scripts-and-files">Scripts and Files</a></li>
-        <li><a href="#how-it-works">How it works</a></li>
-        <li><a href="#companion-services">Companion Services</a></li>
-        <li><a href="#tests">Tests</a></li>
-        <li><a href="#setup">Setup</a></li>
-        <li><a href="#roadmap">Roadmap</a></li>
-        <li><a href="#contributing">Contributing</a></li>
-        <li><a href="#support">Support</a></li>
-        <li><a href="#license">License</a></li>
-    </ol>
-</details>
+5. No ambiente de desenvolvimento, execute ciclos de inspeção com UV:
 
-<!-- ABOUT THE PROJECT -->
-# About Scarab
+```powershell
+uv run python -m src.main config
+```
 
-<div>
-<img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg"> </div>
+Observação: segredos como a senha do banco devem ser fornecidos via variável de ambiente
+(`SCARAB_DB_PASSWORD` conforme `config/default_config.json`).
 
-This app is intended to run as a service and perform ESB (Enterprise Service Bus) tasks by moving file between input and output folders while performing basic file processing tasks including: file type checking, backup, metadata aggregation and logging.
+## Visão geral da configuração
 
-Metadata files are expected to be tables in XLSX or CSV format, with the first row as the column headers, or JSON arrays and dictionaries.
+O arquivo `config/default_config.json` concentra os parâmetros principais:
+- `repositories`: lista de repositórios com `type` (`local` | `sharepoint`) e `role` (`input` | `storage_media`).
+- `prazos`: `orphaned_media_hours` (horas para considerar mídia órfã) e `trash_cleanup_days` (idade para compactação/purge).
+- `database`: parâmetros de conexão (host, port, dbname, user) e `password_env` (nome da variável de ambiente que guarda a senha).
+- `uuid_namespace`: UUID literal usado como namespace para `uuid.uuid5()` (não recalculado em runtime).
+- `business_key_field`: se vazio (`""`), o UUIDv5 é calculado a partir de todo o payload (excluindo campos de controle); se preenchido, o campo indicado é usado como fonte limpa para o hash.
 
-XLSX and JSON files may contain multiple tables defined in sheets or dictionaries entries in the first level, respectively. Association between the tables is defined by "Primary Key" and "Foreign Key" columns, and may be defined with absolute (UI) or relative values (specific to each file).
+O `config/config.json` (gitignored) pode sobrescrever qualquer campo do default por seção.
 
-Metadata may also be extracted from the filenames using regex patterns and the filename itself may be stored in the metadata file.
+## Como funciona o processamento
 
-Application is written in Python and uses the UV package for environment management and intended to run as a service. Exemples of service configuration files for the Windows Task Manager are provided in the [data/examples](./data/examples/) folder.
+Fluxo resumido:
+1. O `main.py` varre repositórios `role == "input"` procurando novos arquivos.
+2. Arquivos JSON são validados; o campo `operacao` deve existir e ser um dos literais suportados.
+3. O `pipeline.py` resolve a fonte do `business key` (campo específico ou todo o payload limpo), aplica
+   normalização (`clean_business_key`) e calcula `uuid.uuid5(namespace, source)`.
+4. A aplicação chama `database.py` que executa a função SQL `processar_operacao_json(nome_arquivo, payload)`.
+5. A função no banco realiza `UPSERT` / `DELETE` / remoção de propriedade conforme a `operacao`, e registra a execução em `carga_historico`.
+6. Se houver mídia associada, após sucesso a mídia é movida para um repositório com `role == "storage_media"`.
+7. Mídias sem JSON correspondente são mantidas por `orphaned_media_hours` e, após esse período, movidas para `/trash`.
 
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
+Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/trash` e remoção de arquivos mais antigos que `prazos.trash_cleanup_days`.
 
+## Licença e contribuição
 
-<!-- SCRIPTS AND FILES -->
-# Scripts and Files
+Este repositório mantém os arquivos de política e contribuição na raiz. Consulte:
 
-| Script module | Description |
-| --- | --- |
-| [scarab.py](./src/scarab.py) | main script to run the service |
-| [config_handler.py](./src/config_handler.py) | module responsible for handling the configuration file parsing, validation and processing into the used configuration object |
-| [default_config.json](./src/default_config.json) | default configuration file, used by the script to fill optional values in user configuration files. May be edited to change the default values. |
-| [log_handler.py](./src/log_handler.py) | module responsible for handling configuration of the standard python logging module from the configured parameters, such as enabling the selected output channels and message formatting |
-| [file_handler.py](./src/file_handler.py) | module responsible for handling the file operations such as copy, move and delete |
-| [metadata_handler.py](./src/metadata_handler.py) | module responsible for handling the metadata operations, including reading, merging and storing |
-| | | 
+- [LICENSE.md](LICENSE.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SECURITY.md](SECURITY.md)
+- [SUPPORT.md](SUPPORT.md)
 
-Apart from scripts, the application uses a configuration file to define the application parameters, such as folder paths, folder revisit timing, log method, log level, and log file name, among others.
-
-Please check Scarab [documentation](./docs/README.md) for more details on the configuration file.
-
-Examples of configuration files can be found in the defined [tests](./tests/README.md).
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- How it works -->
-# How it works
-
-Script is made to run as a windows service reading for the task definition in a configuration file that uses JSON format.
-
-The script can monitor multiple folders. As soon as any content is changed, the script sort the content into 3 groups, corresponding to data files to be moved, metadata files to be processed and other files or folders that may be deleted or ignored.
-
-Identification of the files is based on their names using a regex pattern defined in the configuration file. Metadata files are further evaluated by their content, which is expected to contain a minimum set of data columns, otherwise the file will be considered invalid and treated as an unknown file.
-
-Metadata files are expected to be tables (XLSX or CSV format), with the first row as the header, arrays and dictionaries in JSON format.
-
-One or several columns might be used as key columns to uniquely identify each row.
-
-The script will concatenate tables and update the rows based on the key columns. During updates, columns with `null` values are ignored. To entirely remove data, the service must be stopped and the consolidated metadata file manually edited.
-
-Column order in the consolidated metadata file is the same as the last metadata file processed. Columns existing in previous metadata files but not in the new one are kept with minimal order changes, as close as possible to the original neighborhood, otherwise, they are appended to the end of the table.
-
-Additional columns may be added to the consolidated metadata file, including the filename itself and parsed information from the filename using regex groupby.
-
-Rows may be ordered by any indicated column, by default they will be sorted following the order by which they were created when processing the input files.
-
-For XLSX files with multiple sheets, JSON files with multiple dictionaries in the root, or CSV files with significantly different column set or respecting different regex rules, the script can create a multi table consolidated result, including relational association between tables using Primary Key (PK) and Foreign Key (FK) relationships. Such relationships may be relative, within a single file, or absolute, across multiple files.
-
-The consolidated metadata file is stored in multiple output folder and different output formats may be used, primary XLSX but also csv, json, qvd (qlik sense) and parquet. For single table formats (csv, qvd and parquet), when consolidating multi-table data, the base name of the catalog file will have added the suffix "_table", to indicate which table the data is associated to. 
-
-Data files may be of any type and may be moved to multiple output folders. Different output folders may be set for different file regex.
-
-References to the data files within the consolidated metadata file may be used to add additional metadata information, indicating that the data file was moved to the output folder.
-
-Data files without the corresponding metadata may be hold in temp folders and eventually moved to trash.
-
-Input folder cleaning policies may be defined in the configuration file, including moving files to a trash folder or deleting them, thus handling unidentified files.
-
-Exception to the cleaning policies may be defined to allow the use of specific input folder structure or permanence of files that may not be processed.
-
-A log is used to keep track of the script execution, being possible to have the log presented in the terminal and/or saved to a file.
-
-To stop, the script monitor the occurrence of kill signal from the system or ctrl+c if running in the terminal.
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- Companion services -->
-# Companion Services
-
-Companion services were developed to extend the application functionalities and create a production environment integrated with MS Sharepoint and cloud services, including:
-
-- [PowerAutomate script](https://en.wikipedia.org/wiki/Microsoft_Power_Automate) that extract metadata from files uploaded to MS Sharepoint repositories, through a browser or OneDrive client application. Metadata and corresponding uploaded files are placed into restricted repositories monitored by Scarab service. Example of such script is provided in the [src/PA](./src/PA/) folder.
-- [Windows Scheduler](https://en.wikipedia.org/wiki/Windows_Task_Scheduler) to run Scarab service as a Windows Task. Examples are provided in the [src/Scheduler](./src/Scheduler/) folder. This allows the service to run in a machine without user intervention, starting with the system and restarting in case of failure in a machine capable of also running other companion services, such as OneDrive Client Application, enabling Scarab to access Sharepoint repositories as local synced folders, without the need of additional coding for Sharepoint API access, that may be restricted in some environments.
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- TESTS -->
-# Tests
-
-Testes are proposed for different scenarios to validate the scripts and modules.
-
-Please check the [tests folder](./tests/README.md) for more details.
-
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- SETUP -->
-# Setup
-
-Scripts were intended to be used in a Windows machine with UV package and environment management.
-
-You may simply clone the repository and run the script with the following command or follow the [install procedures](./install/README.md)
-
-For more details about UV, please check the [UV documentation](https://docs.astral.sh/uv/)
-
-Please check Scarab [documentation](./docs/README.md) for more details on the configuration file.
-
-Additional examples can be found in the [data folder](./data/examples/) of the repository.
-
-These examples include.
-
-- `.json` configuration files for the application in some scenarios currently in use.
-- `.xml` files for the Windows task manager to run the application as a service.
-- `zip` file with a companion script to be used with [PowerAutomate](https://en.wikipedia.org/wiki/Microsoft_Power_Automate) to extract data from [MS Sharepoint](https://en.wikipedia.org/wiki/SharePoint) repositories and post them to the input folders.
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- ROADMAP -->
-# Roadmap
-
-This section presents a simplified view of the roadmap.
-
-* [x] Version 1.0.0: [21/02/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v1.0.0), initial release
-  * [x] version 1.0.1: [31/03/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v1.0.1), bug fix
-  * [x] version 1.1.0: [14/04/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v1.1.0), Row ordering, ignore feature and scarab companion
-* [x] Version 2.0.0: [08/07/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v2.0.0), multi table support with PK/FK update, Advanced regex, Filename processing
-  * [x] version 2.1.0: [08/09/2025](https://github.com/InovaFiscaliza/Scarab/releases/tag/v2.1.0), Improved validation and error handling, multiple output folders, automatic file encoding identification
-  * [x] version 2.1.1: [30/01/2026](https://github.com/InovaFiscaliza/Scarab/releases/tag/v.2.1.1), fix column order issue, update docstring and typing hints. Add examples and tests. PA companion update to vectorized processing.
-* [ ] Sharepoint direct access through API and [open issues](https://github.com/InovaFiscaliza/Scarab/issues)
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- CONTRIBUTING -->
-# Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-
-For detailed contribution guidelines, please see [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- SUPPORT -->
-# Support
-
-For support, please see [SUPPORT.md](./SUPPORT.md) for available resources and how to get help.
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- LICENSE -->
-# License
-
-Distributed under the GNU General Public License (GPL), version 3. See [LICENSE](./LICENSE) for more information.
-
-For detailed license information, please see [LICENSE.md](./LICENSE.md).
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
-
-<!-- REFERENCES -->
-## References
-
-* [UV Short Guide](https://www.saaspegasus.com/guides/uv-deep-dive/)
-* [Readme Template](https://github.com/othneildrew/Best-README-Template)
-
-<div>
-    <a href="#about-scarab">
-        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="Back to the top of this page">
-    </a>
-    <br><br>
-</div>
+Por favor, siga as diretrizes de contribuição e o código de conduta ao enviar PRs.

@@ -25,15 +25,25 @@ reescrita do Scarab (nova arquitetura PostgreSQL + Podman, descrita em `docs/rew
   use **pydantic** (`BaseModel`, `model_config = ConfigDict(frozen=True)`) e reutilize o padrão de
   docstring literal logo abaixo de cada atributo (ver exemplo em `legacy/src/config_handler.py`,
   projeto legado — a convenção funciona igual em campos pydantic).
-- Quando o módulo tiver teste aprovado (ver `/memories/repo/rewrite-plan.md`), crie também o
-  arquivo `tests/test_<módulo>.py` correspondente, usando mocks para dependências externas (banco,
-  SharePoint) — nunca exija infraestrutura real rodando para os testes unitários passarem.
+- Quando o módulo tiver teste aprovado (isso será dito explicitamente no seu prompt), crie
+  também o arquivo `tests/test_<módulo>.py` correspondente, usando mocks para dependências
+  externas (banco, SharePoint) — nunca exija infraestrutura real rodando para os testes
+  unitários passarem.
 - SQL: nomes de tabelas/colunas/função em **português**, exatamente como definidos em
   `docs/rewrite/CONTRACTS.md`.
 - Markdown voltado ao usuário final (README, etc.): **Português do Brasil**.
 - Segurança: SQL sempre parametrizado; nomes de arquivo vindos de conteúdo não confiável (JSON)
   sempre sanitizados (`basename` + checagem de diretório) antes de qualquer I/O em disco; segredos
   somente via variável de ambiente, nunca hardcoded nem logados.
+
+## Memória (`/memories/...`)
+
+Você **não tem acesso à ferramenta de memória**. Se um prompt de módulo mencionar ler ou
+atualizar `/memories/repo/rewrite-plan.md`, ignore essa instrução — **não** crie um arquivo real
+em `memories/repo/rewrite-plan.md` (ou qualquer caminho parecido) dentro do repositório; isso já
+aconteceu por engano antes e não deve se repetir. Em vez disso: confie apenas nas informações e
+decisões que o orquestrador já incluiu diretamente no seu prompt, e termine seu relatório com uma
+linha de log sugerida (data, módulo, arquivos, suposições) para o orquestrador aplicar à memória.
 
 ## Abordagem
 
@@ -51,4 +61,5 @@ Ao final, responda com um resumo curto:
 - Arquivos criados/editados (lista).
 - Resultado da validação (`get_errors` limpo? comando de smoke test rodou?).
 - Suposições ou decisões que precisam de confirmação do usuário (se houver).
-- Atualize o checklist em `/memories/repo/rewrite-plan.md`, marcando este módulo como concluído.
+- Uma linha de log sugerida para o orquestrador registrar na memória (você mesmo não tem acesso a
+  ela — ver seção "Memória" acima).
