@@ -62,7 +62,9 @@ class _FakeConnection:
 class _FakePool:
     """Minimal stand-in for `psycopg_pool.ConnectionPool`."""
 
-    def __init__(self, connection: _FakeConnection, open_exc: Exception | None = None) -> None:
+    def __init__(
+        self, connection: _FakeConnection, open_exc: Exception | None = None
+    ) -> None:
         self._connection = connection
         self.open_exc = open_exc
         self.opened = False
@@ -164,7 +166,9 @@ def test_call_processar_operacao_json_does_not_interpolate_payload_into_sql() ->
     _, cursor = _wire_fake_pool(db, fetchone_result=("SUCESSO", None, uuid.uuid4()))
     malicious_payload = {"operacao": "INSERT", "id": "1); DROP TABLE clientes_docs; --"}
 
-    db.call_processar_operacao_json("'; DROP TABLE clientes_docs; --.json", malicious_payload)
+    db.call_processar_operacao_json(
+        "'; DROP TABLE clientes_docs; --.json", malicious_payload
+    )
 
     [(query, _params)] = cursor.executed
     assert "DROP TABLE" not in query
@@ -176,14 +180,18 @@ def test_call_processar_operacao_json_returns_erro_when_no_row_returned() -> Non
     db = Database(_make_config())
     _wire_fake_pool(db, fetchone_result=None)
 
-    result = db.call_processar_operacao_json("arquivo.json", {"operacao": "INSERT", "id": "x"})
+    result = db.call_processar_operacao_json(
+        "arquivo.json", {"operacao": "INSERT", "id": "x"}
+    )
 
     assert result.status == "ERRO"
     assert result.client_id is None
 
 
 @pytest.mark.parametrize("failure_point", ["open", "execute"])
-def test_call_processar_operacao_json_returns_erro_on_database_error(failure_point: str) -> None:
+def test_call_processar_operacao_json_returns_erro_on_database_error(
+    failure_point: str,
+) -> None:
     """Connection and query failures are converted to a `ProcessResult`, never raised."""
     db = Database(_make_config())
     error = psycopg.OperationalError("connection refused")
@@ -192,7 +200,9 @@ def test_call_processar_operacao_json_returns_erro_on_database_error(failure_poi
     else:
         _wire_fake_pool(db, execute_exc=error)
 
-    result = db.call_processar_operacao_json("arquivo.json", {"operacao": "INSERT", "id": "x"})
+    result = db.call_processar_operacao_json(
+        "arquivo.json", {"operacao": "INSERT", "id": "x"}
+    )
 
     assert result.status == "ERRO"
     assert result.client_id is None

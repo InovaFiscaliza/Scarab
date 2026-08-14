@@ -67,7 +67,9 @@ class Database:
             open=False,
         )
 
-    def call_processar_operacao_json(self, filename: str, payload: dict) -> ProcessResult:
+    def call_processar_operacao_json(
+        self, filename: str, payload: dict
+    ) -> ProcessResult:
         """Call the `processar_operacao_json` stored function.
 
         Args:
@@ -111,7 +113,10 @@ class Database:
 
         status, message, client_id = row
         logger.info(
-            "processar_operacao_json for %r: status=%s id=%s", filename, status, client_id
+            "processar_operacao_json for %r: status=%s id=%s",
+            filename,
+            status,
+            client_id,
         )
         return ProcessResult(
             # the stored function only ever returns one of these two literals
