@@ -1,0 +1,22 @@
+{
+    "business_key_field": "codigo",
+    "repositories": [
+        {
+            "name": "local_inbound",
+            "type": "local",
+            "path": "examples/sandbox/post",
+            "role": "input"
+        },
+        {
+            "name": "local_media",
+            "type": "local",
+            "path": "examples/sandbox/get",
+            "role": "storage_media"
+        }
+    ],
+    "trash_path": "examples/sandbox/trash",
+    "database": {
+        "host": "db"
+    },
+    "sharepoint": null
+}

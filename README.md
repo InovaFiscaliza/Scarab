@@ -1,4 +1,16 @@
-# Scarab — Nova Arquitetura (PostgreSQL + Podman)
+<details>
+    <summary>Índice</summary>
+    <ol>
+        <li><a href="#visão-geral">Visão Geral</a></li>
+        <li><a href="#arquitetura">Arquitetura</a></li>
+        <li><a href="#estrutura-do-repositório">Estrutura do Repositório</a></li>
+        <li><a href="#pré-requisitos">Pré-requisitos</a></li>
+        <li><a href="#como-rodar-localmente">Como Rodar Localmente</a></li>
+        <li><a href="#visão-geral-da-configuração">Visão Geral da Configuração</a></li>
+        <li><a href="#como-funciona-o-processamento">Como Funciona o Processamento</a></li>
+        <li><a href="#licença-e-contribuição">Licença e Contribuição</a></li>
+    </ol>
+</details>
 
 ## Visão geral
 
@@ -12,9 +24,16 @@ O objetivo é tornar a ingestão robusta, audível e compatível com orquestraç
 (Podman), mantendo políticas de segurança para segredos, limpeza de arquivos órfãos e proteção
 contra path traversal e injeção SQL.
 
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
+
 ## Arquitetura
 
-Diagrama de alto nível do fluxo de dados (Mermaid):
+Diagrama de alto nível do fluxo de dados:
 
 ```mermaid
 flowchart LR
@@ -42,40 +61,62 @@ Principais componentes:
 O contrato técnico completo da configuração, dos módulos Python, do banco e das regras de
 segurança está em [docs/architecture/CONTRACTS.md](docs/architecture/CONTRACTS.md).
 
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
+
 ## Estrutura do repositório
 
 Árvore principal (resumida):
 
+```mermaid
+treeView-beta
+    Scarab/
+        containers/
+            Containerfile.app
+            Containerfile.db
+            podman-compose.yml
+        config/
+            default_config.json
+            config.json ## gitignored; overrides locais
+        db/
+            init.sql
+            procedures.sql
+        src/
+            __init__.py
+            main.py
+            config_loader.py
+            database.py
+            storage_manager.py
+            pipeline.py
+        tests/
+        pyproject.toml
+        README.md
+        .gitignore
 ```
-.
-├── containers/
-│   ├── Containerfile.app
-│   ├── Containerfile.db
-│   └── podman-compose.yml
-├── config/
-│   ├── default_config.json
-│   └── config.json      # gitignored, overrides locais
-├── db/
-│   ├── init.sql
-│   └── procedures.sql
-├── src/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── config_loader.py
-│   ├── database.py
-│   ├── storage_manager.py
-│   └── pipeline.py
-├── tests/
-├── pyproject.toml
-├── README.md
-└── .gitignore
-```
+
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
 
 ## Pré-requisitos
 
 - Podman (para orquestrar containers com `podman-compose`).
 - UV (gerenciador de ambiente usado no desenvolvimento): `uv sync` para instalar dependências.
 - Acesso a um PostgreSQL (pode ser provisionado via `containers/podman-compose.yml`).
+
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
 
 ## Como rodar localmente
 
@@ -113,6 +154,13 @@ uv run python -m src.main config
 Observação: segredos como a senha do banco devem ser fornecidos via variável de ambiente
 (`SCARAB_DB_PASSWORD` conforme `config/default_config.json`).
 
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
+
 ## Visão geral da configuração
 
 O arquivo `config/default_config.json` concentra os parâmetros principais:
@@ -125,6 +173,13 @@ O arquivo `config/default_config.json` concentra os parâmetros principais:
 - `business_key_field`: se vazio (`""`), o UUIDv5 é calculado a partir de todo o payload (excluindo campos de controle); se preenchido, o campo indicado é usado como fonte limpa para o hash.
 
 O `config/config.json` (gitignored) pode sobrescrever qualquer campo do default por seção.
+
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
 
 ## Como funciona o processamento
 
@@ -140,6 +195,13 @@ Fluxo resumido:
 
 Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/trash` e remoção de arquivos mais antigos que `prazos.trash_cleanup_days`.
 
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
+
 ## Licença e contribuição
 
 Este repositório mantém os arquivos de política e contribuição na raiz. Consulte:
@@ -151,3 +213,10 @@ Este repositório mantém os arquivos de política e contribuição na raiz. Con
 - [SUPPORT.md](SUPPORT.md)
 
 Por favor, siga as diretrizes de contribuição e o código de conduta ao enviar PRs.
+
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
