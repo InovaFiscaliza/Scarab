@@ -6,10 +6,7 @@ Implemente o **Módulo 07 (Main)** da reescrita do Scarab.
 
 ## Leitura obrigatória antes de codificar
 - [CONTRACTS.md](../../../docs/rewrite/CONTRACTS.md) — seção 3.5 (contrato do módulo)
-- [PLAN.md](../../../docs/rewrite/PLAN.md) — seção 2 (mapeamento, última linha — padrão de sinais
-  do `legacy/src/scarab.py` legado)
-- `legacy/src/scarab.py` (legado) — **somente leitura**, para reaproveitar o padrão de
-  `signal.signal`/loop/contagem de erros; não copie literalmente, adapte para os novos módulos
+- [PLAN.md](../../../docs/rewrite/PLAN.md) — seção 2 (mapeamento e padrão de sinais)
 - `src/config_loader.py`, `src/database.py`, `src/storage_manager.py`, `src/pipeline.py` já
   implementados — leia os arquivos reais para casar exatamente com as assinaturas implementadas
 
@@ -24,8 +21,7 @@ Implemente o **Módulo 07 (Main)** da reescrita do Scarab.
 ## Requisitos específicos
 
 1. Handlers para `SIGINT`, `SIGTERM`, `SIGBREAK` que sinalizam uma flag global `keep_running =
-   False` para parada graciosa (mesmo espírito do `sigint_handler` em `legacy/src/scarab.py`
-   legado).
+  False` para parada graciosa.
 2. `main(config_dir: str) -> None`:
    - carrega config via `config_loader.get_config(config_dir)`;
    - inicializa logging (nível/formato conforme `config.log`);
@@ -39,8 +35,8 @@ Implemente o **Módulo 07 (Main)** da reescrita do Scarab.
    - ao sair do loop (flag `keep_running == False` ou erros excedidos), chama `db.close()` e
      loga uma mensagem final de encerramento.
 3. Bloco `if __name__ == "__main__":` validando `sys.argv` (espera o caminho do diretório de
-   config como argumento único) e chamando `main(config_dir)`, com mensagem de uso em caso de
-   argumento ausente/incorreto (mesmo padrão do `legacy/src/scarab.py` legado).
+  config como argumento único) e chamando `main(config_dir)`, com mensagem de uso em caso de
+  argumento ausente/incorreto.
 4. Não implemente lógica de negócio aqui — tudo que for classificação/validação/persistência já
    está em `pipeline.py`/`database.py`/`storage_manager.py`. `main.py` apenas orquestra o ciclo de
    vida do processo.

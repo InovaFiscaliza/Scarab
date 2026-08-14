@@ -31,14 +31,13 @@ metadados em arquivos XLSX/CSV/JSON/QVD/Parquet) por um novo serviço:
 - Deploy automatizado via **Podman** (`podman-compose`), com containers separados para a aplicação
   e o banco.
 
-O código atual (`scarab.py`, `config_handler.py`, `metadata_handler.py`, `file_handler.py`,
-`log_handler.py`) já foi **arquivado em `legacy/src/`** (junto com `legacy/tests/`), e será
-**removido definitivamente** apenas como último passo, depois que a nova arquitetura estiver
-implementada e validada (ver §6).
+O código da implementação anterior foi removido desta branch após a conclusão da nova arquitetura.
+Caso seja necessário recuperá-lo, os releases e o histórico Git continuam sendo a fonte de
+recuperação.
 
 ## 2. Mapeamento: Scarab atual → Nova arquitetura
 
-| Conceito atual (`legacy/src/default_config.json` / `legacy/src/config_handler.py`) | Novo conceito | Observação |
+| Conceito anterior (configuração baseada em arquivos) | Novo conceito | Observação |
 |---|---|---|
 | `folders.post` (lista de pastas de entrada) | `repositories[].role == "input"` | Generaliza para local **e** SharePoint |
 | `folders.get` (dict regex → pastas de saída) | `repositories[].role == "storage_media"` | Somente mídia; dados estruturados vão para o banco |
@@ -56,7 +55,7 @@ implementada e validada (ver §6).
 | `csv separator`, `catalog names`, `table names`, `metadata.key` (multi-tabela) | **Eliminados** | Não há mais múltiplos formatos de arquivo de saída nem múltiplas tabelas por arquivo |
 | `log.*` (nível, tela/arquivo, formato colorido) | `log.*` | Mesma filosofia, nomes de campo em `snake_case` |
 | Docstring literal por atributo de config (hover no VS Code) | Mantido em `config_loader.py` | Convenção explicitamente reaproveitada |
-| `signal.signal(SIGTERM/SIGBREAK/SIGINT, ...)` + loop com `time.sleep` (`legacy/src/scarab.py`) | Mesmo padrão em `src/main.py` | Reaproveitado quase sem alteração |
+| `signal.signal(SIGTERM/SIGBREAK/SIGINT, ...)` + loop com `time.sleep` | Mesmo padrão em `src/main.py` | Reaproveitado quase sem alteração |
 
 ## 3. Arquitetura alvo
 
@@ -89,8 +88,7 @@ implementada e validada (ver §6).
 └── .gitignore
 ```
 
-O código legado já foi arquivado em `legacy/` (`legacy/src/`, `legacy/tests/`) — `src/` e `tests/`
-na raiz são recriados do zero pelos módulos novos, sem mistura com o código antigo.
+`src/` e `tests/` na raiz contêm exclusivamente a implementação e os testes da arquitetura nova.
 
 ### Fluxo de dados
 
@@ -130,7 +128,7 @@ flowchart TD
     M07 --> M08
     M00 --> M09[09 - .github/workflows/ci.yml]
     M07 --> M09
-    M08 --> MF[FINAL - validação de integração\n+ remoção do código legado]
+    M08 --> MF[FINAL - validação de integração]
     M09 --> MF
 ```
 
@@ -146,7 +144,7 @@ flowchart TD
 | 07 | Main | `src/main.py`, teste opcional (loop é majoritariamente I/O e sinais) | 06 |
 | 08 | Containers | `containers/Containerfile.app`, `Containerfile.db`, `podman-compose.yml` | 00, 03, 07 |
 | 09 | CI | `.github/workflows/ci.yml` (roda `uv run pytest`) | 00, 07 |
-| Final | Integração + limpeza | testes de ponta a ponta, remoção definitiva de `legacy/` | 08, 09 — **requer confirmação explícita do usuário** |
+| Final | Integração | testes de ponta a ponta com Podman/PostgreSQL | 08, 09 |
 
 Cada módulo tem um prompt pronto em [.github/prompts/rewrite/](../../.github/prompts/rewrite/),
 executado pelo agente [rewrite-builder](../../.github/agents/rewrite-builder.agent.md).
@@ -160,7 +158,7 @@ janela de contexto ou os limites de geração de uma única resposta.
 - **`docs/rewrite/CONTRACTS.md`**: contrato único e estável (nomes, tipos, esquemas). Cada módulo lê
   só as seções que precisa, não o histórico da conversa inteira.
 - **`.github/agents/rewrite-builder.agent.md`**: agente especializado, com escopo restrito (só edita
-  os arquivos do módulo pedido, não toca no código legado, sempre valida com `get_errors`).
+  os arquivos do módulo pedido, sempre valida com `get_errors`).
 - **`.github/prompts/rewrite/NN-*.prompt.md`**: um prompt por módulo, autocontido, linkando apenas
   as seções relevantes de PLAN/CONTRACTS.
 - **`/memories/repo/rewrite-plan.md`** (memória do repositório): checklist de progresso e decisões
@@ -191,22 +189,14 @@ módulo 03 (SQL), validar a sintaxe manualmente (não há banco disponível aind
 ## 6. Estratégia de risco e rollback
 
 1. **Branch dedicada:** criada — `rewrite/postgres-architecture`, a partir de `main` (commit
-   `7b8d2aa`). Todo o trabalho da reescrita acontece aqui; `main` permanece estável até revisão e
-   merge final via PR.
-2. **Código legado arquivado:** `scarab.py`, `config_handler.py`, `metadata_handler.py`,
-   `file_handler.py`, `log_handler.py`, `default_config.json` e toda a pasta `tests/` (incluindo o
-   `sandbox` de testes) já foram movidos para `legacy/src/` e `legacy/tests/` (commit
-   "chore: archive legacy Scarab implementation under legacy/"), preservando a relação de caminho
-   relativo entre eles — os scripts `.bat` legados continuam funcionando a partir de
-   `legacy/tests/`. O `.gitignore` foi ajustado (`legacy/tests/sandbox`, `legacy/tests/bkp`).
-3. **Remoção definitiva do legado é um passo isolado e explicitamente confirmado pelo usuário** —
-   nunca automática. Só ocorre depois de:
-   - todos os módulos 00–09 implementados e sem erros (`get_errors` limpo);
-   - `podman-compose up` validado manualmente (banco sobe, aplicação conecta, um arquivo de teste é
-     processado com sucesso);
-   - confirmação explícita do usuário para apagar a pasta `legacy/` inteira (ou parte dela).
-4. Como tudo fica em Git, qualquer remoção é reversível via histórico, mas a confirmação explícita
-   evita perda de trabalho em andamento não commitado.
+  `7b8d2aa`). Todo o trabalho da reescrita acontece aqui; `main` permanece estável até revisão e
+  merge final via PR.
+2. **Implementação anterior removida:** os módulos, instaladores e exemplos antigos foram
+  removidos após a conclusão dos Módulos 00–09. Releases e histórico Git permanecem disponíveis
+  para recuperação eventual.
+3. **Validação de integração pendente:** `podman-compose up` ainda precisa ser executado em um
+  ambiente com Podman; o banco deve subir, a aplicação conectar e um arquivo de teste ser
+  processado com sucesso.
 
 ## 7. Segurança (resumo)
 
@@ -223,8 +213,8 @@ Pontos críticos que **todo** módulo relevante deve implementar:
 1. **Config:** `config_loader.py` usa **pydantic** (`BaseModel`, `model_config =
    ConfigDict(frozen=True)`), não `dataclasses`. CONTRACTS.md §3.1 já reflete isso.
 2. **Branch dedicada:** `rewrite/postgres-architecture`, criada a partir de `main` — feito.
-3. **Código legado:** movido para `legacy/` imediatamente (não esperou o cutover final) — feito
-   (`legacy/src/`, `legacy/tests/`).
+3. **Implementação anterior:** removida após a conclusão dos módulos — feito; recuperação fica
+  disponível pelos releases/histórico Git.
 4. **Testes automatizados:** aprovado — cada módulo Python (02, 04, 05, 06) entrega também um
    teste `pytest` correspondente (com mocks, sem dependências externas reais); `ci.yml` (Módulo 09)
    roda `uv run pytest`.
@@ -248,10 +238,7 @@ módulo, se surgirem suposições que precisem de validação.
 ## 9. Próximos passos imediatos
 
 1. ~~Confirmar decisões da §8~~ — feito.
-2. ~~Criar branch dedicada e arquivar código legado em `legacy/`~~ — feito
-   (`rewrite/postgres-architecture`, commit "chore: archive legacy Scarab implementation under
-   legacy/").
-3. Iniciar o **Módulo 00 (scaffold)**, seguido do **Módulo 01 (README.md)** e **Módulo 02
-   (config)**, cada um via subagente (modelo escolhido por mim conforme a complexidade do
-   módulo), com validação e atualização do log em `/memories/repo/rewrite-plan.md` entre passos.
-4. Após cada módulo, aviso você com um resumo curto antes de prosseguir para o próximo.
+2. ~~Implementar os Módulos 00–09~~ — feito, com testes automatizados e CI.
+3. ~~Remover os arquivos antigos desnecessários~~ — feito; releases e histórico Git continuam
+  disponíveis para recuperação.
+4. Executar a validação de integração em um ambiente com Podman/PostgreSQL.

@@ -6,9 +6,9 @@ If you need help using Scarab or have questions, here are the resources availabl
 
 ### Documentation
 
-- **Main Documentation**: Check [docs/README.md](./docs/README.md) for comprehensive documentation on configuration, features, and usage
-- **Examples**: Review [data/examples/](./data/examples/) for real-world configuration examples
-- **Test Cases**: The [tests/](./tests/) folder contains examples for various scenarios
+- **Main Documentation**: Check [README.md](./README.md) for architecture, configuration, and usage
+- **Architecture Contracts**: Review [docs/rewrite/CONTRACTS.md](./docs/rewrite/CONTRACTS.md) for module and database contracts
+- **Test Suite**: Run `uv run pytest` to validate the active implementation
 
 ### Reporting Issues
 
@@ -52,8 +52,8 @@ Interested in contributing to Scarab? See [CONTRIBUTING.md](./CONTRIBUTING.md) f
 Before running Scarab in production:
 
 1. Review the configuration carefully
-2. Test with the provided test scripts in [tests/](./tests/)
-3. Use the sandbox environment to validate your setup
+2. Run the automated suite with `uv run pytest`
+3. Validate the containers with `podman compose -f containers/podman-compose.yml up --build`
 4. Check the generated logs for any warnings or errors
 
 ## FAQ
@@ -65,15 +65,15 @@ A: Ensure the path to your configuration file is correct and the file has `.json
 
 **Q: Files not being processed**
 A: Check that:
-- Regex patterns in `metadata file regex` and `data file regex` match your filenames
-- Folders are correctly configured in the configuration file
+- Input repositories are correctly configured
+- The JSON contains a supported `operacao` value
 - View the service logs for detailed error messages
 
 **Q: Data not consolidating correctly**
 A: Verify:
-- Column headers match across files
-- Key column definitions are correct
-- Multi-table PK/FK relationships (if used) are properly configured
+- The JSON payload is valid and contains the configured business key when one is required
+- The PostgreSQL function is installed and reachable
+- The database logs contain no rejected operation
 
 **Q: Service won't start**
 A: Check:
@@ -84,9 +84,9 @@ A: Check:
 ### Getting More Information
 
 - Check application logs (configured in the `log` section)
-- Review the detailed [documentation](./docs/README.md)
+- Review the [README](./README.md) and [architecture contracts](./docs/rewrite/CONTRACTS.md)
 - Search existing [GitHub Issues](https://github.com/InovaFiscaliza/Scarab/issues)
-- See [test examples](./tests/README.md) for various scenarios
+- Run `uv run pytest` for the current regression suite
 
 ## Security Issues
 

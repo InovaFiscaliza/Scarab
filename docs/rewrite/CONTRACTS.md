@@ -287,10 +287,9 @@ def load_config(config_dir: str) -> AppConfig: ...
 def get_config(config_dir: str | None = None) -> AppConfig: ...  # cached singleton (functools.lru_cache ou equivalente)
 ```
 
-Reaproveitar o padrão já usado em `legacy/src/config_handler.py` (legado): **docstring literal
-logo abaixo de cada atributo**, para que o VS Code exiba a descrição no hover — essa convenção do
-Pyright/Pylance funciona da mesma forma em campos de `pydantic.BaseModel`, não é exclusiva de
-`dataclass`.
+Use **docstrings literais logo abaixo de cada atributo**, para que o VS Code exiba a descrição no
+hover — essa convenção do Pyright/Pylance funciona da mesma forma em campos de
+`pydantic.BaseModel`.
 
 ### 3.2 `src/database.py`
 
@@ -398,7 +397,7 @@ if __name__ == "__main__":
     ...  # valida argv, chama main(config_dir)
 ```
 
-Deve seguir o mesmo padrão de `legacy/src/scarab.py` (legado): handlers para `SIGINT`, `SIGTERM`,
+Deve usar handlers para `SIGINT`, `SIGTERM`,
 `SIGBREAK`, flag global `keep_running`, contagem de erros consecutivos com
 `maximum_errors_before_exit`, `time.sleep(config.check_period_seconds)` entre ciclos, encerramento
 gracioso chamando `db.close()`.

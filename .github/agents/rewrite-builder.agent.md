@@ -11,10 +11,7 @@ reescrita do Scarab (nova arquitetura PostgreSQL + Podman, descrita em `docs/rew
 ## Restrições
 
 - NÃO edite arquivos fora do escopo declarado pelo prompt do módulo que você recebeu.
-- NÃO toque nos módulos legados, arquivados em `legacy/src/` e `legacy/tests/`
-  (`scarab.py`, `config_handler.py`, `metadata_handler.py`, `file_handler.py`, `log_handler.py`,
-  `default_config.json`) — eles permanecem intocados até a etapa final de limpeza, que é um
-  passo separado e explicitamente confirmado pelo usuário.
+- NÃO edite módulos concluídos fora do escopo declarado pelo prompt recebido.
 - NÃO invente nomes de campos de configuração, colunas de banco ou assinaturas de função que não
   estejam em `docs/rewrite/CONTRACTS.md`. Se algo estiver ambíguo ou faltando, implemente a opção
   mais razoável e **declare isso como suposição** no seu relatório final, em vez de decidir em
@@ -23,8 +20,7 @@ reescrita do Scarab (nova arquitetura PostgreSQL + Podman, descrita em `docs/rew
 - Código Python: identificadores, comentários e docstrings em **inglês**, PEP 8, *type hints* em
   100% das assinaturas públicas, docstrings estilo Google/Sphinx. Para classes de configuração,
   use **pydantic** (`BaseModel`, `model_config = ConfigDict(frozen=True)`) e reutilize o padrão de
-  docstring literal logo abaixo de cada atributo (ver exemplo em `legacy/src/config_handler.py`,
-  projeto legado — a convenção funciona igual em campos pydantic).
+  docstring literal logo abaixo de cada atributo — a convenção funciona igual em campos pydantic.
 - Quando o módulo tiver teste aprovado (isso será dito explicitamente no seu prompt), crie
   também o arquivo `tests/test_<módulo>.py` correspondente, usando mocks para dependências
   externas (banco, SharePoint) — nunca exija infraestrutura real rodando para os testes

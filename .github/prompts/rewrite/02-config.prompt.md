@@ -28,8 +28,7 @@ Implemente o **Módulo 02 (Configuração)** da reescrita do Scarab.
    (`RepositoryConfig`, `DeadlinesConfig`, `DatabaseConfig`, `SharePointConfig`, `LogConfig`,
    `AppConfig`), usando **pydantic** (`BaseModel` com `model_config = ConfigDict(frozen=True)`) —
    decisão já confirmada pelo usuário, não use `dataclasses`.
-3. Reaproveite o padrão de docstring por atributo já usado em `legacy/src/config_handler.py`
-   (docstring literal logo abaixo de cada atributo) para integração com o hover do VS Code (essa
+3. Use docstrings literais logo abaixo de cada atributo para integração com o hover do VS Code (essa
    convenção do Pyright/Pylance funciona igual em campos pydantic). Não copie código do módulo
    legado — apenas o padrão estilístico.
 4. Implemente merge/fallback: carregar `default_config.json`; se `config/config.json` existir

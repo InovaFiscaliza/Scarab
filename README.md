@@ -68,8 +68,6 @@ Principais componentes:
 └── .gitignore
 ```
 
-O código legado encontra-se arquivado em `legacy/` e não é usado pela nova arquitetura.
-
 ## Pré-requisitos
 
 - Podman (para orquestrar containers com `podman-compose`).

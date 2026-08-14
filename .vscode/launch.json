@@ -5,25 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Sandbox test config.json",
+            "name": "Scarab daemon",
             "type": "debugpy",
             "request": "launch",
-            "cwd": "${workspaceFolder}/tests",
-            "program": "${workspaceFolder}/src/scarab.py",
+            "module": "src.main",
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
             "args": [
-                "./sandbox/config.json"
-            ]
-        },
-        {
-            "name": "Sandbox test config_alt.json",
-            "type": "debugpy",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/tests",
-            "program": "${workspaceFolder}/src/scarab.py",
-            "console": "integratedTerminal",
-            "args": [
-                "./sandbox/config_alt.json"
+                "config"
             ]
         }
     ]
