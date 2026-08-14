@@ -1,11 +1,10 @@
-# Contratos Técnicos — Reescrita Scarab (Arquitetura PostgreSQL/Podman)
+# Contratos Técnicos — Scarab (Arquitetura PostgreSQL/Podman)
 
-> **Este documento é a fonte única de verdade** para nomes, assinaturas, esquemas e regras de
-> segurança usados por todos os módulos da nova arquitetura. Qualquer agente que implemente um
-> módulo deve seguir estritamente estas definições. Divergências ou lacunas devem ser reportadas
-> como "suposição/assunção" no relatório final do módulo — nunca decididas silenciosamente.
+> **Este documento é a referência técnica da arquitetura vigente** para nomes, assinaturas,
+> esquemas e regras de segurança. Alterações no comportamento público devem atualizar o código,
+> os testes e este documento quando aplicável.
 >
-> Ver também: [PLAN.md](./PLAN.md) para visão geral, mapeamento conceitual e ordem de construção.
+> A visão geral de uso e operação está no [README](../../README.md).
 
 ---
 
@@ -156,7 +155,8 @@ usando um bloco `EXCEPTION WHEN OTHERS` — que em PL/pgSQL cria um *savepoint* 
 registrar o erro sem perder a transação externa). A função sempre retorna `(status, mensagem, id)`
 para que `database.py` saiba o resultado sem consulta adicional.
 
-Referência de implementação (rascunho a refinar no Módulo 03, não copiar literalmente sem revisão):
+Referência de implementação (rascunho a revisar antes de alterar a função SQL; não copiar
+literalmente sem revisão):
 
 ```sql
 CREATE OR REPLACE FUNCTION processar_operacao_json(
@@ -443,8 +443,8 @@ gracioso chamando `db.close()`.
   pelo usuário (`clientes_docs`, `carga_historico`, `processar_operacao_json`, `operacao`,
   `DELETE_REGISTRO`, `REMOVER_PROPRIEDADE`, `propriedade`) — não traduzir.
 - **Markdown (README, docs de arquitetura):** **Português do Brasil**.
-- Nenhum módulo deve alterar arquivos fora do seu escopo declarado (ver prompt de cada módulo em
-  `.github/prompts/rewrite/`).
+- Alterações de comportamento devem preservar a compatibilidade entre os módulos, os testes e os
+  scripts SQL correspondentes.
 
 ---
 

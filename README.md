@@ -39,6 +39,9 @@ Principais componentes:
 - `src/storage_manager.py`: abstração de repositórios (local / SharePoint) e sanitização de nomes.
 - `db/`: scripts SQL com `clientes_docs`, `carga_historico` e `processar_operacao_json`.
 
+O contrato técnico completo da configuração, dos módulos Python, do banco e das regras de
+segurança está em [docs/architecture/CONTRACTS.md](docs/architecture/CONTRACTS.md).
+
 ## Estrutura do repositório
 
 Árvore principal (resumida):

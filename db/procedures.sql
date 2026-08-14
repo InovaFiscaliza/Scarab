@@ -1,6 +1,6 @@
 -- =============================================================================
--- Scarab — Função de persistência (Módulo 03)
--- Referência: docs/rewrite/CONTRACTS.md §2.3
+-- Scarab — Função de persistência
+-- Referência: docs/architecture/CONTRACTS.md §2.3
 --
 -- Ponto de entrada ÚNICO da aplicação para escrita em clientes_docs.
 -- Depende das tabelas criadas por db/init.sql.

@@ -12,5 +12,9 @@
         "pyqvd",
         "SIGBREAK"
     ],
-    "python.defaultInterpreterPath": "c:\\GitHub\\Scarab\\.venv\\Scripts\\python.exe"
+    "python.defaultInterpreterPath": "c:\\GitHub\\Scarab_Project\\Scarab\\.venv\\Scripts\\python.exe",
+    "chat.tools.terminal.autoApprove": {
+        "git fetch": true,
+        "git rev-parse": true
+    }
 }

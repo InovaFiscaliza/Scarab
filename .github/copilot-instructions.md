@@ -7,10 +7,9 @@ local or SharePoint input repositories, validates JSON descriptors, calculates d
 identifiers, calls PostgreSQL JSONB functions, and dispatches associated media to configured
 storage repositories.
 
-The active implementation is under `src/`; database definitions are under `db/`; container
-artifacts are under `containers/`. Project architecture and module contracts are documented in
-[docs/rewrite/PLAN.md](../docs/rewrite/PLAN.md) and
-[docs/rewrite/CONTRACTS.md](../docs/rewrite/CONTRACTS.md).
+The implementation is under `src/`; database definitions are under `db/`; container artifacts are
+under `containers/`. Current architecture and module/database contracts are documented in
+[docs/architecture/CONTRACTS.md](../docs/architecture/CONTRACTS.md).
 
 ## Active Modules
 
@@ -38,7 +37,7 @@ artifacts are under `containers/`. Project architecture and module contracts are
 - User-facing Markdown documentation is written in Brazilian Portuguese.
 - Use absolute imports from `src.*`.
 - Keep public Python signatures fully typed and preserve the contracts in
-  `docs/rewrite/CONTRACTS.md`.
+  `docs/architecture/CONTRACTS.md`.
 - Use parameterized SQL exclusively. Never interpolate payloads, filenames, or secrets into SQL.
 - Treat filenames read from JSON as untrusted. Route all storage operations through
   `StorageManager` validation.

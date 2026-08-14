@@ -7,7 +7,7 @@ If you need help using Scarab or have questions, here are the resources availabl
 ### Documentation
 
 - **Main Documentation**: Check [README.md](./README.md) for architecture, configuration, and usage
-- **Architecture Contracts**: Review [docs/rewrite/CONTRACTS.md](./docs/rewrite/CONTRACTS.md) for module and database contracts
+- **Architecture Contracts**: Review [docs/architecture/CONTRACTS.md](./docs/architecture/CONTRACTS.md) for module and database contracts
 - **Test Suite**: Run `uv run pytest` to validate the active implementation
 
 ### Reporting Issues
@@ -84,7 +84,7 @@ A: Check:
 ### Getting More Information
 
 - Check application logs (configured in the `log` section)
-- Review the [README](./README.md) and [architecture contracts](./docs/rewrite/CONTRACTS.md)
+- Review the [README](./README.md) and [architecture contracts](./docs/architecture/CONTRACTS.md)
 - Search existing [GitHub Issues](https://github.com/InovaFiscaliza/Scarab/issues)
 - Run `uv run pytest` for the current regression suite
 

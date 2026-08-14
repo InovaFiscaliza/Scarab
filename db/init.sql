@@ -1,9 +1,9 @@
 -- =============================================================================
--- Scarab — Esquema de banco de dados (Módulo 03)
--- Referência: docs/rewrite/CONTRACTS.md §2.1, §2.2 e §4 (item 6)
+-- Scarab — Esquema de banco de dados
+-- Referência: docs/architecture/CONTRACTS.md §2.1, §2.2 e §4 (item 6)
 --
 -- Este script é idempotente: pode ser executado mais de uma vez sem erro.
--- É montado no contêiner PostgreSQL em /docker-entrypoint-initdb.d/ (Módulo 08).
+-- É montado no contêiner PostgreSQL em /docker-entrypoint-initdb.d/.
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS carga_historico (
 COMMENT ON TABLE carga_historico IS
     'Trilha de auditoria: uma linha por arquivo JSON processado, com sucesso ou erro.';
 COMMENT ON COLUMN carga_historico.cliente_id IS
-    'UUID do documento afetado. Sem FOREIGN KEY por design (ver docs/rewrite/CONTRACTS.md §2.2).';
+    'UUID do documento afetado. Sem FOREIGN KEY por design (ver docs/architecture/CONTRACTS.md §2.2).';
 
 CREATE INDEX IF NOT EXISTS idx_carga_historico_status
     ON carga_historico (status);

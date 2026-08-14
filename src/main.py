@@ -33,7 +33,7 @@ MAINTENANCE_INTERVAL_SECONDS: float = 3600.0
 """Minimum time between `IngestionPipeline.run_trash_maintenance()` runs.
 
 There is no dedicated config field for this cadence (see
-`docs/rewrite/CONTRACTS.md`, section 1.2): trash compression/purge is
+`docs/architecture/CONTRACTS.md`, section 1.2): trash compression/purge is
 comparatively expensive and only meaningful on a much slower cadence than the
 ingestion scan, so it is scheduled with its own fixed elapsed-time check
 (`_maintenance_due()`) instead of reusing `check_period_seconds` or
