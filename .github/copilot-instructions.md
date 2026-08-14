@@ -1,16 +1,24 @@
 # Scarab AI Coding Agent Instructions
 
+> ⚠️ **Reescrita em andamento (branch `rewrite/postgres-architecture`).** Este documento descreve a
+> arquitetura **legada** (ESB baseado em arquivos), agora arquivada em `legacy/`. Uma nova
+> arquitetura (ingestão assíncrona + PostgreSQL + Podman) está sendo construída em `src/` — veja
+> [docs/rewrite/PLAN.md](../docs/rewrite/PLAN.md) e [docs/rewrite/CONTRACTS.md](../docs/rewrite/CONTRACTS.md).
+> Este arquivo será reescrito por completo quando a migração for concluída.
+
 ## Project Overview
 Scarab is an **Enterprise Service Bus (ESB)** that runs as a Windows service, monitoring folders and performing file operations while consolidating metadata tables. It processes XLSX, CSV, and JSON files, merging metadata with support for multi-table relationships (PK/FK), filename extraction, and multiple output formats.
+
+**Note:** all paths below refer to the legacy implementation, archived under `legacy/` (e.g. `src/scarab.py` is now `legacy/src/scarab.py`).
 
 ## Architecture & Data Flow
 
 ### Module Structure
-- **[scarab.py](src/scarab.py)**: Main loop with signal handlers (SIGTERM, SIGBREAK, SIGINT) for graceful shutdown
-- **[config_handler.py](src/config_handler.py)**: JSON config parser with defaults from [default_config.json](src/default_config.json)
-- **[metadata_handler.py](src/metadata_handler.py)**: Core metadata consolidation engine (1886 lines)
-- **[file_handler.py](src/file_handler.py)**: File operations (move, trash, MD5 checking)
-- **[log_handler.py](src/log_handler.py)**: Logging setup with `coloredlogs` for terminal and file output
+- **[scarab.py](../legacy/src/scarab.py)**: Main loop with signal handlers (SIGTERM, SIGBREAK, SIGINT) for graceful shutdown
+- **[config_handler.py](../legacy/src/config_handler.py)**: JSON config parser with defaults from [default_config.json](../legacy/src/default_config.json)
+- **[metadata_handler.py](../legacy/src/metadata_handler.py)**: Core metadata consolidation engine (1886 lines)
+- **[file_handler.py](../legacy/src/file_handler.py)**: File operations (move, trash, MD5 checking)
+- **[log_handler.py](../legacy/src/log_handler.py)**: Logging setup with `coloredlogs` for terminal and file output
 
 ### Critical Data Flow
 1. Files appear in `POST` folders → moved to `TEMP` (MD5 checked for duplicates)
@@ -25,7 +33,7 @@ Scarab is an **Enterprise Service Bus (ESB)** that runs as a Windows service, mo
   - `"relative value": true`: Keys are file-scoped (reset per file)
   - `"relative value": false`: Absolute keys across all files
   - `"int type": true`: Sequential integer PKs; `false`: strings/UUIDs
-- **Key Merge Logic**: Rows with duplicate key columns are merged using `_custom_agg()` (see [metadata_handler.py#L195](src/metadata_handler.py#L195))
+- **Key Merge Logic**: Rows with duplicate key columns are merged using `_custom_agg()` (see [metadata_handler.py#L195](../legacy/src/metadata_handler.py#L195))
   - Concatenates unique values with `, ` separator
   - PK merges tracked in `pk_unmerge_map` for FK fixup
 
@@ -63,15 +71,15 @@ Scarab is an **Enterprise Service Bus (ESB)** that runs as a Windows service, mo
 ## Development Workflows
 
 ### Running Tests
-- **Location**: [tests/](tests/) folder with `.bat` scripts (Windows-specific)
-- **Command**: `uv run ..\src\scarab.py .\sandbox\config.json` (from `tests/` directory)
+- **Location**: [legacy/tests/](../legacy/tests/) folder with `.bat` scripts (Windows-specific)
+- **Command**: `uv run ..\..\legacy\src\scarab.py .\sandbox\config.json` (from `legacy/tests/` directory)
 - **Setup**: Run `0clean_test.bat` to reset sandbox, then `1test_simple_XLSX.bat`, etc.
 - **Stop**: `Ctrl+C` for graceful shutdown (may take up to `check period in seconds`)
 
 ### Environment Setup
 1. Install [UV](https://docs.astral.sh/uv/) package manager
-2. Run `uv sync` in project root (installs deps from [pyproject.toml](pyproject.toml))
-3. Execute: `uv run src\scarab.py <config_path>.json`
+2. Run `uv sync` in project root (installs deps from [pyproject.toml](../pyproject.toml))
+3. Execute: `uv run legacy\src\scarab.py <config_path>.json`
 
 ### Dependencies (from pyproject.toml)
 - `pandas>=2.2.3`, `openpyxl>=3.1.5`: XLSX/CSV handling
@@ -109,12 +117,12 @@ Metadata handler creates internal columns with unique IDs to avoid conflicts:
 ## Integration Points
 
 ### Windows Task Scheduler
-- XML examples in [src/Scheduler/](src/Scheduler/)
+- XML examples in [legacy/src/Scheduler/](../legacy/src/Scheduler/)
 - Service runs on startup, auto-restarts on failure
 - Supports OneDrive sync for SharePoint integration
 
 ### Power Automate
-- PA scripts in [src/PA/](src/PA/) extract metadata from SharePoint uploads
+- PA scripts in [legacy/src/PA/](../legacy/src/PA/) extract metadata from SharePoint uploads
 - Places files in Scarab-monitored folders for processing
 
 ## Output Formats
