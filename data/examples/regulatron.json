@@ -7,8 +7,7 @@
         "level": "INFO",
         "file output": true,
         "file path": [
-            "Z:/sp/GET/log/Regulatron/log_Regulatron.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/log/Regulatron/log_Regulatron.txt"
+            "Z:/sp/GET/log/Regulatron/log_Regulatron.txt"
         ]
     },
     "folders": {
@@ -46,10 +45,10 @@
             "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Anuncios.xlsx"
         ],
         "table names": {
-            "_": "Publicação",
+            "_": "Publica\u00e7\u00e3o",
             "LLM": "LLM",
             "SCH": "SCH",
-            "Anúncio": "Anúncio"
+            "An\u00fancio": "An\u00fancio"
         },
         "input to ignore": [
             "Z:/sp/POST/Regulatron/.regulatron_post",
@@ -72,7 +71,7 @@
                 "correspondencia_nome_comercial",
                 "correspondencia_fabricante"
             ],
-            "Anúncio": [
+            "An\u00fancio": [
                 "url",
                 "screenshot"
             ]
@@ -91,7 +90,7 @@
                 "fabricante",
                 "nome"
             ],
-            "Anúncio": [
+            "An\u00fancio": [
                 "key"
             ]
         },
@@ -120,7 +119,7 @@
                     }
                 }
             },
-            "Anúncio": {
+            "An\u00fancio": {
                 "FK": {
                     "_": {
                         "name": "key",
@@ -133,10 +132,10 @@
             "_": "jsonFileName"
         },
         "add file timestamp": {
-            "_": "createdAt"
+            "_": "processedAt"
         },
         "filename data format": {
-            "_": "^(?!sp_meta_)[^_]+(?:_[^_]+)+_(?P<key>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
+            "_": "^[^_]+(?:_[^_]+)+_(?P<key>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         },
         "data published flag": {
             "rawFiles": [
@@ -144,5 +143,5 @@
             ]
         }
     },
-    "last clean": "2026-08-11 12:19:10"
+    "last clean": "2026-08-20 12:46:17"
 }

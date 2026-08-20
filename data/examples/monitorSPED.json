@@ -8,8 +8,7 @@
         "level": "INFO",
         "file output": true,
         "file path": [
-            "Z:/sp/GET/log/monitorSPED/log_monitorSPED.txt",
-            "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/log/monitorSPED/log_monitorSPED.txt"
+            "Z:/sp/GET/log/monitorSPED/log_monitorSPED.txt"
         ]
     },
     "folders": {
@@ -43,10 +42,10 @@
         ],
         "table names": {
             "project": "PROJETO",
-            "taxEstimateSummary": "APURAÇÃO",
+            "taxEstimateSummary": "APURA\u00c7\u00c3O",
             "files": "ARQUIVOS",
             "accounts": "CONTAS",
-            "_": "PUBLICAÇÃO"
+            "_": "PUBLICA\u00c7\u00c3O"
         },
         "input to ignore": [
             "Z:/sp/POST/monitorSPED/.monitorSPED"
@@ -61,24 +60,29 @@
         ],
         "key": {
             "project": [
+                "correlationKey",
                 "issue",
                 "context",
                 "entityGroupId"
             ],
             "taxEstimateSummary": [
+                "correlationKey",
                 "entityId",
                 "periodStart",
                 "periodEnd"
             ],
             "files": [
+                "correlationKey",
                 "fileName"
             ],
             "accounts": [
+                "correlationKey",
                 "entityId",
                 "accountCode",
                 "periodYear"
             ],
             "_": [
+                "correlationKey",
                 "jsonFileName"
             ]
         },
@@ -181,11 +185,11 @@
             "_": "jsonFileName"
         },
         "add file timestamp": {
-            "_": "createdAt"
+            "_": "processedAt"
         },
         "filename data format": {
             "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
-    "last clean": "2025-07-07 14:14:07"
+    "last clean": "2026-08-20 14:20:42"
 }

@@ -158,11 +158,11 @@
             "_": "jsonFileName"
         },
         "add file timestamp": {
-            "_": "createdAt"
+            "_": "processedAt"
         },
         "filename data format": {
             "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
-    "last clean": "2026-08-06 06:38:40"
+    "last clean": "2026-08-20 07:38:12"
 }
