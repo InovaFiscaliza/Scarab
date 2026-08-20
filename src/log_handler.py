@@ -35,6 +35,23 @@ class ResilientStreamHandler(logging.StreamHandler):
             self.setStream(open(os.devnull, "w", encoding="utf-8"))
 
 
+class ResilientFileHandler(logging.FileHandler):
+    """File handler that degrades gracefully if the target file becomes invalid."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            super().emit(record)
+        except (OSError, ValueError) as e:
+            # Log the error to stderr if possible
+            fallback_stream = getattr(sys, "__stderr__", None)
+            if fallback_stream is not None:
+                fallback_stream.write(f"Logging error: {e}\n")
+                fallback_stream.flush()
+
+            # Continue without this handler to avoid repeated traceback spam
+            pass
+
+
 # --------------------------------------------------------------
 def start_logging(config: cm.Config) -> logging.Logger:
     """Start the logging system with the configuration values from the config file.
@@ -86,13 +103,22 @@ def start_logging(config: cm.Config) -> logging.Logger:
                 file.trash_it(file=log_file, overwrite=config.log_overwrite)
 
             # Create new log file with header line
-            with open(log_file, "w") as log_file_handle:
-                log_file_handle.write(config.log_title + "\n")
+            try:
+                with open(log_file, "w") as log_file_handle:
+                    log_file_handle.write(config.log_title + "\n")
 
-            fh = logging.FileHandler(log_file)
-            file_formatter = logging.Formatter(fmt=config.log_file_format)
-            fh.setFormatter(file_formatter)
-            log.addHandler(fh)
+                fh = ResilientFileHandler(log_file)
+                file_formatter = logging.Formatter(fmt=config.log_file_format)
+                fh.setFormatter(file_formatter)
+                log.addHandler(fh)
+            except (OSError, IOError) as e:
+                # Log the error to stderr if possible
+                fallback_stream = getattr(sys, "__stderr__", None)
+                if fallback_stream is not None:
+                    fallback_stream.write(
+                        f"Failed to set up file logging for {log_file}: {e}\n"
+                    )
+                    fallback_stream.flush()
 
     log.critical(f"Scarab v{config.scarab_version} starts rolling ({config.name})...")
 
