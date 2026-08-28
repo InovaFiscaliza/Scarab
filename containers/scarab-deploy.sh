@@ -368,16 +368,37 @@ provision_application_role() {
     compose exec -T db /usr/local/sbin/scarab-provision-app-role
 }
 
+wait_for_application() {
+    local attempt container_id status
+    for ((attempt = 1; attempt <= 30; attempt++)); do
+        container_id="$(container_id_for_service app)"
+        if [[ -n "$container_id" ]]; then
+            status="$(podman inspect --format '{{.State.Status}}' "$container_id" 2>/dev/null || true)"
+            [[ "$status" == "running" ]] && return 0
+        fi
+        sleep 1
+    done
+    die "Application did not reach the running state within 30 seconds."
+}
+
 start_stack() {
     compose config >/dev/null
-    compose up -d
+
+    local db_container app_container
+    db_container="$(container_id_for_service db)"
+    app_container="$(container_id_for_service app)"
+    if [[ -n "$db_container" && -n "$app_container" ]]; then
+        podman start "$db_container" >/dev/null
+    else
+        if [[ -n "$db_container" || -n "$app_container" ]]; then
+            compose down
+        fi
+        compose up -d
+    fi
+
     wait_for_database
     provision_application_role
-
-    local app_container
-    app_container="$(container_id_for_service app)"
-    [[ -n "$app_container" ]] || die "Application container was not created."
-    podman restart "$app_container" >/dev/null
+    wait_for_application
     compose ps
 }
 
@@ -399,6 +420,7 @@ update_stack() {
         compose pull
     fi
 
+    compose down
     start_stack
 }
 
