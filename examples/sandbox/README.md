@@ -35,7 +35,7 @@ pipeline não possui `temp_path` nem uma etapa que o utilize explicitamente.
 A partir da raiz do repositório no host Linux:
 
 ```bash
-sudo bash containers/scarab-deploy.sh install \
+sudo bash deploy/scarab-deploy.sh install \
 	--environment test \
 	--instance scarab-test \
 	--service-user "$(id -un)" \

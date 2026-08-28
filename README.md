@@ -77,7 +77,7 @@ segurança está em [docs/architecture/CONTRACTS.md](docs/architecture/CONTRACTS
 ```mermaid
 treeView-beta
     Scarab/
-        containers/
+        deploy/
             Containerfile.app
             Containerfile.db
             podman-compose.build.yml
@@ -115,7 +115,7 @@ treeView-beta
 
 - Podman (para orquestrar containers com `podman-compose`).
 - UV (gerenciador de ambiente usado no desenvolvimento): `uv sync` para instalar dependências.
-- Acesso a um PostgreSQL (pode ser provisionado via `containers/podman-compose.yml`).
+- Acesso a um PostgreSQL (pode ser provisionado via `deploy/podman-compose.yml`).
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
@@ -167,10 +167,10 @@ FHS provisionados e não deve ser iniciado diretamente do checkout.
 
 ## Estrutura do Podman Compose
 
-O runtime usa [containers/podman-compose.yml](containers/podman-compose.yml) em todos os ambientes.
+O runtime usa [deploy/podman-compose.yml](deploy/podman-compose.yml) em todos os ambientes.
 Esse arquivo não contém build nem caminhos do checkout. O override
-[containers/podman-compose.build.yml](containers/podman-compose.build.yml) acrescenta build somente
-no laboratório. [containers/scarab-deploy.sh](containers/scarab-deploy.sh) instala e opera ambos.
+[deploy/podman-compose.build.yml](deploy/podman-compose.build.yml) acrescenta build somente
+no laboratório. [deploy/scarab-deploy.sh](deploy/scarab-deploy.sh) instala e opera ambos.
 
 No host, cada instância segue a hierarquia Linux:
 
@@ -211,10 +211,48 @@ O fluxo remoto recomendado mantém checkout, build, containers e bind mounts no 
 estação de trabalho acessa esse host por SSH; não é necessário instalar Podman localmente para usar
 as tarefas incluídas em [.vscode/tasks.json](.vscode/tasks.json).
 
+### Bootstrap automatizado
+
+O script `deploy/scarab-bootstrap.sh` é executado no host Linux. Sem `--branch`, ele resolve a
+release mais recente publicada no GitHub e clona sua tag em um diretório temporário sob o `HOME` da
+conta de serviço. Para validar acesso sudo, Podman rootless, Compose, GitHub e os arquivos da versão
+sem instalar, use `--check`:
+
+```bash
+bash deploy/scarab-bootstrap.sh \
+    --branch rewrite/postgres-architecture \
+    --instance scarab-test \
+    --check
+```
+
+Remova `--check` para instalar. A opção `--branch` seleciona explicitamente uma branch em vez da
+última release. Se `--instance` for omitido, o bootstrap também omite esse argumento ao chamar
+`scarab-deploy`, cujo padrão é `scarab`. Enquanto uma release que contenha o novo deployment não
+estiver publicada, use a branch; releases antigas são recusadas quando não contêm os artefatos
+necessários.
+
+Em uma estação Windows, mantenha `deploy/scarab-bootstrap.bat` e
+`deploy/scarab-bootstrap.sh` no mesmo diretório. O `.bat` verifica o OpenSSH, envia o `.sh` e o
+executa no host Linux:
+
+```powershell
+.\deploy\scarab-bootstrap.bat `
+    --host ContainerHost `
+    --branch rewrite/postgres-architecture `
+    --instance scarab-test `
+    --check
+```
+
+O SSH deve funcionar por chave; o sudo remoto pode solicitar a senha no terminal. Em builds locais
+de teste, o checkout é preservado porque os próximos updates ainda precisam dele. Com imagens
+imutáveis, o diretório temporário é removido. Se a instância já existir, `install` valida ambiente e
+proprietário, atualiza os artefatos instalados e executa `scarab-deploy update` como a conta
+rootless.
+
 Depois de configurar o SSH, instale uma instância de teste no host:
 
 ```bash
-sudo bash containers/scarab-deploy.sh install \
+sudo bash deploy/scarab-deploy.sh install \
     --environment test \
     --instance scarab-test \
     --service-user "$(id -un)" \

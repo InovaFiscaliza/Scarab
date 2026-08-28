@@ -29,13 +29,16 @@ Options and defaults:
   --no-pull
       Skip image pulls (pulling is enabled by default for immutable images).
 
+Re-running install for an existing instance refreshes its installed files and
+then updates the stack as the configured rootless service user.
+
 Examples:
-  sudo ./containers/scarab-deploy.sh install \
+    sudo ./deploy/scarab-deploy.sh install \
       --environment test --instance scarab-test --service-user lobao --source "$PWD"
   sudo -iu lobao scarab-deploy update --instance scarab-test
   sudo -iu lobao scarab-deploy test --instance scarab-test
 
-  sudo ./containers/scarab-deploy.sh install \
+    sudo ./deploy/scarab-deploy.sh install \
       --environment production --instance scarab --service-user scarab \
       --app-image registry.example/scarab/app:1.0.0 \
       --db-image registry.example/scarab/db:1.0.0
@@ -174,15 +177,32 @@ install_instance() {
     fi
     source_root="$(cd "$source_root" && pwd)"
 
-    [[ -f "$source_root/containers/podman-compose.yml" ]] || die "Invalid source tree: $source_root"
-    [[ -f "$source_root/containers/podman-compose.build.yml" ]] || die "Build Compose file is missing."
-    [[ -f "$source_root/containers/scarab.env.example" ]] || die "Environment template is missing."
+    [[ -f "$source_root/deploy/podman-compose.yml" ]] || die "Invalid source tree: $source_root"
+    [[ -f "$source_root/deploy/podman-compose.build.yml" ]] || die "Build Compose file is missing."
+    [[ -f "$source_root/deploy/scarab.env.example" ]] || die "Environment template is missing."
     [[ -f "$source_root/config/default_config.json" ]] || die "Default configuration is missing."
 
     local service_group service_home
     service_group="$(id -gn "$service_user")"
     service_home="$(getent passwd "$service_user" | cut -d: -f6)"
     [[ -n "$service_home" ]] || die "Cannot determine home directory for $service_user."
+
+    local instance_installed=false installed_environment installed_owner
+    if [[ -e "$compose_env" ]]; then
+        [[ -r "$compose_env" && -r "$compose_file" && -d "$postgres_dir" ]] ||
+            die "Instance $instance has an incomplete installation under $etc_dir."
+        installed_environment="$(
+            grep -m1 '^SCARAB_ENVIRONMENT=' "$compose_env" | cut -d= -f2- || true
+        )"
+        [[ -n "$installed_environment" ]] ||
+            die "SCARAB_ENVIRONMENT is missing from $compose_env"
+        [[ "$installed_environment" == "$environment_name" ]] ||
+            die "Instance $instance is installed as $installed_environment, not $environment_name."
+        installed_owner="$(stat -c '%U' "$postgres_dir")"
+        [[ "$installed_owner" == "$service_user" ]] ||
+            die "Instance $instance belongs to $installed_owner, not $service_user."
+        instance_installed=true
+    fi
 
     local build_local=false
     if [[ "$environment_name" == "test" ]]; then
@@ -208,10 +228,10 @@ install_instance() {
         "$share02_dir" "$share02_dir/media" "$fixtures_dir" "$log_dir"
 
     install -o root -g "$service_group" -m 0640 \
-        "$source_root/containers/podman-compose.yml" "$compose_file"
+        "$source_root/deploy/podman-compose.yml" "$compose_file"
     install -o root -g "$service_group" -m 0640 \
-        "$source_root/containers/podman-compose.build.yml" "$build_file"
-    install -o root -g root -m 0755 "$source_root/containers/scarab-deploy.sh" "$INSTALL_PATH"
+        "$source_root/deploy/podman-compose.build.yml" "$build_file"
+    install -o root -g root -m 0755 "$source_root/deploy/scarab-deploy.sh" "$INSTALL_PATH"
     install -o root -g "$service_group" -m 0640 \
         "$source_root/config/default_config.json" "$config_dir/default_config.json"
 
@@ -247,7 +267,7 @@ EOF
         unset admin_password app_password
     elif [[ "$environment_name" == "production" && ! -e "$runtime_env.example" ]]; then
         install -o root -g "$service_group" -m 0640 \
-            "$source_root/containers/scarab.env.example" "$runtime_env.example"
+            "$source_root/deploy/scarab.env.example" "$runtime_env.example"
     fi
 
     if [[ "$environment_name" == "test" ]]; then
@@ -291,6 +311,31 @@ EOF
             printf 'WARNING: enable linger manually for %s before relying on boot startup.\n' \
                 "$service_user" >&2
         fi
+    fi
+
+    if [[ "$instance_installed" == true ]]; then
+        require_command env
+        require_command runuser
+        local service_uid
+        service_uid="$(id -u "$service_user")"
+        local -a service_environment=(
+            env "HOME=$service_home" "USER=$service_user" "LOGNAME=$service_user"
+        )
+        if [[ -d "/run/user/$service_uid" ]]; then
+            service_environment+=("XDG_RUNTIME_DIR=/run/user/$service_uid")
+        fi
+        local -a update_command=("$INSTALL_PATH" update --instance "$instance")
+        if [[ "$build_local" == true ]]; then
+            update_command+=(--build-source "$source_root")
+        elif [[ "$pull_images" == false ]]; then
+            update_command+=(--no-pull)
+        fi
+
+        printf 'Refreshed installed files for %s; updating the stack.\n' "$instance"
+        runuser --user "$service_user" -- \
+            "${service_environment[@]}" "${update_command[@]}"
+        printf 'Updated %s environment "%s".\n' "$instance" "$environment_name"
+        return
     fi
 
     printf 'Installed %s environment "%s".\n' "$instance" "$environment_name"
@@ -430,7 +475,7 @@ update_stack() {
 
     if [[ -n "$selected_source" ]]; then
         selected_source="$(cd "$selected_source" && pwd)"
-        [[ -f "$selected_source/containers/Containerfile.app" ]] ||
+        [[ -f "$selected_source/deploy/Containerfile.app" ]] ||
             die "Invalid build source: $selected_source"
         compose_with_build "$selected_source" build
     elif [[ "$pull_images" == true ]]; then

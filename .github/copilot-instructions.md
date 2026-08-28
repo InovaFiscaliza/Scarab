@@ -7,8 +7,8 @@ local or SharePoint input repositories, validates JSON descriptors, calculates d
 identifiers, calls PostgreSQL JSONB functions, and dispatches associated media to configured
 storage repositories.
 
-The implementation is under `src/`; database definitions are under `db/`; container artifacts are
-under `containers/`. Current architecture and module/database contracts are documented in
+The implementation is under `src/`; database definitions are under `db/`; deployment artifacts are
+under `deploy/`. Current architecture and module/database contracts are documented in
 [docs/architecture/CONTRACTS.md](../docs/architecture/CONTRACTS.md).
 
 ## Active Modules
@@ -28,7 +28,7 @@ under `containers/`. Current architecture and module/database contracts are docu
 2. Run the test suite with `uv run pytest`.
 3. Run lint with `uv run ruff check src tests`.
 4. Run the daemon locally with `uv run python -m src.main config`.
-5. Install and run the full stack with `containers/scarab-deploy.sh`; do not start the runtime
+5. Install and run the full stack with `deploy/scarab-deploy.sh`; do not start the runtime
   Compose directly from the checkout.
 
 ## Conventions

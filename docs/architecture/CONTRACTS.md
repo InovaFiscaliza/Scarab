@@ -105,9 +105,9 @@ Ver §3.4 e §6 para o algoritmo exato.
 
 ### 1.4 Contrato de implantação em containers
 
-O runtime é definido por `containers/podman-compose.yml`. Esse arquivo não contém build nem
+O runtime é definido por `deploy/podman-compose.yml`. Esse arquivo não contém build nem
 caminhos relativos ao checkout. Todas as origens do host são obrigatórias e recebidas pelo arquivo
-`/etc/<instância>/compose.env` instalado por `containers/scarab-deploy.sh`.
+`/etc/<instância>/compose.env` instalado por `deploy/scarab-deploy.sh`.
 
 | Variável Compose | Origem FHS no host | Destino no container |
 |---|---|---|
@@ -118,7 +118,7 @@ caminhos relativos ao checkout. Todas as origens do host são obrigatórias e re
 | `SCARAB_LOG_DIR` | `/var/log/<instância>` | `/var/log/scarab` |
 
 O código do app fica somente na imagem, em `/opt/scarab`. Laboratório e produção usam esse mesmo
-runtime; `containers/podman-compose.build.yml` acrescenta o build a partir de
+runtime; `deploy/podman-compose.build.yml` acrescenta o build a partir de
 `SCARAB_SOURCE_DIR` somente quando solicitado. Produção deve usar imagens imutáveis publicadas em
 registry.
 

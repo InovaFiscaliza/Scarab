@@ -93,11 +93,14 @@ use-a apenas quando a mudança fizer parte do mesmo cenário; para preservar amb
 
 ## Execução em um host Podman remoto
 
-Instale uma instância de laboratório. O instalador extrai as seis fixtures do snapshot para
-`/srv/scarab-test/fixtures`; o checkout não é montado no runtime:
+Instale uma instância de laboratório com `deploy/scarab-deploy.sh`. Neste contexto, as
+**fixtures** são os seis descritores JSON de operações armazenados em `sandbox/store/` dentro do
+snapshot `examples/store/test_01.tgz`, por exemplo `01-insert-registro-001.json`,
+`04-update-registro-001-com-email.json` e `06-delete-registro-002.json`. O comando `install` extrai
+esses arquivos para `/srv/scarab-test/fixtures`; o checkout não é montado no runtime:
 
 ```bash
-sudo bash containers/scarab-deploy.sh install \
+sudo bash deploy/scarab-deploy.sh install \
   --environment test \
   --instance scarab-test \
   --service-user "$(id -un)" \
@@ -118,10 +121,38 @@ para configuração de SSH, `.env`, consultas de aceite, reset e diferenças obr
 
 ## Fluxo recomendado para um teste completo
 
-1. Restaure o cenário desejado com `rst.bat` para recriar o sandbox em um estado conhecido.
+1. Restaure o cenário de testes, por exemplo `test_01.tgz` com `examples/src/rst.bat` para recriar o sandbox em um estado conhecido:
+
+  ```powershell
+  .\examples\src\rst.bat 1
+  ```
+
 2. Faça somente os ajustes necessários nos arquivos e na configuração dentro de `sandbox`.
-3. Atualize o snapshot com `upt.bat` ou crie outro com `add.bat` depois de revisar as mudanças.
-4. Reexecute o instalador de `scarab-test` para atualizar as fixtures instaladas.
+3. Depois de revisar as mudanças, atualize o snapshot consumido pelo teste com
+  `examples/src/upt.bat` ou crie um novo snapshot com `examples/src/add.bat`:
+
+  ```powershell
+  .\examples\src\upt.bat 1
+  ```
+    ou
+
+  ```powershell
+  .\examples\src\add.bat
+  ```
+
+  `examples/src/add.bat` cria outro snapshot, por exemplo `test_02.tgz`, caso o último cenário configurado seja o `test_01.tgz`.
+
+4. Na raiz do checkout no host Podman, reexecute o comando `install` de
+  `deploy/scarab-deploy.sh`. Ele substitui as fixtures em `/srv/scarab-test/fixtures` pelos seis JSON atualizados do snapshot:
+
+  ```bash
+  sudo bash deploy/scarab-deploy.sh install \
+    --environment test \
+    --instance scarab-test \
+    --service-user "$(id -un)" \
+    --source "$PWD"
+  ```
+
 5. Execute `scarab-deploy test --instance scarab-test`.
 6. Verifique o resultado no PostgreSQL e em `/srv/scarab-test/share01` e `share02`.
 
