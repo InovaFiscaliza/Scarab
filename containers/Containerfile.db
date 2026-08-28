@@ -1,4 +1,4 @@
-FROM postgres:16-alpine
+FROM docker.io/library/postgres:16-alpine
 
 # Copy DB initialization scripts into the Postgres init directory. Scripts are
 # executed in alphabetical order by the official Postgres docker-entrypoint.

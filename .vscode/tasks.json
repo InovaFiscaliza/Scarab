@@ -1,0 +1,116 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Scarab remoto: verificar acesso",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "set -eu; cd \"$HOME/services/scarab\"; podman --version; podman compose version; git status --short --branch"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: atualizar do origin",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "set -eu; cd \"$HOME/services/scarab\"; test -z \"$(git status --porcelain)\" || { echo 'ERRO: o checkout remoto possui alteracoes locais.' >&2; exit 1; }; git pull --ff-only"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: sincronizar alteracoes locais",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}\\.vscode\\sync-remote.ps1"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: testes unitarios Linux",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "set -eu; cd \"$HOME/services/scarab\"; podman run --rm -e UV_PROJECT_ENVIRONMENT=/tmp/venv -v \"$PWD:/workspace:ro\" --tmpfs /workspace/src/scarab.egg-info:rw --tmpfs /workspace/.pytest_cache:rw --tmpfs /workspace/build:rw -w /workspace ghcr.io/astral-sh/uv:python3.13-bookworm-slim uv run --frozen --extra dev --no-editable pytest -q"
+            ],
+            "dependsOn": "Scarab remoto: sincronizar alteracoes locais",
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: validar Compose",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "set -eu; cd \"$HOME/services/scarab\"; test -f .env || { echo 'ERRO: crie ~/services/scarab/.env diretamente no host remoto.' >&2; exit 1; }; test -f config/config.json || { echo 'ERRO: crie config/config.json no checkout remoto.' >&2; exit 1; }; podman compose -f \"$PWD/containers/podman-compose.yml\" config >/dev/null; echo 'Compose remoto valido.'"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: subir e reconstruir",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "set -eu; cd \"$HOME/services/scarab\"; podman compose -f \"$PWD/containers/podman-compose.yml\" up -d --build; podman compose -f \"$PWD/containers/podman-compose.yml\" ps"
+            ],
+            "dependsOn": "Scarab remoto: validar Compose",
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: status",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "cd \"$HOME/services/scarab\" && podman compose -f \"$PWD/containers/podman-compose.yml\" ps"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: logs",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "cd \"$HOME/services/scarab\" && podman compose -f \"$PWD/containers/podman-compose.yml\" logs --tail=200 app db"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: parar",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "cd \"$HOME/services/scarab\" && podman compose -f \"$PWD/containers/podman-compose.yml\" down"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

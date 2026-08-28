@@ -162,7 +162,7 @@ class AppConfig(_Frozen):
     """SharePoint Client Credentials settings, or `None` if unused."""
     log: LogConfig
     """Logging configuration."""
-    trash_path: str = "/app/data/trash"
+    trash_path: str = "/mnt/share01/trash"
     """Local directory receiving rejected files and orphaned media."""
     max_file_size_bytes: int = 50 * 1024 * 1024
     """Maximum file size accepted by the pipeline before reading into memory."""

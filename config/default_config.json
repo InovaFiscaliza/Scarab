@@ -16,7 +16,7 @@
         {
             "name": "local_inbound",
             "type": "local",
-            "path": "/app/data/inbound",
+            "path": "/mnt/share01/post",
             "role": "input"
         },
         {
@@ -41,7 +41,7 @@
         "max_pool_size": 5
     },
     "sharepoint": null,
-    "trash_path": "/app/data/trash",
+    "trash_path": "/mnt/share01/trash",
     "max_file_size_bytes": 52428800,
     "log": {
         "level": "DEBUG",

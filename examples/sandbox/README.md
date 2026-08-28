@@ -26,9 +26,9 @@ sandbox/
 └── trash/             # arquivos rejeitados e mídias órfãs
 ```
 
-O `config.json` usa caminhos relativos à raiz do repositório. O diretório `temp` fica disponível
-para operações temporárias, mas o contrato atual do pipeline não possui `temp_path` nem uma etapa
-que o utilize explicitamente.
+O `config.json` usa caminhos absolutos sob `/mnt/share01`, o destino Linux do bind mount no
+container. O diretório `temp` fica disponível para operações temporárias, mas o contrato atual do
+pipeline não possui `temp_path` nem uma etapa que o utilize explicitamente.
 
 ## Execução com Podman
 
@@ -39,8 +39,15 @@ Copy-Item examples/sandbox/config.json config/config.json
 podman compose -f containers/podman-compose.yml up --build
 ```
 
-O compose monta `examples/sandbox` no mesmo caminho dentro do container. Como os nomes possuem
-prefixo numérico, os descritores são listados na ordem da sequência e processados pelo daemon.
+O compose monta `examples/sandbox` do host em `/mnt/share01` no container. Assim, `post`, `get` e
+`trash` são acessados pela aplicação como `/mnt/share01/post`, `/mnt/share01/get` e
+`/mnt/share01/trash`. Como os nomes possuem prefixo numérico, os descritores são listados na ordem
+da sequência e processados pelo daemon.
+
+Esse mapeamento é destinado apenas ao teste funcional. Em produção, substitua
+`../examples/sandbox` no Compose por um diretório ou filesystem permanente do host. Repositórios
+adicionais podem ser montados em `/mnt/share02`, `/mnt/share03` e assim por diante, desde que seus
+caminhos também sejam declarados em `config/config.json`.
 
 Para consultar o resultado, use o PostgreSQL do serviço `db` e verifique `clientes_docs` e
 `carga_historico`. Ao final, remova os arquivos de entrada processados e o override local se

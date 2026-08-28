@@ -30,7 +30,7 @@ def _default_config_data() -> dict[str, Any]:
             {
                 "name": "local_inbound",
                 "type": "local",
-                "path": "/app/data/inbound",
+                "path": "/mnt/share01/post",
                 "role": "input",
             },
             {

@@ -1,4 +1,4 @@
-FROM python:3.13-slim AS builder
+FROM docker.io/library/python:3.13-slim AS builder
 
 # Copy UV runtime binaries from the upstream image so we can run `uv sync`
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -17,7 +17,7 @@ RUN uv sync --frozen --no-dev
 # transferred into the final, minimal runtime image.
 COPY config /app/config
 
-FROM python:3.13-slim AS final
+FROM docker.io/library/python:3.13-slim AS final
 
 # Create a non-root system user `scarab` and use /app as working directory.
 RUN groupadd --system scarab \

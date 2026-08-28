@@ -22,14 +22,14 @@
   "media_reference_json_path": "midia.arquivo",
   "null_string_values": ["", "NA", "N/A", "null", "None"],
   "repositories": [
-    { "name": "local_inbound", "type": "local", "path": "/app/data/inbound", "role": "input" },
+    { "name": "local_inbound", "type": "local", "path": "/mnt/share01/post", "role": "input" },
     { "name": "sharepoint_media", "type": "sharepoint", "path": "/sites/Dev/Docs", "role": "storage_media" }
   ],
   "prazos": {
     "orphaned_media_hours": 24,
     "trash_cleanup_days": 7
   },
-  "trash_path": "/app/data/trash",
+  "trash_path": "/mnt/share01/trash",
   "max_file_size_bytes": 52428800,
   "database": {
     "host": "localhost",
@@ -56,6 +56,12 @@
 **Regra de segredos:** `database.password_env` e `sharepoint.client_secret_env` guardam o **nome**
 de uma variável de ambiente, nunca o segredo em si (ver §4). `config/config.json` (gitignored)
 pode sobrescrever qualquer campo acima; campos ausentes herdam do default via merge raso por seção.
+
+**Convenção de volumes locais em containers:** caminhos `/mnt/shareNN` identificam pontos de
+montagem independentes dentro do container, como `/mnt/share01` e `/mnt/share02`. O Compose
+publicado associa `/mnt/share01` a `examples/sandbox` somente para o teste funcional. Em produção,
+a origem desse bind mount deve ser substituída por armazenamento permanente do host; repositórios
+adicionais devem receber novos pontos de montagem e caminhos correspondentes na configuração.
 
 **`business_key_field` em branco (`""`, valor padrão):** não existe chave de negócio fixa
 pré-definida. Quando este campo estiver em branco, `pipeline.py` calcula o UUIDv5 a partir de

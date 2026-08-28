@@ -196,7 +196,7 @@ class IngestionPipeline:
         self._storage = storage
         self._db = db
         self._trash_path = trash_path or getattr(
-            config, "trash_path", "/app/data/trash"
+            config, "trash_path", "/mnt/share01/trash"
         )
         self._max_file_size_bytes = max_file_size_bytes or getattr(
             config, "max_file_size_bytes", DEFAULT_MAX_FILE_SIZE_BYTES

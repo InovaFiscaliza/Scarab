@@ -4,17 +4,17 @@
         {
             "name": "local_inbound",
             "type": "local",
-            "path": "examples/sandbox/post",
+            "path": "/mnt/share01/post",
             "role": "input"
         },
         {
             "name": "local_media",
             "type": "local",
-            "path": "examples/sandbox/get",
+            "path": "/mnt/share01/get",
             "role": "storage_media"
         }
     ],
-    "trash_path": "examples/sandbox/trash",
+    "trash_path": "/mnt/share01/trash",
     "database": {
         "host": "db"
     },

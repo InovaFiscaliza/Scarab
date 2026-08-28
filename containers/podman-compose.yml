@@ -28,10 +28,10 @@ services:
       db:
         condition: service_healthy
     volumes:
-      # Application config (read-only): supply repo-local config/config.json via host .env/.local
+      # Application config (read-only): supply repo-local config/config.json.
       - ../config:/app/config:ro
-      # Keep the example's relative paths valid inside the container.
-      - ../examples/sandbox:/app/examples/sandbox:Z
+      # Functional test only: replace the host path with a permanent share in production.
+      - ../examples/sandbox:/mnt/share01:Z
     restart: unless-stopped
 
 volumes:
