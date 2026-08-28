@@ -45,3 +45,10 @@ under `containers/`. Current architecture and module/database contracts are docu
   hardcode or log secret values.
 - Do not add dependencies for Python standard-library modules such as `uuid`.
 - Do not edit unrelated files or reformat completed modules without a concrete reason.
+
+<!-- mermaid-ai-skills:start -->
+## Mermaid Diagrams
+
+When the user asks to create, edit, or visualize a diagram, follow the
+instructions in `.github/instructions/mermaid.instructions.md`.
+<!-- mermaid-ai-skills:end -->

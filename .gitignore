@@ -21,7 +21,8 @@ config/config.json
 .venv
 .vscode/settings.json
 
-test_regulatron_full.tgz
+# Ignore sandbox examples
+examples/sandbox/
 
 # Related files
 scarab_release.tgz
