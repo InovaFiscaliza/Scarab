@@ -4,17 +4,21 @@
         <li><a href="#visão-geral">Visão Geral</a></li>
         <li><a href="#arquitetura">Arquitetura</a></li>
         <li><a href="#estrutura-do-repositório">Estrutura do Repositório</a></li>
+        <li><a href="#como-funciona-o-processamento">Como Funciona o Processamento</a></li>
         <li><a href="#pré-requisitos">Pré-requisitos</a></li>
         <li><a href="#como-rodar-localmente">Como Rodar Localmente</a></li>
         <li><a href="#estrutura-do-podman-compose">Estrutura do Podman Compose</a></li>
         <li><a href="#implantação-remota-e-testes">Implantação Remota e Testes</a></li>
         <li><a href="#visão-geral-da-configuração">Visão Geral da Configuração</a></li>
-        <li><a href="#como-funciona-o-processamento">Como Funciona o Processamento</a></li>
         <li><a href="#licença-e-contribuição">Licença e Contribuição</a></li>
     </ol>
 </details>
 
 ## Visão geral
+
+<div>
+    <img align="left" width="100" height="100" src="./docs/images/scarab_glyph.svg">
+</div>
 
 O Scarab é um serviço de ingestão e persistência de documentos e metadados. A nova arquitetura
 substitui a saída em arquivos por um armazenamento centralizado em PostgreSQL: o serviço recebe
@@ -22,7 +26,7 @@ descritores JSON (com ou sem mídia), valida e normaliza o payload, calcula um i
 determinístico (UUIDv5) e delega a persistência a funções armazenadas no banco. Mídias são
 armazenadas em repositórios configuráveis (local ou SharePoint) e vinculadas ao registro no banco.
 
-O objetivo é tornar a ingestão robusta, audível e compatível com orquestração via containers
+O objetivo é tornar a ingestão robusta, audítável e compatível com orquestração via containers
 (Podman), mantendo políticas de segurança para segredos, limpeza de arquivos órfãos e proteção
 contra path traversal e injeção SQL.
 
@@ -62,6 +66,27 @@ Principais componentes:
 
 O contrato técnico completo da configuração, dos módulos Python, do banco e das regras de
 segurança está em [docs/architecture/CONTRACTS.md](docs/architecture/CONTRACTS.md).
+
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
+
+## Como funciona o processamento
+
+Fluxo resumido:
+1. O `main.py` varre repositórios `role == "input"` procurando novos arquivos.
+2. Arquivos JSON são validados; o campo `operacao` deve existir e ser um dos literais suportados.
+3. O `pipeline.py` resolve a fonte do `business key` (campo específico ou todo o payload limpo), aplica
+   normalização (`clean_business_key`) e calcula `uuid.uuid5(namespace, source)`.
+4. A aplicação chama `database.py` que executa a função SQL `processar_operacao_json(nome_arquivo, payload)`.
+5. A função no banco realiza `UPSERT` / `DELETE` / remoção de propriedade conforme a `operacao`, e registra a execução em `carga_historico`.
+6. Se houver mídia associada, após sucesso a mídia é movida para um repositório com `role == "storage_media"`.
+7. Mídias sem JSON correspondente são mantidas por `orphaned_media_hours` e, após esse período, movidas para `/trash`.
+
+Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/trash` e remoção de arquivos mais antigos que `prazos.trash_cleanup_days`.
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
@@ -113,9 +138,34 @@ treeView-beta
 
 ## Pré-requisitos
 
-- Podman (para orquestrar containers com `podman-compose`).
-- UV (gerenciador de ambiente usado no desenvolvimento): `uv sync` para instalar dependências.
-- Acesso a um PostgreSQL (pode ser provisionado via `deploy/podman-compose.yml`).
+### Desenvolvimento local
+
+- Git para obter e versionar o código;
+- Python 3.13 ou superior;
+- [UV](https://docs.astral.sh/uv/) para instalar as dependências com
+    `uv sync --extra dev` e executar lint e testes;
+- acesso a um PostgreSQL externo somente para executar o daemon fora do stack. No stack completo,
+    [deploy/podman-compose.yml](deploy/podman-compose.yml) provisiona o próprio serviço de banco;
+- Podman e um provider de `podman compose` são opcionais no desenvolvimento Python e necessários
+    apenas para construir imagens ou exercitar o stack completo.
+
+### Execução do stack
+
+No host de execução:
+
+- Linux com Bash e utilitários básicos do sistema;
+- Podman 4 ou superior e um provider de `podman compose`, como `podman-compose` 1.x;
+- uma conta de serviço não-root com Podman rootless, subuids e subgids configurados;
+- acesso administrativo por `root` ou `sudo` durante a instalação; os comandos de ciclo de vida
+    são executados posteriormente pela conta de serviço;
+- acesso aos registries das imagens e, ao usar o bootstrap, ao GitHub;
+- Git para o bootstrap e para builds locais a partir de uma branch. Sem `--branch`, o bootstrap
+    também requer um entre `curl`, `python3` ou `wget` para resolver a release mais recente. Essas
+    ferramentas não são necessárias durante a execução com imagens imutáveis já instaladas.
+
+Python e UV não são exigidos pelo runtime da aplicação, e um PostgreSQL externo também não é
+necessário: as imagens contêm o runtime e
+[deploy/podman-compose.yml](deploy/podman-compose.yml) provisiona o serviço de banco.
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
@@ -135,7 +185,7 @@ git clone <repo> && cd Scarab
 2. Instale dependências de desenvolvimento com UV:
 
 ```powershell
-uv sync
+uv sync --extra dev
 ```
 
 3. Para executar somente o daemon fora de containers, crie um override e ajuste o banco para um
@@ -213,6 +263,8 @@ as tarefas incluídas em [.vscode/tasks.json](.vscode/tasks.json).
 
 ### Bootstrap automatizado
 
+#### Execução direta no host Linux
+
 O script `deploy/scarab-bootstrap.sh` é executado no host Linux. Sem `--branch`, ele resolve a
 release mais recente publicada no GitHub e clona sua tag em um diretório temporário sob o `HOME` da
 conta de serviço. Para validar acesso sudo, Podman rootless, Compose, GitHub e os arquivos da versão
@@ -231,9 +283,15 @@ Remova `--check` para instalar. A opção `--branch` seleciona explicitamente um
 estiver publicada, use a branch; releases antigas são recusadas quando não contêm os artefatos
 necessários.
 
-Em uma estação Windows, mantenha `deploy/scarab-bootstrap.bat` e
-`deploy/scarab-bootstrap.sh` no mesmo diretório. O `.bat` verifica o OpenSSH, envia o `.sh` e o
-executa no host Linux:
+#### Execução remota pela estação Windows
+
+Na estação Windows são necessários PowerShell, os clientes OpenSSH `ssh.exe` e `scp.exe` e acesso
+SSH por chave ao host Linux. O passo a passo para gerar e proteger a chave, configurar o alias SSH
+e conceder privilégio administrativo via `sudo`, sem habilitar login direto de `root`, está na
+[Wiki: Acesso SSH por chave e sudo remoto](https://github.com/InovaFiscaliza/Scarab/wiki/Acesso-SSH-por-Chave-e-Sudo).
+
+Mantenha `deploy/scarab-bootstrap.bat` e `deploy/scarab-bootstrap.sh` no mesmo diretório. O `.bat`
+verifica o OpenSSH, envia o `.sh` e executa no host Linux o mesmo fluxo descrito acima:
 
 ```powershell
 .\deploy\scarab-bootstrap.bat `
@@ -243,11 +301,14 @@ executa no host Linux:
     --check
 ```
 
-O SSH deve funcionar por chave; o sudo remoto pode solicitar a senha no terminal. Em builds locais
-de teste, o checkout é preservado porque os próximos updates ainda precisam dele. Com imagens
-imutáveis, o diretório temporário é removido. Se a instância já existir, `install` valida ambiente e
-proprietário, atualiza os artefatos instalados e executa `scarab-deploy update` como a conta
-rootless.
+Podman não precisa ser instalado no Windows; ele executa no host Linux. Python e UV também não são
+requisitos da estação para usar o bootstrap. O SSH deve funcionar por chave, e o `sudo` remoto pode
+solicitar a senha no terminal.
+
+Em builds locais de teste, o checkout é preservado porque os próximos updates ainda precisam dele.
+Com imagens imutáveis, o diretório temporário é removido. Se a instância já existir, `install`
+valida ambiente e proprietário, atualiza os artefatos instalados e executa
+`scarab-deploy update` como a conta rootless.
 
 Depois de configurar o SSH, instale uma instância de teste no host:
 
@@ -312,37 +373,12 @@ O `config/config.json` (gitignored) pode sobrescrever qualquer campo do default 
     <br><br>
 </div>
 
-## Como funciona o processamento
-
-Fluxo resumido:
-1. O `main.py` varre repositórios `role == "input"` procurando novos arquivos.
-2. Arquivos JSON são validados; o campo `operacao` deve existir e ser um dos literais suportados.
-3. O `pipeline.py` resolve a fonte do `business key` (campo específico ou todo o payload limpo), aplica
-   normalização (`clean_business_key`) e calcula `uuid.uuid5(namespace, source)`.
-4. A aplicação chama `database.py` que executa a função SQL `processar_operacao_json(nome_arquivo, payload)`.
-5. A função no banco realiza `UPSERT` / `DELETE` / remoção de propriedade conforme a `operacao`, e registra a execução em `carga_historico`.
-6. Se houver mídia associada, após sucesso a mídia é movida para um repositório com `role == "storage_media"`.
-7. Mídias sem JSON correspondente são mantidas por `orphaned_media_hours` e, após esse período, movidas para `/trash`.
-
-Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/trash` e remoção de arquivos mais antigos que `prazos.trash_cleanup_days`.
-
-<div>
-    <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
-    </a>
-    <br><br>
-</div>
-
 ## Itens a fazer / melhorias
 
-- Implementar API REST usando PostgREST
-- Implementar API para upload de mídia via HTTP usando 
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- [SECURITY.md](SECURITY.md)
-- [SUPPORT.md](SUPPORT.md)
-
-Por favor, siga as diretrizes de contribuição e o código de conduta ao enviar PRs.
+- [ ] Implementar funções base
+- [ ] Implementar módulo de conversão de arquivos de entrada e injestão de dados para compatibilidade
+- [ ] Implementar API REST usando PostgREST
+- Implementar API para upload de mídia via HTTP usando [https://tus.io/](https://tus.io/)
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
