@@ -10,7 +10,24 @@ Usage:
   scarab-deploy.sh install --environment test|production --service-user USER
       [--instance NAME] [--source PATH] [--app-image IMAGE] [--db-image IMAGE]
   scarab-deploy update [--instance NAME] [--build-source PATH] [--no-pull]
-    scarab-deploy validate|start|stop|status|logs|backup|test [--instance NAME]
+  scarab-deploy validate|start|stop|status|logs|backup|test [--instance NAME]
+
+Options and defaults:
+  --environment test|production
+      Required for install; no default.
+  --service-user USER
+      Required for install; no default.
+  --instance NAME
+      Instance and filesystem namespace (default: scarab).
+  --source PATH
+      Installation source (default: tree containing this script, when available).
+  --app-image IMAGE, --db-image IMAGE
+      Test defaults when both are omitted: localhost/scarab-app:INSTANCE and
+      localhost/scarab-db:INSTANCE. Both options are required in production.
+  --build-source PATH
+      Update source (default: configured installation source for local builds).
+  --no-pull
+      Skip image pulls (pulling is enabled by default for immutable images).
 
 Examples:
   sudo ./containers/scarab-deploy.sh install \
