@@ -202,6 +202,24 @@ Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/tra
     <br><br>
 </div>
 
+## Itens a fazer / melhorias
+
+- Implementar API REST usando PostgREST
+- Implementar API para upload de mídia via HTTP usando 
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SECURITY.md](SECURITY.md)
+- [SUPPORT.md](SUPPORT.md)
+
+Por favor, siga as diretrizes de contribuição e o código de conduta ao enviar PRs.
+
+<div>
+    <a href="#visão-geral" title="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+    </a>
+    <br><br>
+</div>
+
 ## Licença e contribuição
 
 Este repositório mantém os arquivos de política e contribuição na raiz. Consulte:
