@@ -23,7 +23,7 @@
   "null_string_values": ["", "NA", "N/A", "null", "None"],
   "repositories": [
     { "name": "local_inbound", "type": "local", "path": "/mnt/share01/post", "role": "input" },
-    { "name": "sharepoint_media", "type": "sharepoint", "path": "/sites/Dev/Docs", "role": "storage_media" }
+    { "name": "local_media", "type": "local", "path": "/mnt/share02/media", "role": "storage_media" }
   ],
   "prazos": {
     "orphaned_media_hours": 24,
@@ -32,7 +32,7 @@
   "trash_path": "/mnt/share01/trash",
   "max_file_size_bytes": 52428800,
   "database": {
-    "host": "localhost",
+    "host": "db",
     "port": 5432,
     "dbname": "scarab",
     "user": "scarab_app",
@@ -58,10 +58,10 @@ de uma variável de ambiente, nunca o segredo em si (ver §4). `config/config.js
 pode sobrescrever qualquer campo acima; campos ausentes herdam do default via merge raso por seção.
 
 **Convenção de volumes locais em containers:** caminhos `/mnt/shareNN` identificam pontos de
-montagem independentes dentro do container, como `/mnt/share01` e `/mnt/share02`. O Compose
-publicado associa `/mnt/share01` a `examples/sandbox` somente para o teste funcional. Em produção,
-a origem desse bind mount deve ser substituída por armazenamento permanente do host; repositórios
-adicionais devem receber novos pontos de montagem e caminhos correspondentes na configuração.
+montagem independentes dentro do container, como `/mnt/share01` e `/mnt/share02`. O mesmo Compose
+é usado em teste e produção; um arquivo de ambiente define quais diretórios FHS do host são
+associados a esses destinos. Repositórios adicionais devem receber novos pontos de montagem e
+caminhos correspondentes na configuração.
 
 **`business_key_field` em branco (`""`, valor padrão):** não existe chave de negócio fixa
 pré-definida. Quando este campo estiver em branco, `pipeline.py` calcula o UUIDv5 a partir de
@@ -102,6 +102,29 @@ Ver §3.4 e §6 para o algoritmo exato.
   associado, equivalente a `folders.get`.
 - Pode haver múltiplos repositórios de cada papel (lista), assim como o Scarab atual suporta
   múltiplas pastas `post` e múltiplas pastas `get` por padrão.
+
+### 1.4 Contrato de implantação em containers
+
+O runtime é definido por `containers/podman-compose.yml`. Esse arquivo não contém build nem
+caminhos relativos ao checkout. Todas as origens do host são obrigatórias e recebidas pelo arquivo
+`/etc/<instância>/compose.env` instalado por `containers/scarab-deploy.sh`.
+
+| Variável Compose | Origem FHS no host | Destino no container |
+|---|---|---|
+| `SCARAB_CONFIG_DIR` | `/etc/<instância>/config` | `/etc/scarab` (somente leitura) |
+| `SCARAB_POSTGRES_DIR` | `/var/lib/<instância>/postgresql` | `/var/lib/postgresql/data` |
+| `SCARAB_SHARE01_DIR` | `/srv/<instância>/share01` | `/mnt/share01` |
+| `SCARAB_SHARE02_DIR` | `/srv/<instância>/share02` | `/mnt/share02` |
+| `SCARAB_LOG_DIR` | `/var/log/<instância>` | `/var/log/scarab` |
+
+O código do app fica somente na imagem, em `/opt/scarab`. Laboratório e produção usam esse mesmo
+runtime; `containers/podman-compose.build.yml` acrescenta o build a partir de
+`SCARAB_SOURCE_DIR` somente quando solicitado. Produção deve usar imagens imutáveis publicadas em
+registry.
+
+Os serviços não compartilham pod, pois cada um exige um mapeamento `keep-id` próprio: UID/GID 70
+para PostgreSQL e 999 para o app. A conta rootless do host deve ser proprietária dos diretórios
+mutáveis. O banco não publica a porta 5432 por padrão.
 
 ---
 

@@ -1,0 +1,10 @@
+services:
+  db:
+    build:
+      context: "${SCARAB_SOURCE_DIR:?Set SCARAB_SOURCE_DIR to the source checkout}"
+      dockerfile: containers/Containerfile.db
+
+  app:
+    build:
+      context: "${SCARAB_SOURCE_DIR:?Set SCARAB_SOURCE_DIR to the source checkout}"
+      dockerfile: containers/Containerfile.app

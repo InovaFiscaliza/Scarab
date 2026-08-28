@@ -28,8 +28,8 @@ under `containers/`. Current architecture and module/database contracts are docu
 2. Run the test suite with `uv run pytest`.
 3. Run lint with `uv run ruff check src tests`.
 4. Run the daemon locally with `uv run python -m src.main config`.
-5. Run the containers with `podman compose -f containers/podman-compose.yml up --build` when Podman
-   is available.
+5. Install and run the full stack with `containers/scarab-deploy.sh`; do not start the runtime
+  Compose directly from the checkout.
 
 ## Conventions
 

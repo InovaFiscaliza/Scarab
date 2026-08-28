@@ -53,8 +53,9 @@ Before running Scarab in production:
 
 1. Review the configuration carefully
 2. Run the automated suite with `uv run pytest`
-3. Validate the containers with `podman compose -f containers/podman-compose.yml up --build`
-4. Check the generated logs for any warnings or errors
+3. Install a test instance with `containers/scarab-deploy.sh`
+4. Run `scarab-deploy test --instance scarab-test`
+5. Check the generated logs for any warnings or errors
 
 ## FAQ
 

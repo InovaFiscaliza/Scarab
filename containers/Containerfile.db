@@ -4,7 +4,10 @@ FROM docker.io/library/postgres:16-alpine
 # executed in alphabetical order by the official Postgres docker-entrypoint.
 COPY db/init.sql /docker-entrypoint-initdb.d/01-init.sql
 COPY db/procedures.sql /docker-entrypoint-initdb.d/02-procedures.sql
+COPY db/provision-app-role.sh /usr/local/sbin/scarab-provision-app-role
 
-# Ensure SQL files are world-readable (the entrypoint runs them as the
-# postgres user inside the container).
-RUN chmod a+r /docker-entrypoint-initdb.d/*.sql || true
+# Provision the least-privilege application role after schema initialization.
+RUN chmod a+r /docker-entrypoint-initdb.d/*.sql \
+	&& chmod 0755 /usr/local/sbin/scarab-provision-app-role \
+	&& ln -s /usr/local/sbin/scarab-provision-app-role \
+		/docker-entrypoint-initdb.d/03-provision-app-role.sh

@@ -91,16 +91,40 @@ script somente atualiza um arquivo que já exista em `store`. Como a operação 
 use-a apenas quando a mudança fizer parte do mesmo cenário; para preservar ambos os estados, use
 `add.bat`.
 
+## Execução em um host Podman remoto
+
+Instale uma instância de laboratório. O instalador extrai as seis fixtures do snapshot para
+`/srv/scarab-test/fixtures`; o checkout não é montado no runtime:
+
+```bash
+sudo bash containers/scarab-deploy.sh install \
+  --environment test \
+  --instance scarab-test \
+  --service-user "$(id -un)" \
+  --source "$PWD"
+```
+
+Como a conta rootless:
+
+```bash
+scarab-deploy update --instance scarab-test
+scarab-deploy test --instance scarab-test
+```
+
+Em um banco recém-criado, o resultado esperado é dois registros finais e seis históricos com
+status `SUCESSO`. Consulte o
+[runbook de implantação remota](https://github.com/InovaFiscaliza/Scarab/wiki/Podman-Compose-Servidor-Remoto)
+para configuração de SSH, `.env`, consultas de aceite, reset e diferenças obrigatórias de produção.
+
 ## Fluxo recomendado para um teste completo
 
 1. Restaure o cenário desejado com `rst.bat` para recriar o sandbox em um estado conhecido.
 2. Faça somente os ajustes necessários nos arquivos e na configuração dentro de `sandbox`.
-3. Execute a solução completa conforme [sandbox/README.md](sandbox/README.md), usando o
-	`config.json` do cenário.
-4. Verifique o resultado no PostgreSQL e inspecione as áreas `post`, `get` e `trash` do sandbox.
-5. Para descartar o resultado e repetir o teste, execute `rst.bat` novamente.
-6. Para preservar o estado como cenário, use `add.bat`; para corrigir deliberadamente o snapshot
-	de origem, use `upt.bat`.
+3. Atualize o snapshot com `upt.bat` ou crie outro com `add.bat` depois de revisar as mudanças.
+4. Reexecute o instalador de `scarab-test` para atualizar as fixtures instaladas.
+5. Execute `scarab-deploy test --instance scarab-test`.
+6. Verifique o resultado no PostgreSQL e em `/srv/scarab-test/share01` e `share02`.
 
 Esse ciclo mantém os testes reproduzíveis: os snapshots permanecem em `store`, enquanto o
-`sandbox` pode ser consumido, modificado e recriado sem ser tratado como armazenamento permanente.
+`sandbox` é apenas a cópia de autoria e pode ser recriado sem ser tratado como armazenamento de
+runtime.

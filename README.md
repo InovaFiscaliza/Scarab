@@ -7,6 +7,7 @@
         <li><a href="#pré-requisitos">Pré-requisitos</a></li>
         <li><a href="#como-rodar-localmente">Como Rodar Localmente</a></li>
         <li><a href="#estrutura-do-podman-compose">Estrutura do Podman Compose</a></li>
+        <li><a href="#implantação-remota-e-testes">Implantação Remota e Testes</a></li>
         <li><a href="#visão-geral-da-configuração">Visão Geral da Configuração</a></li>
         <li><a href="#como-funciona-o-processamento">Como Funciona o Processamento</a></li>
         <li><a href="#licença-e-contribuição">Licença e Contribuição</a></li>
@@ -79,12 +80,16 @@ treeView-beta
         containers/
             Containerfile.app
             Containerfile.db
+            podman-compose.build.yml
             podman-compose.yml
+            scarab-deploy.sh
+            scarab.env.example
         config/
             default_config.json
             config.json ## gitignored; overrides locais
         db/
             init.sql
+            provision-app-role.sh
             procedures.sql
         src/
             __init__.py
@@ -133,27 +138,25 @@ git clone <repo> && cd Scarab
 uv sync
 ```
 
-3. Copie o arquivo de configuração e ajuste conforme necessário:
+3. Para executar somente o daemon fora de containers, crie um override e ajuste o banco para um
+    PostgreSQL acessível pela estação:
 
 ```powershell
-mkdir -Force config; copy-file config/default_config.json config/config.json
-# editar config/config.json (senha do banco via variável de ambiente)
+New-Item -ItemType Directory -Force config | Out-Null
+Copy-Item config/default_config.json config/config.json
+# editar config/config.json, inclusive database.host
+$env:SCARAB_DB_PASSWORD = "<senha-local>"
 ```
 
-4. Suba os containers (aplica-se quando `containers/podman-compose.yml` estiver presente):
-
-```powershell
-podman compose -f containers/podman-compose.yml up
-```
-
-5. No ambiente de desenvolvimento, execute ciclos de inspeção com UV:
+4. Execute ciclos de inspeção com UV:
 
 ```powershell
 uv run python -m src.main config
 ```
 
-Observação: segredos como a senha do banco devem ser fornecidos via variável de ambiente
-(`SCARAB_DB_PASSWORD` conforme `config/default_config.json`).
+O stack completo deve ser instalado em um host Linux com `scarab-deploy`, conforme a seção
+[Implantação remota e testes](#implantação-remota-e-testes). O Compose de runtime exige caminhos
+FHS provisionados e não deve ser iniciado diretamente do checkout.
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
@@ -164,121 +167,85 @@ Observação: segredos como a senha do banco devem ser fornecidos via variável 
 
 ## Estrutura do Podman Compose
 
-O arquivo [containers/podman-compose.yml](containers/podman-compose.yml) define os serviços `db` e
-`app`, uma rede interna criada automaticamente pelo Compose e o volume nomeado `db_data`. Os
-caminhos relativos usados pelo Compose partem do diretório `containers`; por isso, por exemplo,
-`../config` corresponde à pasta `config` na raiz do repositório.
+O runtime usa [containers/podman-compose.yml](containers/podman-compose.yml) em todos os ambientes.
+Esse arquivo não contém build nem caminhos do checkout. O override
+[containers/podman-compose.build.yml](containers/podman-compose.build.yml) acrescenta build somente
+no laboratório. [containers/scarab-deploy.sh](containers/scarab-deploy.sh) instala e opera ambos.
+
+No host, cada instância segue a hierarquia Linux:
+
+| Host | Finalidade | Container |
+|---|---|---|
+| `/etc/<instância>/config` | Configuração somente leitura | `/etc/scarab` |
+| `/var/lib/<instância>/postgresql` | Estado do PostgreSQL | `/var/lib/postgresql/data` |
+| `/srv/<instância>/share01` | Entrada e lixeira | `/mnt/share01` |
+| `/srv/<instância>/share02` | Mídia final | `/mnt/share02` |
+| `/var/log/<instância>` | Logs em arquivo opcionais | `/var/log/scarab` |
+| `/var/backups/<instância>` | Backups lógicos no host | não montado |
+
+O código e as dependências são imutáveis na imagem em `/opt/scarab`. Nenhum diretório do checkout
+é montado em runtime.
 
 ### Serviço `db`
 
-O serviço de banco é construído com `containers/Containerfile.db`, baseado no PostgreSQL 16. Os
-scripts `db/init.sql` e `db/procedures.sql` são incluídos na imagem e executados, nessa ordem,
-somente quando o diretório de dados do PostgreSQL está vazio.
-
-- `env_file` carrega as variáveis de `../.env` usadas na inicialização do PostgreSQL.
-- A porta `5432` do host é encaminhada para a porta `5432` do container.
-- O volume `db_data` preserva o cluster PostgreSQL entre recriações do container.
-- O `healthcheck` usa `pg_isready`; o serviço `app` só inicia depois que o banco está saudável.
-- `restart: unless-stopped` reinicia o serviço após falhas ou reinicializações do Podman, exceto
-    quando ele tiver sido parado explicitamente.
-
-O volume `db_data` não é uma pasta versionada dentro do repositório. É um volume gerenciado pelo
-Podman e armazenado na área de dados do próprio mecanismo. Seu nome efetivo pode receber o prefixo
-do projeto Compose.
+O PostgreSQL usa bind mount persistente sob `/var/lib/<instância>` e não publica a porta 5432. A
+imagem executa schema, procedures e criação idempotente do papel `scarab_app` na primeira
+inicialização. O instalador reaplica senha e grants mínimos em updates.
 
 ### Serviço `app`
 
-O serviço da aplicação é construído com `containers/Containerfile.app`. A imagem instala as
-dependências, executa o Scarab como usuário não privilegiado e inicia
-`python -m src.main /app/config`. Os serviços compartilham a rede interna do Compose; nessa rede,
-o nome `db` resolve para o container PostgreSQL. Portanto, a configuração usada no container deve
-definir `database.host` como `db`, e não como `localhost`.
+O app executa como usuário não-root com filesystem raiz somente leitura, `/tmp` em `tmpfs`, sem
+capabilities e com `no-new-privileges`. Os serviços usam rede interna e `database.host: "db"`.
+`keep-id` permite escrita nos shares pelo proprietário rootless do host sem permissões globais.
 
-### Mapeamentos entre host e containers
+<div>
+        <a href="#visão-geral" title="De volta ao topo da página">
+                <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        </a>
+        <br><br>
+</div>
 
-| Origem no host | Destino no container | Tipo e acesso | Finalidade |
-|---|---|---|---|
-| Volume Podman `db_data` | `/var/lib/postgresql/data` no `db` | Volume nomeado, leitura e escrita | Armazenamento persistente das tabelas, índices e histórico do PostgreSQL. |
-| `config/` | `/app/config` no `app` | Bind mount somente leitura (`ro`) | Disponibiliza `default_config.json` e o override local `config.json`. |
-| `.env` | Ambiente dos processos `db` e `app` | `env_file`; não é um volume | Injeta variáveis e segredos sem copiar nem montar o arquivo dentro dos containers. |
-| `examples/sandbox/` | `/mnt/share01` no `app` | Bind mount de leitura e escrita com rótulo SELinux privado (`Z`) | Publica, somente para o teste funcional, as pastas de entrada, saída e descarte. |
+## Implantação remota e testes
 
-Os bind mounts mantêm a pasta real no host: uma alteração feita de um lado é vista imediatamente
-do outro. O conteúdo também permanece no host quando o container é removido. No caso de `config`,
-o sufixo `ro` impede que a aplicação modifique os arquivos. Esse mount sobrepõe, durante a
-execução, a configuração que foi copiada para a imagem no processo de build.
+O fluxo remoto recomendado mantém checkout, build, containers e bind mounts no host Linux. A
+estação de trabalho acessa esse host por SSH; não é necessário instalar Podman localmente para usar
+as tarefas incluídas em [.vscode/tasks.json](.vscode/tasks.json).
 
-O arquivo `.env` tem comportamento diferente. Ele permanece apenas no host e o Compose usa seus
-valores para criar o ambiente de cada processo, incluindo os segredos referenciados pela
-configuração, como `SCARAB_DB_PASSWORD`. Alterações no `.env` exigem a recriação dos containers para
-que as novas variáveis sejam aplicadas. Tanto `.env` quanto `config/config.json` são ignorados pelo
-Git para evitar o versionamento de segredos e ajustes locais.
+Depois de configurar o SSH, instale uma instância de teste no host:
 
-O sufixo `Z` no mount do sandbox solicita ao Podman um rótulo SELinux privado compatível com o
-acesso pelo container. Ele é relevante principalmente em hosts Linux com SELinux habilitado.
+```bash
+sudo bash containers/scarab-deploy.sh install \
+    --environment test \
+    --instance scarab-test \
+    --service-user "$(id -un)" \
+    --source "$PWD"
 
-### Pastas de trabalho do sandbox
-
-O `config.json` do cenário funcional usa caminhos sob `/mnt/share01`. O nome interno segue uma
-convenção adequada a mounts Linux e não expõe no container que a origem publicada é um sandbox:
-
-- `/mnt/share01/post`: repositório de entrada monitorado pelo Scarab; recebe descritores JSON e mídias.
-- `/mnt/share01/get`: repositório de saída que recebe as mídias associadas após uma operação bem-sucedida.
-- `/mnt/share01/trash`: recebe arquivos rejeitados e mídias consideradas órfãs.
-- `temp`: área reservada, sem uso explícito no pipeline atual.
-- `store`: área legada do cenário, sem uso pelo pipeline atual.
-
-O fluxo de um teste começa quando arquivos são colocados em `examples/sandbox/post` no host. A
-aplicação os enxerga em `/mnt/share01/post`, grava os metadados no PostgreSQL e move as mídias para
-`/mnt/share01/get` ou os arquivos rejeitados para `/mnt/share01/trash`. Como toda a pasta
-`sandbox` está montada em leitura e escrita, esses movimentos ficam visíveis no host.
-
-Para usar o cenário fornecido, copie seu override para a pasta de configuração montada antes de
-subir os serviços:
-
-```powershell
-Copy-Item examples/sandbox/config.json config/config.json
-podman compose -f containers/podman-compose.yml up --build
+scarab-deploy update --instance scarab-test
+scarab-deploy test --instance scarab-test
 ```
 
-O `sandbox` é uma área efêmera de execução, embora o bind mount faça seus arquivos sobreviverem à
-remoção do container. Restaure-o antes de outro teste para obter um estado conhecido. Consulte
-[examples/README.md](examples/README.md) para o uso dos scripts de restauração e armazenamento dos
-cenários.
+O laboratório usa `/etc/scarab-test`, `/var/lib/scarab-test`, `/srv/scarab-test` e
+`/var/backups/scarab-test`, exatamente como produção usa os caminhos sem `-test`. Somente o
+desenvolvimento constrói imagens do checkout; runtime nunca monta o source. Para homologação com
+paridade completa, forneça ao instalador os mesmos digests de imagem que serão promovidos para
+produção.
 
-### Substituição obrigatória em produção
+Também é possível executar **Tasks: Run Task** no VS Code:
 
-O bind mount `../examples/sandbox:/mnt/share01:Z` existe para que o repositório publicado execute o
-teste funcional sem depender de diretórios externos. Ele não representa armazenamento de produção.
-Antes da implantação, substitua a origem `../examples/sandbox` por um diretório ou filesystem
-permanente do host, com backup, capacidade, ownership e permissões definidos pela operação.
+- `Scarab remoto: verificar acesso` valida SSH, Podman, Compose e o checkout;
+- `Scarab remoto: sincronizar alteracoes locais` envia arquivos modificados sem copiar `.env` ou
+    `config/config.json`;
+- `Scarab remoto: testes unitarios Linux` executa a suíte em um container descartável;
+- `Scarab remoto: validar Compose`, `subir e reconstruir`, `teste funcional`, `status`, `logs`,
+    `backup do banco` e `parar` operam a instância instalada.
 
-Os destinos `/mnt/share01`, `/mnt/share02` e assim por diante são identificadores estáveis dentro
-do container. Eles não precisam ter o mesmo nome no host. Um override de produção com dois
-repositórios locais pode, por exemplo, conter:
+O teste funcional envia fixtures instaladas em `/srv/scarab-test/fixtures` e exige dois registros
+finais e seis entradas `SUCESSO`. Produção usa imagens imutáveis de registry, conta rootless
+dedicada, segredos provisionados e filesystems permanentes, mas conserva a mesma topologia.
 
-```yaml
-services:
-    app:
-        volumes:
-            - /srv/scarab/share01:/mnt/share01:Z
-            - /srv/scarab/share02:/mnt/share02:Z
-```
-
-Nesse caso, a configuração pode manter a entrada e a lixeira sob `/mnt/share01` e definir um
-repositório de mídia em `/mnt/share02/media`. Cada novo `repository.path` local deve estar sob um
-ponto de montagem declarado em `volumes`; declarar o caminho apenas no JSON não cria nem persiste
-o volume.
-
-### Persistência e remoção
-
-- `podman compose -f containers/podman-compose.yml down` remove os containers e a rede, mas mantém
-    o volume `db_data` e todas as pastas montadas do host.
-- O mesmo comando com `--volumes` também remove `db_data` e, portanto, apaga o banco persistido.
-- `config/`, `.env` e a origem associada a `/mnt/shareNN` não são apagados por `down --volumes`,
-    pois são arquivos e diretórios reais do host, não volumes nomeados do Compose.
-- Alterar os scripts SQL e reconstruir a imagem não reaplica a inicialização em um `db_data` já
-    populado. Para uma inicialização limpa, remova deliberadamente o volume ou aplique uma migração.
+O procedimento completo, incluindo bootstrap seguro, comandos de validação, reset do laboratório
+e matriz de diferenças para produção, está na
+[Wiki: Podman Compose em servidor remoto](https://github.com/InovaFiscaliza/Scarab/wiki/Podman-Compose-Servidor-Remoto).
 
 <div>
         <a href="#visão-geral" title="De volta ao topo da página">

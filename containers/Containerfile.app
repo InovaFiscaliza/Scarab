@@ -3,40 +3,35 @@ FROM docker.io/library/python:3.13-slim AS builder
 # Copy UV runtime binaries from the upstream image so we can run `uv sync`
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-WORKDIR /app
+WORKDIR /opt/scarab
 
 # Project metadata for creating a frozen .venv using UV
-COPY pyproject.toml uv.lock /app/
-COPY src /app/src
+COPY pyproject.toml uv.lock /opt/scarab/
+COPY src /opt/scarab/src
 
 # Install project dependencies into an isolated virtualenv (.venv)
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/opt/scarab/.venv/bin:$PATH"
 RUN uv sync --frozen --no-dev
-
-# Copy application configuration into the builder stage so it can be
-# transferred into the final, minimal runtime image.
-COPY config /app/config
 
 FROM docker.io/library/python:3.13-slim AS final
 
-# Create a non-root system user `scarab` and use /app as working directory.
+# Create a non-root system user `scarab` and use /opt/scarab as working directory.
 RUN groupadd --system scarab \
-    && useradd --system --gid scarab --home /app --no-create-home --shell /usr/sbin/nologin scarab
+    && useradd --system --gid scarab --home /opt/scarab --no-create-home --shell /usr/sbin/nologin scarab
 
-WORKDIR /app
+WORKDIR /opt/scarab
 
-# Copy the virtualenv, application code and configuration from the builder.
-COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/src /app/src
-COPY --from=builder /app/config /app/config
+# Copy the virtualenv and application code from the builder.
+COPY --from=builder /opt/scarab/.venv /opt/scarab/.venv
+COPY --from=builder /opt/scarab/src /opt/scarab/src
 
-# Give the non-root user ownership of /app
-RUN chown -R scarab:scarab /app
+# Give the non-root user ownership of the immutable application tree.
+RUN chown -R scarab:scarab /opt/scarab
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/opt/scarab/.venv/bin:$PATH"
 
 # Run as non-root user
 USER scarab
 
-# Entrypoint: `src.main` expects a single argument: path to the config directory
-CMD ["python", "-m", "src.main", "/app/config"]
+# Entrypoint: runtime configuration is mounted read-only from the host.
+CMD ["python", "-m", "src.main", "/etc/scarab"]

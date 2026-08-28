@@ -59,7 +59,7 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "set -eu; cd \"$HOME/services/scarab\"; test -f .env || { echo 'ERRO: crie ~/services/scarab/.env diretamente no host remoto.' >&2; exit 1; }; test -f config/config.json || { echo 'ERRO: crie config/config.json no checkout remoto.' >&2; exit 1; }; podman compose -f \"$PWD/containers/podman-compose.yml\" config >/dev/null; echo 'Compose remoto valido.'"
+                "/usr/local/sbin/scarab-deploy validate --instance scarab-test"
             ],
             "problemMatcher": []
         },
@@ -71,9 +71,26 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "set -eu; cd \"$HOME/services/scarab\"; podman compose -f \"$PWD/containers/podman-compose.yml\" up -d --build; podman compose -f \"$PWD/containers/podman-compose.yml\" ps"
+                "/usr/local/sbin/scarab-deploy update --instance scarab-test"
             ],
-            "dependsOn": "Scarab remoto: validar Compose",
+            "dependsOn": [
+                "Scarab remoto: sincronizar alteracoes locais",
+                "Scarab remoto: validar Compose"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: teste funcional",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "/usr/local/sbin/scarab-deploy test --instance scarab-test"
+            ],
+            "dependsOn": "Scarab remoto: subir e reconstruir",
             "problemMatcher": []
         },
         {
@@ -84,7 +101,7 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "cd \"$HOME/services/scarab\" && podman compose -f \"$PWD/containers/podman-compose.yml\" ps"
+                "/usr/local/sbin/scarab-deploy status --instance scarab-test"
             ],
             "problemMatcher": []
         },
@@ -96,7 +113,7 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "cd \"$HOME/services/scarab\" && podman compose -f \"$PWD/containers/podman-compose.yml\" logs --tail=200 app db"
+                "/usr/local/sbin/scarab-deploy logs --instance scarab-test"
             ],
             "problemMatcher": []
         },
@@ -108,7 +125,19 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "cd \"$HOME/services/scarab\" && podman compose -f \"$PWD/containers/podman-compose.yml\" down"
+                "/usr/local/sbin/scarab-deploy stop --instance scarab-test"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Scarab remoto: backup do banco",
+            "type": "process",
+            "command": "ssh",
+            "args": [
+                "-o",
+                "BatchMode=yes",
+                "ContainerHost",
+                "/usr/local/sbin/scarab-deploy backup --instance scarab-test"
             ],
             "problemMatcher": []
         }

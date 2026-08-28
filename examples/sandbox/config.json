@@ -10,7 +10,7 @@
         {
             "name": "local_media",
             "type": "local",
-            "path": "/mnt/share01/get",
+            "path": "/mnt/share02/media",
             "role": "storage_media"
         }
     ],

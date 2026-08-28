@@ -34,15 +34,15 @@ def _default_config_data() -> dict[str, Any]:
                 "role": "input",
             },
             {
-                "name": "sharepoint_media",
-                "type": "sharepoint",
-                "path": "/sites/Dev/Docs",
+                "name": "local_media",
+                "type": "local",
+                "path": "/mnt/share02/media",
                 "role": "storage_media",
             },
         ],
         "prazos": {"orphaned_media_hours": 24, "trash_cleanup_days": 7},
         "database": {
-            "host": "localhost",
+            "host": "db",
             "port": 5432,
             "dbname": "scarab",
             "user": "scarab_app",
@@ -90,7 +90,7 @@ def test_load_config_reads_defaults(tmp_path: Path) -> None:
 
     assert isinstance(config, AppConfig)
     assert config.name == "scarab"
-    assert config.database.host == "localhost"
+    assert config.database.host == "db"
     assert config.sharepoint is None
     assert len(config.repositories) == 2
 

@@ -20,7 +20,7 @@ calcula o UUIDv5 a partir de todo o payload; nesse modo, adicionar um campo prod
 sandbox/
 ├── config.json       # override usado pelo teste
 ├── post/              # entrada dos descritores JSON
-├── get/               # saída de mídias associadas
+├── get/               # área legada mantida no snapshot
 ├── store/             # área legada, não usada pelo pipeline atual
 ├── temp/              # área temporária reservada
 └── trash/             # arquivos rejeitados e mídias órfãs
@@ -32,28 +32,29 @@ pipeline não possui `temp_path` nem uma etapa que o utilize explicitamente.
 
 ## Execução com Podman
 
-A partir da raiz do repositorio:
+A partir da raiz do repositório no host Linux:
 
-```powershell
-Copy-Item examples/sandbox/config.json config/config.json
-podman compose -f containers/podman-compose.yml up --build
+```bash
+sudo bash containers/scarab-deploy.sh install \
+	--environment test \
+	--instance scarab-test \
+	--service-user "$(id -un)" \
+	--source "$PWD"
+
+scarab-deploy update --instance scarab-test
+scarab-deploy test --instance scarab-test
 ```
 
-O compose monta `examples/sandbox` do host em `/mnt/share01` no container. Assim, `post`, `get` e
-`trash` são acessados pela aplicação como `/mnt/share01/post`, `/mnt/share01/get` e
-`/mnt/share01/trash`. Como os nomes possuem prefixo numérico, os descritores são listados na ordem
-da sequência e processados pelo daemon.
+O instalador copia a configuração para `/etc/scarab-test/config`, as fixtures para
+`/srv/scarab-test/fixtures` e usa `/srv/scarab-test/share01` e `share02` como runtime. Dentro do
+container, entrada e lixeira ficam em `/mnt/share01`; mídia fica em `/mnt/share02/media`.
 
-Esse mapeamento é destinado apenas ao teste funcional. Em produção, substitua
-`../examples/sandbox` no Compose por um diretório ou filesystem permanente do host. Repositórios
-adicionais podem ser montados em `/mnt/share02`, `/mnt/share03` e assim por diante, desde que seus
-caminhos também sejam declarados em `config/config.json`.
+O comando `test` recria o estado descartável, envia as fixtures e valida `clientes_docs` e
+`carga_historico`. Os snapshots permanecem inalterados no checkout.
 
-Para consultar o resultado, use o PostgreSQL do serviço `db` e verifique `clientes_docs` e
-`carga_historico`. Ao final, remova os arquivos de entrada processados e o override local se
-quiser retornar a configuração padrão:
+Em um host Linux remoto, use `scarab-deploy test --instance scarab-test`. O aceite em um banco novo
+é entrada e lixeira vazias, dois registros finais (`REG-001` e `REG-003`) e seis linhas `SUCESSO`
+em `carga_historico`.
 
-```powershell
-Remove-Item examples/sandbox/post/*.json
-Remove-Item config/config.json
-```
+O passo a passo completo está no
+[runbook de implantação remota](https://github.com/InovaFiscaliza/Scarab/wiki/Podman-Compose-Servidor-Remoto).

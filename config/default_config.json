@@ -20,9 +20,9 @@
             "role": "input"
         },
         {
-            "name": "sharepoint_media",
-            "type": "sharepoint",
-            "path": "/sites/Dev/Docs",
+            "name": "local_media",
+            "type": "local",
+            "path": "/mnt/share02/media",
             "role": "storage_media"
         }
     ],
@@ -31,7 +31,7 @@
         "trash_cleanup_days": 7
     },
     "database": {
-        "host": "localhost",
+        "host": "db",
         "port": 5432,
         "dbname": "scarab",
         "user": "scarab_app",
