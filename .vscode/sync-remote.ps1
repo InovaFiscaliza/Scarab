@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$SshHost = "ContainerHost",
-    [string]$RemoteRoot = "services/scarab"
+    [string]$RemoteRoot = "src/scarab"
 )
 
 $ErrorActionPreference = "Stop"
