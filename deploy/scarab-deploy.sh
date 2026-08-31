@@ -168,6 +168,11 @@ install_instance() {
     [[ -n "$service_user" ]] || die "--service-user is required."
     id "$service_user" >/dev/null 2>&1 || die "Service user does not exist: $service_user"
 
+    require_command env
+    require_command loginctl
+    require_command runuser
+    require_command systemctl
+
     if [[ -z "$source_root" ]]; then
         local candidate
         candidate="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -292,12 +297,16 @@ EOF
 Description=Scarab container stack ($instance)
 Wants=network-online.target
 After=network-online.target
+StartLimitIntervalSec=5min
+StartLimitBurst=5
 
 [Service]
 Type=oneshot
 ExecStart=$INSTALL_PATH start --instance $instance
 ExecStop=$INSTALL_PATH stop --instance $instance
 RemainAfterExit=yes
+Restart=on-failure
+RestartSec=15s
 TimeoutStartSec=180
 
 [Install]
@@ -306,24 +315,29 @@ EOF
     install -o "$service_user" -g "$service_group" -m 0644 "$unit_temporary" "$unit_file"
     rm -f "$unit_temporary"
 
-    if command -v loginctl >/dev/null 2>&1; then
-        if ! loginctl enable-linger "$service_user"; then
-            printf 'WARNING: enable linger manually for %s before relying on boot startup.\n' \
-                "$service_user" >&2
-        fi
-    fi
+    local service_uid service_runtime_dir
+    service_uid="$(id -u "$service_user")"
+    loginctl enable-linger "$service_user" ||
+        die "Failed to enable linger for $service_user."
+    systemctl start "user@$service_uid.service" ||
+        die "Failed to start the systemd user manager for $service_user."
+    service_runtime_dir="/run/user/$service_uid"
+    [[ -S "$service_runtime_dir/bus" ]] ||
+        die "The systemd user bus is unavailable for $service_user."
+
+    local -a service_environment=(
+        env "HOME=$service_home" "USER=$service_user" "LOGNAME=$service_user"
+        "XDG_RUNTIME_DIR=$service_runtime_dir"
+        "DBUS_SESSION_BUS_ADDRESS=unix:path=$service_runtime_dir/bus"
+    )
+    runuser --user "$service_user" -- \
+        "${service_environment[@]}" systemctl --user daemon-reload ||
+        die "Failed to reload the systemd user manager for $service_user."
+    runuser --user "$service_user" -- \
+        "${service_environment[@]}" systemctl --user enable "$instance.service" ||
+        die "Failed to enable $instance.service for $service_user."
 
     if [[ "$instance_installed" == true ]]; then
-        require_command env
-        require_command runuser
-        local service_uid
-        service_uid="$(id -u "$service_user")"
-        local -a service_environment=(
-            env "HOME=$service_home" "USER=$service_user" "LOGNAME=$service_user"
-        )
-        if [[ -d "/run/user/$service_uid" ]]; then
-            service_environment+=("XDG_RUNTIME_DIR=/run/user/$service_uid")
-        fi
         local -a update_command=("$INSTALL_PATH" update --instance "$instance")
         if [[ "$build_local" == true ]]; then
             update_command+=(--build-source "$source_root")
@@ -345,7 +359,7 @@ EOF
     fi
     printf 'Next, run as %s: %s update --instance %s\n' \
         "$service_user" "$INSTALL_PATH" "$instance"
-    printf 'Optional systemd activation: systemctl --user enable --now %s.service\n' "$instance"
+    printf 'Enabled %s.service for automatic startup at boot.\n' "$instance"
 }
 
 load_instance() {
@@ -446,11 +460,12 @@ wait_for_application() {
 start_stack() {
     compose config >/dev/null
 
-    local db_container app_container
+    local db_container app_container existing_stack=false
     db_container="$(container_id_for_service db)"
     app_container="$(container_id_for_service app)"
     if [[ -n "$db_container" && -n "$app_container" ]]; then
         podman start "$db_container" >/dev/null
+        existing_stack=true
     else
         if [[ -n "$db_container" || -n "$app_container" ]]; then
             compose down
@@ -460,6 +475,9 @@ start_stack() {
 
     wait_for_database
     provision_application_role
+    if [[ "$existing_stack" == true ]]; then
+        podman start "$app_container" >/dev/null
+    fi
     wait_for_application
     compose ps
 }
@@ -484,6 +502,8 @@ update_stack() {
 
     compose down
     start_stack
+    systemctl --user reset-failed "$instance.service"
+    systemctl --user start "$instance.service"
 }
 
 stop_stack() {
@@ -556,6 +576,7 @@ case "$command_name" in
         ;;
     update)
         require_command podman
+        require_command systemctl
         load_instance
         update_stack
         ;;

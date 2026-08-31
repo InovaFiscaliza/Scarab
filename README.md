@@ -32,7 +32,7 @@ contra path traversal e injeção SQL.
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -42,6 +42,13 @@ contra path traversal e injeção SQL.
 Diagrama de alto nível do fluxo de dados:
 
 ```mermaid
+---
+config:
+    'theme': 'base'
+    'themeVariables':
+      'primaryColor': '#253bb7',
+      'primaryTextColor': '#747171'
+---
 flowchart LR
     A[Front-end / Usuário] -->|deposita arquivos| B[Repositório input\nlocal ou SharePoint]
     B --> C{main.py: loop de varredura}
@@ -69,7 +76,7 @@ segurança está em [docs/architecture/CONTRACTS.md](docs/architecture/CONTRACTS
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -90,7 +97,7 @@ Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/tra
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -100,6 +107,13 @@ Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/tra
 Árvore principal (resumida):
 
 ```mermaid
+---
+config:
+    'theme': 'base'
+    'themeVariables':
+      'primaryColor': '#253bb7',
+      'primaryTextColor': '#747171'
+---
 treeView-beta
     Scarab/
         deploy/
@@ -107,31 +121,36 @@ treeView-beta
             Containerfile.db
             podman-compose.build.yml
             podman-compose.yml
-            scarab-deploy.sh
-            scarab.env.example
+            scarab-deploy.sh ## script used on container deployment (local)
+            scarab-bootstrap.sh ## script used to bootstrap the environment from a linux system (remote)
+            scarab-bootstrap.bat ## script used to bootstrap the environment from a Windows system (remote)
+            scarab.env.example ## example environment file
+        examples/ ## Sripts and resources for testing and experimentation
+            /sandbox ## gitignored; local sandbox environment
+            /src ## scripts to manage the sandbox environment
+            /store ## data storage for the sandbox environment
         config/
-            default_config.json
-            config.json ## gitignored; overrides locais
+            default_config.json ## default configuration file
+            config.json ## gitignored; local overrides to default configuration
         db/
             init.sql
             provision-app-role.sh
             procedures.sql
         src/
-            __init__.py
-            main.py
-            config_loader.py
-            database.py
-            storage_manager.py
-            pipeline.py
-        tests/
-        pyproject.toml
-        README.md
+            __init__.py ## marks the directory as a Python package
+            main.py ## entry point of the application
+            config_loader.py ## loads and parses the configuration files
+            database.py ## database interaction layer
+            storage_manager.py ## handles media storage operations
+            pipeline.py ## orchestrates the processing pipeline
+        tests/ ## python testing suite
+        pyproject.toml ## Python project configuration file
         .gitignore
 ```
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -169,7 +188,7 @@ necessário: as imagens contêm o runtime e
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -210,7 +229,7 @@ FHS provisionados e não deve ser iniciado diretamente do checkout.
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -250,7 +269,7 @@ capabilities e com `no-new-privileges`. Os serviços usam rede interna e `databa
 
 <div>
         <a href="#visão-geral" title="De volta ao topo da página">
-                <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+                <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
         </a>
         <br><br>
 </div>
@@ -323,6 +342,21 @@ scarab-deploy update --instance scarab-test
 scarab-deploy test --instance scarab-test
 ```
 
+O instalador exige um host com systemd/logind, habilita `linger` para a conta rootless, recarrega o
+gerenciador de usuário e habilita `scarab-test.service` para o boot. O comando `update` inicia o
+stack e deixa essa unidade ativa, de modo que o systemd também execute o encerramento ordenado do
+Compose no shutdown. Verifique a ativação com:
+
+```bash
+loginctl show-user "$(id -un)" -p Linger
+systemctl --user is-enabled scarab-test.service
+systemctl --user is-active scarab-test.service
+```
+
+No runtime, banco e aplicação usam `restart: unless-stopped`. No boot, a unidade inicia o banco,
+aguarda o healthcheck, reaplica o papel da aplicação e então inicia o app. Uma partida que falhar é
+repetida após 15 segundos, respeitando o limite de cinco partidas em uma janela de cinco minutos.
+
 O laboratório usa `/etc/scarab-test`, `/var/lib/scarab-test`, `/srv/scarab-test` e
 `/var/backups/scarab-test`, exatamente como produção usa os caminhos sem `-test`. Somente o
 desenvolvimento constrói imagens do checkout; runtime nunca monta o source. Para homologação com
@@ -348,7 +382,7 @@ e matriz de diferenças para produção, está na
 
 <div>
         <a href="#visão-geral" title="De volta ao topo da página">
-                <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+                <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
         </a>
         <br><br>
 </div>
@@ -368,7 +402,7 @@ O `config/config.json` (gitignored) pode sobrescrever qualquer campo do default 
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -382,7 +416,7 @@ O `config/config.json` (gitignored) pode sobrescrever qualquer campo do default 
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>
@@ -401,7 +435,7 @@ Por favor, siga as diretrizes de contribuição e o código de conduta ao enviar
 
 <div>
     <a href="#visão-geral" title="De volta ao topo da página">
-        <img align="right" width="40" height="40" src="./images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
+        <img align="right" width="40" height="40" src="./docs/images/up-arrow.svg" title="De volta ao topo da página" alt="De volta ao topo da página">
     </a>
     <br><br>
 </div>

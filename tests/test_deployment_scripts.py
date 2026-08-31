@@ -84,6 +84,14 @@ def bootstrap_environment(tmp_path: Path) -> dict[str, str]:
         exit 0
         """,
     )
+    for command in ("loginctl", "runuser", "systemctl"):
+        _write_executable(
+            fake_bin / command,
+            """
+            #!/usr/bin/env bash
+            exit 0
+            """,
+        )
     _write_executable(
         fake_bin / "curl",
         """
@@ -175,6 +183,70 @@ def test_shell_entry_points_have_valid_bash_syntax() -> None:
         check=True,
         cwd=REPOSITORY_ROOT,
     )
+
+
+def test_existing_stack_starts_application_after_database_provisioning() -> None:
+    """Booting existing containers honors the database dependency order."""
+    contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    start_stack = contents[contents.index("start_stack() {") :]
+    start_stack = start_stack[: start_stack.index("\n}\n")]
+
+    expected_order = [
+        'podman start "$db_container"',
+        "wait_for_database",
+        "provision_application_role",
+        'podman start "$app_container"',
+        "wait_for_application",
+    ]
+    positions = [start_stack.index(operation) for operation in expected_order]
+
+    assert positions == sorted(positions)
+
+
+def test_installer_enables_systemd_boot_with_bounded_retry() -> None:
+    """Installation makes boot activation mandatory and retries failed starts."""
+    contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert "StartLimitIntervalSec=5min" in contents
+    assert "StartLimitBurst=5" in contents
+    assert "Restart=on-failure" in contents
+    assert "RestartSec=15s" in contents
+    assert 'loginctl enable-linger "$service_user"' in contents
+    assert 'systemctl --user enable "$instance.service"' in contents
+    assert "Optional systemd activation" not in contents
+
+
+def test_bootstrap_preflights_systemd_requirements() -> None:
+    """Bootstrap rejects unsupported hosts before cloning deployment sources."""
+    contents = BOOTSTRAP_SCRIPT.read_text(encoding="utf-8")
+
+    for command in ("loginctl", "runuser", "systemctl"):
+        assert f"require_command {command}" in contents
+
+
+def test_update_activates_systemd_service_after_starting_stack() -> None:
+    """A successful update leaves the user service supervising the stack."""
+    contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    update_stack = contents[contents.index("update_stack() {") :]
+    update_stack = update_stack[: update_stack.index("\n}\n")]
+
+    expected_order = [
+        "compose down",
+        "start_stack",
+        'systemctl --user reset-failed "$instance.service"',
+        'systemctl --user start "$instance.service"',
+    ]
+    positions = [update_stack.index(operation) for operation in expected_order]
+
+    assert positions == sorted(positions)
+
+
+def test_compose_restarts_both_services_unless_explicitly_stopped() -> None:
+    """Podman keeps both long-running services under its restart policy."""
+    compose_file = REPOSITORY_ROOT / "deploy" / "podman-compose.yml"
+    contents = compose_file.read_text(encoding="utf-8")
+
+    assert contents.count("restart: unless-stopped") == 2
 
 
 @POSIX_ONLY

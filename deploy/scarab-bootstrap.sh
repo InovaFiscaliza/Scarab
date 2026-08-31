@@ -152,12 +152,16 @@ if [[ "$environment_name" == "production" ]]; then
 fi
 
 require_command bash
+require_command env
 require_command git
 require_command getent
 require_command id
+require_command loginctl
 require_command mktemp
 require_command podman
 require_command rm
+require_command runuser
+require_command systemctl
 
 operator_uid="$(id -u)"
 if [[ -z "$service_user" ]]; then
