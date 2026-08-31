@@ -46,8 +46,11 @@ Diagrama de alto nível do fluxo de dados:
 config:
     'theme': 'base'
     'themeVariables':
-      'primaryColor': '#253bb7',
-      'primaryTextColor': '#747171'
+      'primaryColor': '#9090ff'
+      'secondaryColor': '#808080'
+      'primaryTextColor': '#eeeeee'
+      'primaryBorderColor': '#ffffff'
+      'lineColor': '#808080'
 ---
 flowchart LR
     A[Front-end / Usuário] -->|deposita arquivos| B[Repositório input\nlocal ou SharePoint]
@@ -111,8 +114,11 @@ Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/tra
 config:
     'theme': 'base'
     'themeVariables':
-      'primaryColor': '#253bb7',
-      'primaryTextColor': '#747171'
+      'primaryColor': '#9090ff'
+      'secondaryColor': '#808080'
+      'primaryTextColor': '#eeeeee'
+      'primaryBorderColor': '#ffffff'
+      'lineColor': '#808080'
 ---
 treeView-beta
     Scarab/
