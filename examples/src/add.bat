@@ -1,6 +1,6 @@
 @echo off
 REM Creates a gzip-compressed tar archive of the examples\sandbox directory.
-REM Saves the archive in examples\store as test_XX.tgz, using the next serial after
+REM Saves the archive in examples\data as test_XX.tgz, using the next serial after
 REM the highest numeric suffix found in existing test_*.tgz files. Serial numbers are
 REM limited to 01 through 99.
 REM Requires tar.exe in PATH and exits with an error if validation or archive creation fails.
@@ -16,20 +16,20 @@ if errorlevel 1 (
 set "SCRIPT_DIR=%~dp0"
 set "EXAMPLES_DIR=%SCRIPT_DIR%.."
 set "SANDBOX_DIR=%EXAMPLES_DIR%\sandbox"
-set "STORE_DIR=%EXAMPLES_DIR%\store"
+set "DATA_DIR=%EXAMPLES_DIR%\data"
 
 if not exist "%SANDBOX_DIR%\." (
 	echo ERROR: Sandbox directory not found: "%SANDBOX_DIR%"
 	exit /b 1
 )
 
-if not exist "%STORE_DIR%\." (
-	echo ERROR: Store directory not found: "%STORE_DIR%"
+if not exist "%DATA_DIR%\." (
+	echo ERROR: Data directory not found: "%DATA_DIR%"
 	exit /b 1
 )
 
 set /a highest=0
-for %%F in ("%STORE_DIR%\test_*.tgz") do (
+for %%F in ("%DATA_DIR%\test_*.tgz") do (
 	if exist "%%~fF" call :consider_archive "%%~nxF"
 )
 
@@ -43,7 +43,7 @@ if !next! LSS 10 (
 ) else (
 	set "serial=!next!"
 )
-set "archive=%STORE_DIR%\test_!serial!.tgz"
+set "archive=%DATA_DIR%\test_!serial!.tgz"
 
 if exist "!archive!" (
 	echo ERROR: Archive already exists: "!archive!"

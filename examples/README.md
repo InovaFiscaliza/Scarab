@@ -7,7 +7,7 @@ ficam divididos em três áreas:
 examples/
 ├── sandbox/  # cópia de trabalho usada durante a execução dos testes
 ├── src/      # scripts para restaurar e armazenar cenários
-└── store/    # snapshots compactados no formato test_NN.tgz
+└── data/     # snapshots compactados no formato test_NN.tgz
 ```
 
 ## Sandbox descartável
@@ -17,7 +17,7 @@ apagado por completo ao restaurar outro cenário. Portanto:
 
 - não mantenha nele arquivos únicos, credenciais ou qualquer dado que não possa ser recriado;
 - restaure um snapshot antes de cada teste completo para começar de um estado conhecido;
-- considere permanentes somente as alterações gravadas intencionalmente em um arquivo de `store`;
+- considere permanentes somente as alterações gravadas intencionalmente em um arquivo de `data`;
 - use `add.bat` ou `upt.bat` apenas depois de revisar o conteúdo que será preservado.
 
 No Compose publicado, essa pasta do host é montada como `/mnt/share01` dentro do container. O nome
@@ -25,7 +25,7 @@ interno imita um ponto de montagem Linux de produção, mas não torna o sandbox
 implantação real, a origem do bind mount deve ser substituída por armazenamento persistente do
 host; outros repositórios podem ser montados como `/mnt/share02`, `/mnt/share03` e assim por diante.
 
-O diretório `examples/store`, que contém os arquivos `test_NN.tgz`, não deve ser confundido com
+O diretório `examples/data`, que contém os arquivos `test_NN.tgz`, não deve ser confundido com
 `examples/sandbox/store`. Este último pertence à estrutura do cenário e é uma área legada, não
 utilizada pelo pipeline atual.
 
@@ -42,13 +42,13 @@ Os utilitários em `src` são scripts em lote para Windows e exigem `tar.exe` di
 where.exe tar.exe
 ```
 
-Os scripts localizam `sandbox` e `store` a partir da própria pasta em que estão instalados. Assim,
+Os scripts localizam `sandbox` e `data` a partir da própria pasta em que estão instalados. Assim,
 podem ser chamados a partir de qualquer diretório; os exemplos abaixo partem da raiz do
 repositório.
 
 ## Restaurar um cenário: `rst.bat`
 
-Restaura um snapshot de `store` como a nova cópia de trabalho em `sandbox`:
+Restaura um snapshot de `data` como a nova cópia de trabalho em `sandbox`:
 
 ```powershell
 # Restaura test_00.tgz, usado como padrão quando o número é omitido
@@ -65,7 +65,7 @@ está disponível.
 
 ## Criar um cenário: `add.bat`
 
-Cria em `store` um novo snapshot com o conteúdo atual de `sandbox`:
+Cria em `data` um novo snapshot com o conteúdo atual de `sandbox`:
 
 ```powershell
 .\examples\src\add.bat
@@ -87,7 +87,7 @@ Substitui um snapshot existente pelo conteúdo atual de `sandbox`:
 ```
 
 O número do cenário é obrigatório e deve estar entre `0` e `99`, com ou sem zero à esquerda. O
-script somente atualiza um arquivo que já exista em `store`. Como a operação sobrescreve o snapshot,
+script somente atualiza um arquivo que já exista em `data`. Como a operação sobrescreve o snapshot,
 use-a apenas quando a mudança fizer parte do mesmo cenário; para preservar ambos os estados, use
 `add.bat`.
 
@@ -95,7 +95,7 @@ use-a apenas quando a mudança fizer parte do mesmo cenário; para preservar amb
 
 Instale uma instância de laboratório com `deploy/scarab-deploy.sh`. Neste contexto, as
 **fixtures** são os seis descritores JSON de operações armazenados em `sandbox/store/` dentro do
-snapshot `examples/store/test_01.tgz`, por exemplo `01-insert-registro-001.json`,
+snapshot `examples/data/test_01.tgz`, por exemplo `01-insert-registro-001.json`,
 `04-update-registro-001-com-email.json` e `06-delete-registro-002.json`. O comando `install` extrai
 esses arquivos para `/srv/scarab-test/fixtures`; o checkout não é montado no runtime:
 
@@ -156,6 +156,6 @@ para configuração de SSH, `.env`, consultas de aceite, reset e diferenças obr
 5. Execute `scarab-deploy test --instance scarab-test`.
 6. Verifique o resultado no PostgreSQL e em `/srv/scarab-test/share01` e `share02`.
 
-Esse ciclo mantém os testes reproduzíveis: os snapshots permanecem em `store`, enquanto o
+Esse ciclo mantém os testes reproduzíveis: os snapshots permanecem em `data`, enquanto o
 `sandbox` é apenas a cópia de autoria e pode ser recriado sem ser tratado como armazenamento de
 runtime.

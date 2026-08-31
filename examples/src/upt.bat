@@ -1,5 +1,5 @@
 @echo off
-REM Updates a selected test archive in examples\store using contents of examples\sandbox.
+REM Updates a selected test archive in examples\data using contents of examples\sandbox.
 REM One argument must be provided.
 REM It must contain only digits and represent a number from 0 through 99.
 
@@ -14,15 +14,15 @@ if errorlevel 1 (
 set "SCRIPT_DIR=%~dp0"
 set "EXAMPLES_DIR=%SCRIPT_DIR%.."
 set "SANDBOX_DIR=%EXAMPLES_DIR%\sandbox"
-set "STORE_DIR=%EXAMPLES_DIR%\store"
+set "DATA_DIR=%EXAMPLES_DIR%\data"
 
 if not exist "%SANDBOX_DIR%\." (
 	echo ERROR: Sandbox directory not found: "%SANDBOX_DIR%"
 	exit /b 1
 )
 
-if not exist "%STORE_DIR%\." (
-	echo ERROR: Store directory not found: "%STORE_DIR%"
+if not exist "%DATA_DIR%\." (
+	echo ERROR: Data directory not found: "%DATA_DIR%"
 	exit /b 1
 )
 
@@ -65,7 +65,7 @@ if !number! LSS 10 (
 )
 
 :select_archive
-set "archive=%STORE_DIR%\test_!serial!.tgz"
+set "archive=%DATA_DIR%\test_!serial!.tgz"
 
 if not exist "!archive!" (
 	echo ERROR: Archive not found: "!archive!"

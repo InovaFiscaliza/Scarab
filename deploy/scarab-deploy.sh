@@ -278,7 +278,7 @@ EOF
     if [[ "$environment_name" == "test" ]]; then
         local extraction_dir
         extraction_dir="$(mktemp -d)"
-        tar -xzf "$source_root/examples/store/test_01.tgz" -C "$extraction_dir"
+        tar -xzf "$source_root/examples/data/test_01.tgz" -C "$extraction_dir"
         find "$fixtures_dir" -mindepth 1 -delete
         cp "$extraction_dir"/sandbox/store/*.json "$fixtures_dir/"
         chown -R "$service_user:$service_group" "$fixtures_dir"

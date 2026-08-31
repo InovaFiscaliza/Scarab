@@ -126,7 +126,7 @@ def bootstrap_environment(tmp_path: Path) -> dict[str, str]:
             deploy/scarab.env.example
             config/default_config.json
             examples/sandbox/config.json
-            examples/store/test_01.tgz
+            examples/data/test_01.tgz
         )
         for required_path in "${required_paths[@]}"; do
             mkdir -p "$checkout/$(dirname "$required_path")"

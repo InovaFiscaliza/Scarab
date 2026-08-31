@@ -269,7 +269,7 @@ required_paths=(
     config/default_config.json
 )
 if [[ "$environment_name" == "test" ]]; then
-    required_paths+=(examples/sandbox/config.json examples/store/test_01.tgz)
+    required_paths+=(examples/sandbox/config.json examples/data/test_01.tgz)
 fi
 for required_path in "${required_paths[@]}"; do
     if [[ ! -f "$checkout_dir/$required_path" ]]; then

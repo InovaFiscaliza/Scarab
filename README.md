@@ -128,7 +128,7 @@ treeView-beta
         examples/ ## Sripts and resources for testing and experimentation
             /sandbox ## gitignored; local sandbox environment
             /src ## scripts to manage the sandbox environment
-            /store ## data storage for the sandbox environment
+            /data ## archived test scenarios
         config/
             default_config.json ## default configuration file
             config.json ## gitignored; local overrides to default configuration

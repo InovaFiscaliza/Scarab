@@ -1,5 +1,5 @@
 @echo off
-REM Extracts a selected test archive from the examples\store directory into the current directory.
+REM Extracts a selected test archive from the examples\data directory into the current directory.
 REM With no argument, extracts test_00.tgz. Otherwise, the argument must be
 REM a number from 1 through 99, with or without leading zeroes.
 
@@ -13,7 +13,7 @@ if errorlevel 1 (
 
 set "SCRIPT_DIR=%~dp0"
 set "EXAMPLES_DIR=%SCRIPT_DIR%.."
-set "STORE_DIR=%EXAMPLES_DIR%\store"
+set "DATA_DIR=%EXAMPLES_DIR%\data"
 set "TARGET_DIR=%EXAMPLES_DIR%"
 
 if not "%~2"=="" (
@@ -55,7 +55,7 @@ if !number! LSS 10 (
 )
 
 :select_archive
-set "archive=%STORE_DIR%\test_!serial!.tgz"
+set "archive=%DATA_DIR%\test_!serial!.tgz"
 
 if not exist "!archive!" (
 	echo ERROR: Archive not found: "!archive!"
