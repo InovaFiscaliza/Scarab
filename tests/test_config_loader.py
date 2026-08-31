@@ -30,13 +30,13 @@ def _default_config_data() -> dict[str, Any]:
             {
                 "name": "local_inbound",
                 "type": "local",
-                "path": "/mnt/share01/post",
+                "path": "/mnt/post",
                 "role": "input",
             },
             {
                 "name": "local_media",
                 "type": "local",
-                "path": "/mnt/share02/media",
+                "path": "/mnt/get",
                 "role": "storage_media",
             },
         ],
@@ -93,6 +93,11 @@ def test_load_config_reads_defaults(tmp_path: Path) -> None:
     assert config.database.host == "db"
     assert config.sharepoint is None
     assert len(config.repositories) == 2
+    assert [repository.path for repository in config.repositories] == [
+        "/mnt/post",
+        "/mnt/get",
+    ]
+    assert config.trash_path == "/mnt/trash"
 
 
 def test_business_key_field_defaults_to_empty_string(tmp_path: Path) -> None:

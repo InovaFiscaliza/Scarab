@@ -22,14 +22,14 @@
   "media_reference_json_path": "midia.arquivo",
   "null_string_values": ["", "NA", "N/A", "null", "None"],
   "repositories": [
-    { "name": "local_inbound", "type": "local", "path": "/mnt/share01/post", "role": "input" },
-    { "name": "local_media", "type": "local", "path": "/mnt/share02/media", "role": "storage_media" }
+    { "name": "local_inbound", "type": "local", "path": "/mnt/post", "role": "input" },
+    { "name": "local_media", "type": "local", "path": "/mnt/get", "role": "storage_media" }
   ],
   "prazos": {
     "orphaned_media_hours": 24,
     "trash_cleanup_days": 7
   },
-  "trash_path": "/mnt/share01/trash",
+  "trash_path": "/mnt/trash",
   "max_file_size_bytes": 52428800,
   "database": {
     "host": "db",
@@ -57,11 +57,11 @@
 de uma variável de ambiente, nunca o segredo em si (ver §4). `config/config.json` (gitignored)
 pode sobrescrever qualquer campo acima; campos ausentes herdam do default via merge raso por seção.
 
-**Convenção de volumes locais em containers:** caminhos `/mnt/shareNN` identificam pontos de
-montagem independentes dentro do container, como `/mnt/share01` e `/mnt/share02`. O mesmo Compose
-é usado em teste e produção; um arquivo de ambiente define quais diretórios FHS do host são
-associados a esses destinos. Repositórios adicionais devem receber novos pontos de montagem e
-caminhos correspondentes na configuração.
+**Convenção de volumes locais em containers:** `/mnt/post`, `/mnt/get` e `/mnt/trash` são pontos
+de montagem independentes. Usuários depositam entradas em `post`; somente o Scarab grava em `get`,
+cujo conteúdo pode ser disponibilizado aos usuários; e arquivos rejeitados ou órfãos vão para
+`trash`. O mesmo Compose é usado em teste e produção, com as origens FHS do host definidas em um
+arquivo de ambiente.
 
 **`business_key_field` em branco (`""`, valor padrão):** não existe chave de negócio fixa
 pré-definida. Quando este campo estiver em branco, `pipeline.py` calcula o UUIDv5 a partir de
@@ -113,8 +113,9 @@ caminhos relativos ao checkout. Todas as origens do host são obrigatórias e re
 |---|---|---|
 | `SCARAB_CONFIG_DIR` | `/etc/<instância>/config` | `/etc/scarab` (somente leitura) |
 | `SCARAB_POSTGRES_DIR` | `/var/lib/<instância>/postgresql` | `/var/lib/postgresql/data` |
-| `SCARAB_SHARE01_DIR` | `/srv/<instância>/share01` | `/mnt/share01` |
-| `SCARAB_SHARE02_DIR` | `/srv/<instância>/share02` | `/mnt/share02` |
+| `SCARAB_POST_DIR` | `/srv/<instância>/post` | `/mnt/post` |
+| `SCARAB_GET_DIR` | `/srv/<instância>/get` | `/mnt/get` |
+| `SCARAB_TRASH_DIR` | `/srv/<instância>/trash` | `/mnt/trash` |
 | `SCARAB_LOG_DIR` | `/var/log/<instância>` | `/var/log/scarab` |
 
 O código do app fica somente na imagem, em `/opt/scarab`. Laboratório e produção usam esse mesmo

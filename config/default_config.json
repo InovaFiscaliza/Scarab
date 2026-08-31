@@ -16,13 +16,13 @@
         {
             "name": "local_inbound",
             "type": "local",
-            "path": "/mnt/share01/post",
+            "path": "/mnt/post",
             "role": "input"
         },
         {
             "name": "local_media",
             "type": "local",
-            "path": "/mnt/share02/media",
+            "path": "/mnt/get",
             "role": "storage_media"
         }
     ],
@@ -41,7 +41,7 @@
         "max_pool_size": 5
     },
     "sharepoint": null,
-    "trash_path": "/mnt/share01/trash",
+    "trash_path": "/mnt/trash",
     "max_file_size_bytes": 52428800,
     "log": {
         "level": "DEBUG",

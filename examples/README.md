@@ -20,17 +20,17 @@ apagado por completo ao restaurar outro cenário. Portanto:
 - considere permanentes somente as alterações gravadas intencionalmente em um arquivo de `data`;
 - use `add.bat` ou `upt.bat` apenas depois de revisar o conteúdo que será preservado.
 
-No Compose publicado, essa pasta do host é montada como `/mnt/share01` dentro do container. O nome
-interno imita um ponto de montagem Linux de produção, mas não torna o sandbox permanente. Em uma
-implantação real, a origem do bind mount deve ser substituída por armazenamento persistente do
-host; outros repositórios podem ser montados como `/mnt/share02`, `/mnt/share03` e assim por diante.
+O sandbox não é montado no runtime publicado. No ambiente de teste, o instalador extrai as fixtures
+de `test_01.tgz`. Os diretórios persistentes do host são `/srv/<instância>/post`, `get` e `trash`,
+montados separadamente no container como `/mnt/post`, `/mnt/get` e `/mnt/trash`.
 
 O diretório `examples/data`, que contém os arquivos `test_NN.tgz`, não deve ser confundido com
-`examples/sandbox/store`. Este último pertence à estrutura do cenário e é uma área legada, não
-utilizada pelo pipeline atual.
+`examples/sandbox/store`. Este último guarda os descritores usados como fixtures. Em uma execução
+manual, copie-os para `examples/sandbox/post`; no teste implantado, o instalador extrai as fixtures
+de `test_01.tgz` e `scarab-deploy test` as copia para `/srv/scarab-test/post`.
 
-Cada snapshot contém o diretório `sandbox` completo, incluindo sua configuração e seus arquivos de
-entrada. A estrutura e a execução do cenário funcional atual estão descritas em
+Cada snapshot contém o diretório `sandbox` completo, incluindo a configuração e o estado das áreas
+do cenário. A estrutura e a execução do cenário funcional atual estão descritas em
 [sandbox/README.md](sandbox/README.md).
 
 ## Pré-requisitos
@@ -154,7 +154,7 @@ para configuração de SSH, `.env`, consultas de aceite, reset e diferenças obr
   ```
 
 5. Execute `scarab-deploy test --instance scarab-test`.
-6. Verifique o resultado no PostgreSQL e em `/srv/scarab-test/share01` e `share02`.
+6. Verifique o resultado no PostgreSQL e em `/srv/scarab-test/post`, `get` e `trash`.
 
 Esse ciclo mantém os testes reproduzíveis: os snapshots permanecem em `data`, enquanto o
 `sandbox` é apenas a cópia de autoria e pode ser recriado sem ser tratado como armazenamento de

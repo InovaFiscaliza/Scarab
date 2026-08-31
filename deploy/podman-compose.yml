@@ -26,8 +26,9 @@ services:
         condition: service_healthy
     volumes:
       - "${SCARAB_CONFIG_DIR:?Set SCARAB_CONFIG_DIR}:/etc/scarab:ro,Z"
-      - "${SCARAB_SHARE01_DIR:?Set SCARAB_SHARE01_DIR}:/mnt/share01:Z"
-      - "${SCARAB_SHARE02_DIR:?Set SCARAB_SHARE02_DIR}:/mnt/share02:Z"
+      - "${SCARAB_POST_DIR:?Set SCARAB_POST_DIR}:/mnt/post:Z"
+      - "${SCARAB_GET_DIR:?Set SCARAB_GET_DIR}:/mnt/get:Z"
+      - "${SCARAB_TRASH_DIR:?Set SCARAB_TRASH_DIR}:/mnt/trash:Z"
       - "${SCARAB_LOG_DIR:?Set SCARAB_LOG_DIR}:/var/log/scarab:Z"
     environment:
       PYTHONDONTWRITEBYTECODE: "1"

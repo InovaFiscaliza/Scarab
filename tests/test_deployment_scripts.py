@@ -249,6 +249,42 @@ def test_compose_restarts_both_services_unless_explicitly_stopped() -> None:
     assert contents.count("restart: unless-stopped") == 2
 
 
+def test_storage_mount_contract_uses_domain_names() -> None:
+    """Runtime storage is exposed as independent post, get, and trash mounts."""
+    compose_contents = (REPOSITORY_ROOT / "deploy" / "podman-compose.yml").read_text(
+        encoding="utf-8"
+    )
+    deploy_contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    expected_mounts = (
+        '"${SCARAB_POST_DIR:?Set SCARAB_POST_DIR}:/mnt/post:Z"',
+        '"${SCARAB_GET_DIR:?Set SCARAB_GET_DIR}:/mnt/get:Z"',
+        '"${SCARAB_TRASH_DIR:?Set SCARAB_TRASH_DIR}:/mnt/trash:Z"',
+    )
+    for mount in expected_mounts:
+        assert mount in compose_contents
+
+    expected_host_directories = (
+        'post_dir="$storage_root/post"',
+        'get_dir="$storage_root/get"',
+        'trash_dir="$storage_root/trash"',
+    )
+    for directory in expected_host_directories:
+        assert directory in deploy_contents
+
+    expected_environment = (
+        "SCARAB_POST_DIR=$post_dir",
+        "SCARAB_GET_DIR=$get_dir",
+        "SCARAB_TRASH_DIR=$trash_dir",
+    )
+    for variable in expected_environment:
+        assert variable in deploy_contents
+
+    combined_contents = compose_contents + deploy_contents
+    assert "/mnt/share" not in combined_contents
+    assert "SCARAB_SHARE" not in combined_contents
+
+
 @POSIX_ONLY
 def test_latest_release_omits_unspecified_instance(
     bootstrap_environment: dict[str, str],

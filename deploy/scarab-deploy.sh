@@ -154,10 +154,11 @@ compose_file="$etc_dir/compose.yml"
 build_file="$etc_dir/compose.build.yml"
 runtime_env="$etc_dir/scarab.env"
 postgres_dir="/var/lib/$instance/postgresql"
-share_root="/srv/$instance"
-share01_dir="$share_root/share01"
-share02_dir="$share_root/share02"
-fixtures_dir="$share_root/fixtures"
+storage_root="/srv/$instance"
+post_dir="$storage_root/post"
+get_dir="$storage_root/get"
+trash_dir="$storage_root/trash"
+fixtures_dir="$storage_root/fixtures"
 log_dir="/var/log/$instance"
 backup_dir="/var/backups/$instance"
 
@@ -229,8 +230,7 @@ install_instance() {
     install -d -o root -g "$service_group" -m 0750 "$etc_dir" "$config_dir"
     install -d -o "$service_user" -g "$service_group" -m 0700 "$postgres_dir" "$backup_dir"
     install -d -o "$service_user" -g "$service_group" -m 0750 \
-        "$share_root" "$share01_dir" "$share01_dir/post" "$share01_dir/trash" \
-        "$share02_dir" "$share02_dir/media" "$fixtures_dir" "$log_dir"
+        "$storage_root" "$post_dir" "$get_dir" "$trash_dir" "$fixtures_dir" "$log_dir"
 
     install -o root -g "$service_group" -m 0640 \
         "$source_root/deploy/podman-compose.yml" "$compose_file"
@@ -250,8 +250,9 @@ SCARAB_ENVIRONMENT=$environment_name
 SCARAB_ENV_FILE=$runtime_env
 SCARAB_CONFIG_DIR=$config_dir
 SCARAB_POSTGRES_DIR=$postgres_dir
-SCARAB_SHARE01_DIR=$share01_dir
-SCARAB_SHARE02_DIR=$share02_dir
+SCARAB_POST_DIR=$post_dir
+SCARAB_GET_DIR=$get_dir
+SCARAB_TRASH_DIR=$trash_dir
 SCARAB_LOG_DIR=$log_dir
 SCARAB_APP_IMAGE=$app_image
 SCARAB_DB_IMAGE=$db_image
@@ -376,7 +377,8 @@ load_instance() {
     local required_variable
     for required_variable in \
         SCARAB_ENVIRONMENT SCARAB_ENV_FILE SCARAB_CONFIG_DIR SCARAB_POSTGRES_DIR \
-        SCARAB_SHARE01_DIR SCARAB_SHARE02_DIR SCARAB_LOG_DIR SCARAB_APP_IMAGE SCARAB_DB_IMAGE \
+        SCARAB_POST_DIR SCARAB_GET_DIR SCARAB_TRASH_DIR SCARAB_LOG_DIR \
+        SCARAB_APP_IMAGE SCARAB_DB_IMAGE \
         SCARAB_BUILD_LOCAL; do
         [[ -n "${!required_variable:-}" ]] || die "$required_variable is missing from $compose_env"
     done
@@ -529,9 +531,9 @@ reset_test_data() {
     [[ "$SCARAB_ENVIRONMENT" == "test" ]] || die "The test command is disabled outside test environments."
     compose down
     find "$SCARAB_POSTGRES_DIR" -mindepth 1 -delete
-    find "$SCARAB_SHARE01_DIR/post" -mindepth 1 -delete
-    find "$SCARAB_SHARE01_DIR/trash" -mindepth 1 -delete
-    find "$SCARAB_SHARE02_DIR/media" -mindepth 1 -delete
+    find "$SCARAB_POST_DIR" -mindepth 1 -delete
+    find "$SCARAB_GET_DIR" -mindepth 1 -delete
+    find "$SCARAB_TRASH_DIR" -mindepth 1 -delete
 }
 
 run_functional_test() {
@@ -541,11 +543,11 @@ run_functional_test() {
     local fixture_count
     fixture_count="$(find "$fixtures_dir" -maxdepth 1 -type f -name '*.json' | wc -l)"
     [[ "$fixture_count" -eq 6 ]] || die "Expected 6 JSON fixtures, found $fixture_count."
-    cp "$fixtures_dir"/*.json "$SCARAB_SHARE01_DIR/post/"
+    cp "$fixtures_dir"/*.json "$SCARAB_POST_DIR/"
 
     local attempt remaining
     for ((attempt = 1; attempt <= 60; attempt++)); do
-        remaining="$(find "$SCARAB_SHARE01_DIR/post" -maxdepth 1 -type f | wc -l)"
+        remaining="$(find "$SCARAB_POST_DIR" -maxdepth 1 -type f | wc -l)"
         [[ "$remaining" -eq 0 ]] && break
         sleep 2
     done
@@ -560,7 +562,7 @@ run_functional_test() {
     [[ "$clients" == "2" ]] || die "Expected 2 final clients, found $clients."
     [[ "$history" == "6" ]] || die "Expected 6 history rows, found $history."
     [[ "$successes" == "6" ]] || die "Expected 6 successful rows, found $successes."
-    [[ -z "$(find "$SCARAB_SHARE01_DIR/trash" -mindepth 1 -print -quit)" ]] ||
+    [[ -z "$(find "$SCARAB_TRASH_DIR" -mindepth 1 -print -quit)" ]] ||
         die "Trash is not empty after the functional test."
 
     printf 'Functional test passed: 2 clients, 6 successful history rows.\n'

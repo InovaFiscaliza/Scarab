@@ -253,10 +253,15 @@ No host, cada instância segue a hierarquia Linux:
 |---|---|---|
 | `/etc/<instância>/config` | Configuração somente leitura | `/etc/scarab` |
 | `/var/lib/<instância>/postgresql` | Estado do PostgreSQL | `/var/lib/postgresql/data` |
-| `/srv/<instância>/share01` | Entrada e lixeira | `/mnt/share01` |
-| `/srv/<instância>/share02` | Mídia final | `/mnt/share02` |
+| `/srv/<instância>/post` | Entrada depositada pelos usuários | `/mnt/post` |
+| `/srv/<instância>/get` | Resultados e arquivos acessíveis aos usuários | `/mnt/get` |
+| `/srv/<instância>/trash` | Arquivos rejeitados e mídias órfãs | `/mnt/trash` |
 | `/var/log/<instância>` | Logs em arquivo opcionais | `/var/log/scarab` |
 | `/var/backups/<instância>` | Backups lógicos no host | não montado |
+
+Antes de atualizar uma instalação que ainda use o layout numérico anterior, pare o stack, mova a
+entrada, a saída e a lixeira para os três diretórios acima e ajuste qualquer `config.json` local.
+O instalador preserva overrides e não move dados automaticamente entre filesystems.
 
 O código e as dependências são imutáveis na imagem em `/opt/scarab`. Nenhum diretório do checkout
 é montado em runtime.
@@ -271,7 +276,8 @@ inicialização. O instalador reaplica senha e grants mínimos em updates.
 
 O app executa como usuário não-root com filesystem raiz somente leitura, `/tmp` em `tmpfs`, sem
 capabilities e com `no-new-privileges`. Os serviços usam rede interna e `database.host: "db"`.
-`keep-id` permite escrita nos shares pelo proprietário rootless do host sem permissões globais.
+`keep-id` permite escrita nos diretórios montados pelo proprietário rootless do host sem
+permissões globais.
 
 <div>
         <a href="#visão-geral" title="De volta ao topo da página">
