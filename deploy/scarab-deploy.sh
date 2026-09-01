@@ -23,11 +23,12 @@ usage() {
     cat <<'EOF'
 Usage:
   scarab-deploy.sh install --environment test|production --service-user USER
-    --db-bind-address IPV4 [--db-port PORT]
+        [--db-bind-address IPV4] [--db-port PORT]
     [--instance NAME] [--source PATH] [--app-image IMAGE] [--db-image IMAGE]
   scarab-deploy update [--instance NAME] [--build-source PATH] [--no-pull]
 
 Options and defaults:
+    Mandatory for install:
   --environment test|production
       Required for install; no default.
   --service-user USER
@@ -40,7 +41,9 @@ Options and defaults:
       Test defaults when both are omitted: localhost/scarab-app:INSTANCE and
       localhost/scarab-db:INSTANCE. Both options are required in production.
   --db-bind-address IPV4
-      IPv4 address on which PostgreSQL is published. Required for install.
+      Optional non-loopback unicast IPv4 address assigned to this host. If
+      omitted, a single such address is detected automatically; multiple
+      addresses require this option.
   --db-port PORT
       Host port published to PostgreSQL container port 5432 (default: 5432).
   --build-source PATH
@@ -71,27 +74,6 @@ validate_value() {
     local value="$2"
     [[ -n "$value" && "$value" != *$'\n'* && "$value" != *' '* ]] ||
         die "$label must be a non-empty value without spaces or newlines."
-}
-
-validate_ipv4_address() {
-    local address="$1"
-    local -a octets
-    [[ "$address" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
-        die "Database bind address must be an IPv4 literal: $address"
-    IFS=. read -r -a octets <<<"$address"
-    local octet
-    for octet in "${octets[@]}"; do
-        ((10#$octet <= 255)) || die "Invalid IPv4 address: $address"
-    done
-    ((10#${octets[0]} != 0 && 10#${octets[0]} != 127 && 10#${octets[0]} < 224)) ||
-        die "Database bind address must be a non-loopback unicast IPv4 address: $address"
-}
-
-validate_port() {
-    local port="$1"
-    [[ "$port" =~ ^[0-9]+$ ]] || die "Database port must be numeric: $port"
-    ((10#$port >= 1 && 10#$port <= 65535)) ||
-        die "Database port must be between 1 and 65535: $port"
 }
 
 random_secret() {
@@ -192,18 +174,17 @@ install_instance() {
         die "--environment must be test or production."
     [[ "$service_user" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]] ||
         die "--service-user must be a valid Linux account name."
-    [[ -n "$db_bind_address" ]] || die "--db-bind-address is required."
-    validate_ipv4_address "$db_bind_address"
+    if [[ -z "$db_bind_address" && -r "$compose_env" ]]; then
+        db_bind_address="$(grep -m1 '^SCARAB_DB_BIND_ADDRESS=' "$compose_env" | cut -d= -f2- || true)"
+    fi
+    resolve_db_bind_address
     validate_port "$db_port"
     id "$service_user" >/dev/null 2>&1 || die "Service user does not exist: $service_user"
 
     require_command env
-    require_command ip
     require_command loginctl
     require_command runuser
     require_command systemctl
-    ip -4 -o address show | grep -Fq " $db_bind_address/" ||
-        die "Database bind address is not assigned to this host: $db_bind_address"
 
     if [[ -z "$source_root" ]]; then
         local candidate

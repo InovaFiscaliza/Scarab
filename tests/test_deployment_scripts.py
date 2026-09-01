@@ -67,7 +67,7 @@ def bootstrap_environment(tmp_path: Path) -> dict[str, str]:
         fake_bin / "ip",
         """
         #!/usr/bin/env bash
-        printf '2: eth0    inet 192.0.2.10/24 brd 192.0.2.255 scope global eth0\\n'
+        printf '%s\\n' "${FAKE_IP_OUTPUT:-2: eth0    inet 192.0.2.10/24 brd 192.0.2.255 scope global eth0}"
         """,
     )
     _write_executable(
@@ -168,19 +168,17 @@ def bootstrap_environment(tmp_path: Path) -> dict[str, str]:
 
 
 def _run_bootstrap(
-    environment: dict[str, str], *arguments: str
+    environment: dict[str, str], *arguments: str, db_bind_address: str | None = None
 ) -> subprocess.CompletedProcess[str]:
     bash = shutil.which("bash")
     if bash is None:
         pytest.skip("bash is not available")
+    command = [bash, str(BOOTSTRAP_SCRIPT)]
+    if db_bind_address is not None:
+        command.extend(("--db-bind-address", db_bind_address))
+    command.extend(arguments)
     return subprocess.run(
-        [
-            bash,
-            str(BOOTSTRAP_SCRIPT),
-            "--db-bind-address",
-            "192.0.2.10",
-            *arguments,
-        ],
+        command,
         check=False,
         capture_output=True,
         env=environment,
@@ -271,7 +269,7 @@ def test_operations_cli_owns_runtime_commands() -> None:
 
 
 def test_database_is_published_on_an_explicit_host_address() -> None:
-    """PostgreSQL publication requires an installed bind address and port."""
+    """PostgreSQL publication supports explicit and automatic bind selection."""
     compose_contents = (REPOSITORY_ROOT / "deploy" / "podman-compose.yml").read_text(
         encoding="utf-8"
     )
@@ -283,6 +281,16 @@ def test_database_is_published_on_an_explicit_host_address() -> None:
     ) in compose_contents
     assert "SCARAB_DB_BIND_ADDRESS=$db_bind_address" in deploy_contents
     assert "SCARAB_DB_PORT=$db_port" in deploy_contents
+    runtime_contents = RUNTIME_LIBRARY.read_text(encoding="utf-8")
+    assert "resolve_db_bind_address()" in runtime_contents
+    assert "Multiple non-loopback unicast IPv4 addresses" in runtime_contents
+    assert "resolve_db_bind_address" in deploy_contents
+    assert (
+        '[[ -n "$db_bind_address" ]] || die "--db-bind-address is required."'
+        not in deploy_contents
+    )
+    assert "mapfile -t addresses < <(" in runtime_contents
+    assert "ip -4 -o addr show scope global" in runtime_contents
 
 
 def test_bootstrap_preflights_systemd_requirements() -> None:
@@ -481,6 +489,61 @@ def test_windows_launcher_conditionally_forwards_instance() -> None:
         'if defined INSTANCE set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! '
         '--instance !INSTANCE!"'
     ) in contents
+
+
+def test_windows_bootstrap_help_explains_mandatory_arguments() -> None:
+    """Windows help distinguishes required, optional, and production-only values."""
+    contents = BATCH_SCRIPT.read_text(encoding="utf-8")
+
+    assert "echo Mandatory arguments:" in contents
+    assert "echo   --host SSH_HOST" in contents
+    assert "echo Optional arguments:" in contents
+    assert "echo   --db-bind-address IPV4" in contents
+    assert (
+        "echo       host. If omitted, a single such address is detected automatically;"
+        in contents
+    )
+    assert "production requires both --app-image and --db-image" in contents
+    assert "if not defined DB_BIND_ADDRESS (" not in contents
+
+
+@POSIX_ONLY
+def test_bootstrap_autodetects_a_single_database_address(
+    bootstrap_environment: dict[str, str],
+) -> None:
+    """A single global IPv4 address is selected when no bind address is given."""
+    result = _run_bootstrap(
+        bootstrap_environment,
+        "--branch",
+        "rewrite/postgres-architecture",
+        "--check",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Automatically selected database bind address: 192.0.2.10" in result.stdout
+
+
+@POSIX_ONLY
+def test_bootstrap_requires_a_bind_address_when_multiple_are_available(
+    bootstrap_environment: dict[str, str],
+) -> None:
+    """Multiple global IPv4 addresses require an explicit bind address."""
+    bootstrap_environment["FAKE_IP_OUTPUT"] = (
+        "2: eth0    inet 192.0.2.10/24 scope global eth0\n"
+        "3: eth1    inet 198.51.100.10/24 scope global eth1"
+    )
+
+    result = _run_bootstrap(
+        bootstrap_environment,
+        "--branch",
+        "rewrite/postgres-architecture",
+        "--check",
+    )
+
+    assert result.returncode != 0
+    assert "Multiple non-loopback unicast IPv4 addresses" in result.stderr
+    assert "--db-bind-address" in result.stderr
+    assert not Path(bootstrap_environment["FAKE_GIT_CAPTURE"]).exists()
 
 
 def test_remote_sandbox_reset_is_explicit_and_test_only() -> None:

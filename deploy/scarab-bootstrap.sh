@@ -11,10 +11,13 @@ usage() {
 Usage:
   scarab-bootstrap.sh [--branch BRANCH] [--instance NAME]
       [--environment test|production] [--service-user USER]
-            [--app-image IMAGE] [--db-image IMAGE]
-            --db-bind-address IPV4 [--db-port PORT]
+    [--app-image IMAGE] [--db-image IMAGE]
+    [--db-bind-address IPV4] [--db-port PORT]
 
 Options and defaults:
+  No mandatory arguments in the default test mode. The bootstrap detects a
+      single usable non-loopback IPv4 address automatically. When multiple
+      addresses are available, --db-bind-address is required.
   --branch BRANCH
       Clone a specific branch instead of the latest published GitHub release.
   --instance NAME
@@ -27,7 +30,9 @@ Options and defaults:
   --app-image IMAGE, --db-image IMAGE
       Optional immutable images. Both are required for production.
   --db-bind-address IPV4
-      IPv4 address on which PostgreSQL is published. Required.
+      Optional non-loopback unicast IPv4 address assigned to this host. If
+      omitted, a single such address is detected automatically; multiple
+      addresses require this option.
   --db-port PORT
       Host port published to PostgreSQL container port 5432 (default: 5432).
   --check
@@ -102,6 +107,36 @@ validate_port() {
         die "Database port must be between 1 and 65535: $port"
 }
 
+resolve_db_bind_address() {
+    if [[ -z "$db_bind_address" ]]; then
+        local -a addresses
+        mapfile -t addresses < <(
+            ip -4 -o addr show scope global |
+                awk '{split($4, address, "/"); print address[1]}' |
+                sort -u
+        )
+        case "${#addresses[@]}" in
+            0)
+                die "No non-loopback unicast IPv4 address is assigned to this host."
+                ;;
+            1)
+                db_bind_address="${addresses[0]}"
+                printf 'Automatically selected database bind address: %s\n' \
+                    "$db_bind_address"
+                ;;
+            *)
+                die "Multiple non-loopback unicast IPv4 addresses are assigned; pass --db-bind-address explicitly: ${addresses[*]}"
+                ;;
+        esac
+    fi
+
+    validate_ipv4_address "$db_bind_address"
+    ip -4 -o addr show scope global |
+        awk -v expected="$db_bind_address" \
+            '{split($4, address, "/"); if (address[1] == expected) found=1} END {exit !found}' ||
+        die "Database bind address is not assigned to this host: $db_bind_address"
+}
+
 branch=""
 instance=""
 environment_name="test"
@@ -171,8 +206,6 @@ done
 [[ "$(uname -s)" == "Linux" ]] || die "This bootstrap must run on a Linux host."
 [[ "$environment_name" == "test" || "$environment_name" == "production" ]] ||
     die "--environment must be test or production."
-[[ -n "$db_bind_address" ]] || die "--db-bind-address is required."
-validate_ipv4_address "$db_bind_address"
 validate_port "$db_port"
 if [[ -n "$branch" ]]; then
     validate_value "Branch" "$branch"
@@ -204,6 +237,7 @@ require_command podman
 require_command rm
 require_command runuser
 require_command systemctl
+resolve_db_bind_address
 ip -4 -o address show | grep -Fq " $db_bind_address/" ||
     die "Database bind address is not assigned to this host: $db_bind_address"
 

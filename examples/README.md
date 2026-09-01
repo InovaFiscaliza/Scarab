@@ -105,8 +105,9 @@ armazena sua senha:
     --user "DOMINIO\usuario"
 ```
 
-Instale a instância informando o IPv4 do host Linux no qual PostgreSQL deve aceitar conexões. O
-bootstrap também aceita `--db-port` quando 5432 não estiver disponível:
+Instale a instância informando o IPv4 do host Linux no qual PostgreSQL deve aceitar conexões quando
+o host tiver múltiplos endereços. Com um único IPv4 unicast não loopback, o bootstrap faz a detecção
+automática. O bootstrap também aceita `--db-port` quando 5432 não estiver disponível:
 
 ```powershell
 .\deploy\scarab-bootstrap.bat `

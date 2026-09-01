@@ -277,7 +277,9 @@ O código e as dependências são imutáveis na imagem em `/opt/scarab`. Nenhum 
 ### Serviço `db`
 
 O PostgreSQL usa bind mount persistente sob `/var/lib/<instância>` e publica a porta 5432 do
-container no endereço IPv4 e porta do host definidos por `--db-bind-address` e `--db-port`. A
+container no endereço IPv4 e porta do host definidos por `--db-bind-address` e `--db-port`. Se
+`--db-bind-address` for omitido, um único IPv4 unicast não loopback atribuído ao host é detectado
+automaticamente; múltiplos endereços exigem a opção. A
 imagem executa schema, procedures e criação idempotente do papel `scarab_app` na primeira
 inicialização. O instalador reaplica senha e grants mínimos em updates. Restrinja o endereço e o
 firewall à rede administrativa; wildcard, loopback, multicast e endereços não atribuídos ao host

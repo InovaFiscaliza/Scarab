@@ -14,6 +14,59 @@ validate_instance() {
         die "Instance must match ^[a-z][a-z0-9-]*$: $1"
 }
 
+validate_ipv4_address() {
+    local address="$1"
+    local -a octets
+    [[ "$address" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+        die "Database bind address must be an IPv4 literal: $address"
+    IFS=. read -r -a octets <<<"$address"
+    local octet
+    for octet in "${octets[@]}"; do
+        ((10#$octet <= 255)) || die "Invalid IPv4 address: $address"
+    done
+    ((10#${octets[0]} != 0 && 10#${octets[0]} != 127 && 10#${octets[0]} < 224)) ||
+        die "Database bind address must be a non-loopback unicast IPv4 address: $address"
+}
+
+validate_port() {
+    local port="$1"
+    [[ "$port" =~ ^[0-9]+$ ]] || die "Database port must be numeric: $port"
+    ((10#$port >= 1 && 10#$port <= 65535)) ||
+        die "Database port must be between 1 and 65535: $port"
+}
+
+resolve_db_bind_address() {
+    require_command ip
+
+    if [[ -z "$db_bind_address" ]]; then
+        local -a addresses
+        mapfile -t addresses < <(
+            ip -4 -o addr show scope global |
+                awk '{split($4, address, "/"); print address[1]}' |
+                sort -u
+        )
+        case "${#addresses[@]}" in
+            0)
+                die "No non-loopback unicast IPv4 address is assigned to this host."
+                ;;
+            1)
+                db_bind_address="${addresses[0]}"
+                printf 'Automatically selected database bind address: %s\n' \
+                    "$db_bind_address"
+                ;;
+            *)
+                die "Multiple non-loopback unicast IPv4 addresses are assigned; pass --db-bind-address explicitly: ${addresses[*]}"
+                ;;
+        esac
+    fi
+
+    validate_ipv4_address "$db_bind_address"
+    ip -4 -o addr show scope global |
+        awk -v expected="$db_bind_address" \
+            '{split($4, address, "/"); if (address[1] == expected) found=1} END {exit !found}' ||
+        die "Database bind address is not assigned to this host: $db_bind_address"
+}
+
 configure_instance_paths() {
     instance="$1"
     validate_instance "$instance"

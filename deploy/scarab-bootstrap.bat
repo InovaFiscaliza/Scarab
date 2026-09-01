@@ -97,10 +97,6 @@ if not defined SSH_HOST (
     echo ERROR: --host is required.
     exit /b 1
 )
-if not defined DB_BIND_ADDRESS (
-    echo ERROR: --db-bind-address is required.
-    exit /b 1
-)
 if not exist "%BASH_SCRIPT%" (
     echo ERROR: Companion script not found: %BASH_SCRIPT%
     exit /b 1
@@ -150,7 +146,8 @@ if errorlevel 1 (
 )
 
 setlocal EnableDelayedExpansion
-set "REMOTE_ARGUMENTS= --environment !ENVIRONMENT_NAME! --db-bind-address !DB_BIND_ADDRESS! --db-port !DB_PORT!"
+set "REMOTE_ARGUMENTS= --environment !ENVIRONMENT_NAME! --db-port !DB_PORT!"
+if defined DB_BIND_ADDRESS set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! --db-bind-address !DB_BIND_ADDRESS!"
 if defined BRANCH set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! --branch !BRANCH!"
 if defined INSTANCE set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! --instance !INSTANCE!"
 if defined SERVICE_USER set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! --service-user !SERVICE_USER!"
@@ -173,16 +170,39 @@ exit /b 0
 
 :show_help
 echo Usage:
-echo   scarab-bootstrap.bat --host SSH_HOST [--branch BRANCH] [--instance NAME]
-echo       [--environment test^|production] [--service-user USER]
-echo       [--app-image IMAGE] [--db-image IMAGE] --db-bind-address IPV4
-echo       [--db-port PORT] [--check]
+echo   scarab-bootstrap.bat --host SSH_HOST [OPTIONS]
 echo.
-echo Defaults:
-echo   latest published GitHub release; environment test; remote SSH user;
-echo   no --instance argument, so scarab-deploy uses its default instance scarab.
+echo Mandatory arguments:
+echo   --host SSH_HOST
+echo       SSH host or alias for a reachable Linux container host. Key-based
+echo       authentication must already be configured.
+echo.
+echo Conditionally mandatory arguments:
+echo   --app-image IMAGE --db-image IMAGE
+echo       The two image arguments must be supplied together. They are optional
+echo       in test; production requires both --app-image and --db-image.
+echo.
+echo Optional arguments:
+echo   --branch BRANCH
+echo       Git branch to clone instead of the latest published release.
+echo   --instance NAME
+echo       Instance namespace. Default: scarab.
+echo   --environment test^|production
+echo       Deployment environment. Default: test.
+echo   --service-user USER
+echo       Rootless Linux service account. Default: the remote invoking user.
+echo   --db-port PORT
+echo       Host port published to PostgreSQL port 5432. Default: 5432.
+echo   --db-bind-address IPV4
+echo       Optional non-loopback unicast IPv4 address assigned to the Linux
+echo       host. If omitted, a single such address is detected automatically;
+echo       multiple addresses require this argument.
+echo   --check
+echo       Validate access, prerequisites, source, and arguments without
+echo       installing or updating the instance.
+echo   -h, --help
+echo       Show this help message.
 echo.
 echo The Windows script requires ssh.exe and scp.exe with key-based access. It
 echo uploads scarab-bootstrap.sh to the Linux user's home and runs it there.
-echo Use --check to validate access and prerequisites without installing.
 exit /b 0

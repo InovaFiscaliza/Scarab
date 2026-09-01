@@ -117,7 +117,7 @@ caminhos relativos ao checkout. Todas as origens do host são obrigatórias e re
 | `SCARAB_GET_DIR` | `/srv/<instância>/get` | `/mnt/get` |
 | `SCARAB_TRASH_DIR` | `/srv/<instância>/trash` | `/mnt/trash` |
 | `SCARAB_LOG_DIR` | `/var/log/<instância>` | `/var/log/scarab` |
-| `SCARAB_DB_BIND_ADDRESS` | IPv4 informado no `install` | endereço de publicação de PostgreSQL |
+| `SCARAB_DB_BIND_ADDRESS` | IPv4 informado ou detectado no `install` | endereço de publicação de PostgreSQL |
 | `SCARAB_DB_PORT` | porta informada no `install` (padrão `5432`) | porta `5432` do container |
 
 O código do app fica somente na imagem, em `/opt/scarab`. Laboratório e produção usam esse mesmo
