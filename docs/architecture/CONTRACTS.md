@@ -117,6 +117,8 @@ caminhos relativos ao checkout. Todas as origens do host são obrigatórias e re
 | `SCARAB_GET_DIR` | `/srv/<instância>/get` | `/mnt/get` |
 | `SCARAB_TRASH_DIR` | `/srv/<instância>/trash` | `/mnt/trash` |
 | `SCARAB_LOG_DIR` | `/var/log/<instância>` | `/var/log/scarab` |
+| `SCARAB_DB_BIND_ADDRESS` | IPv4 informado no `install` | endereço de publicação de PostgreSQL |
+| `SCARAB_DB_PORT` | porta informada no `install` (padrão `5432`) | porta `5432` do container |
 
 O código do app fica somente na imagem, em `/opt/scarab`. Laboratório e produção usam esse mesmo
 runtime; `deploy/podman-compose.build.yml` acrescenta o build a partir de
@@ -125,7 +127,14 @@ registry.
 
 Os serviços não compartilham pod, pois cada um exige um mapeamento `keep-id` próprio: UID/GID 70
 para PostgreSQL e 999 para o app. A conta rootless do host deve ser proprietária dos diretórios
-mutáveis. O banco não publica a porta 5432 por padrão.
+mutáveis. PostgreSQL é publicado somente no IPv4 unicast não loopback, atribuído ao host, e na
+porta explicitamente instalados. Firewall, roteamento e TLS externo permanecem responsabilidades
+da infraestrutura.
+
+`scarab-deploy` expõe somente `install`, `update` e ajuda. `scarab-ops` expõe `validate`, `start`,
+`stop`, `restart`, `status`, `logs` e `backup`. Ambos reutilizam
+`/usr/local/lib/scarab/scarab-runtime.sh`; a unidade systemd chama `scarab-ops start/stop`.
+Fixtures e resets de laboratório não fazem parte dos artefatos nem da CLI de deployment.
 
 ---
 

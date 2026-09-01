@@ -9,6 +9,8 @@ services:
       - "${SCARAB_ENV_FILE:?Set SCARAB_ENV_FILE in the Compose environment file}"
     volumes:
       - "${SCARAB_POSTGRES_DIR:?Set SCARAB_POSTGRES_DIR}:/var/lib/postgresql/data:Z"
+    ports:
+      - "${SCARAB_DB_BIND_ADDRESS:?Set SCARAB_DB_BIND_ADDRESS}:${SCARAB_DB_PORT:?Set SCARAB_DB_PORT}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h localhost"]
       interval: 10s

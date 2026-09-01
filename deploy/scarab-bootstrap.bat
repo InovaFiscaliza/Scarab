@@ -9,6 +9,8 @@ set "ENVIRONMENT_NAME=test"
 set "SERVICE_USER="
 set "APP_IMAGE="
 set "DB_IMAGE="
+set "DB_BIND_ADDRESS="
+set "DB_PORT=5432"
 set "CHECK_ONLY=false"
 
 :parse_arguments
@@ -64,6 +66,20 @@ if /I "%~1"=="--db-image" (
     shift
     goto parse_arguments
 )
+if /I "%~1"=="--db-bind-address" (
+    if "%~2"=="" goto missing_value
+    set "DB_BIND_ADDRESS=%~2"
+    shift
+    shift
+    goto parse_arguments
+)
+if /I "%~1"=="--db-port" (
+    if "%~2"=="" goto missing_value
+    set "DB_PORT=%~2"
+    shift
+    shift
+    goto parse_arguments
+)
 if /I "%~1"=="--check" (
     set "CHECK_ONLY=true"
     shift
@@ -79,6 +95,10 @@ exit /b 1
 :arguments_parsed
 if not defined SSH_HOST (
     echo ERROR: --host is required.
+    exit /b 1
+)
+if not defined DB_BIND_ADDRESS (
+    echo ERROR: --db-bind-address is required.
     exit /b 1
 )
 if not exist "%BASH_SCRIPT%" (
@@ -99,7 +119,7 @@ where.exe scp.exe >nul 2>&1 || (
     exit /b 1
 )
 
-powershell.exe -NoProfile -Command "$rules = @{ SSH_HOST = '^[A-Za-z0-9._@-]+$'; BRANCH = '^[A-Za-z0-9][A-Za-z0-9._/-]*$'; INSTANCE = '^[a-z][a-z0-9-]*$'; ENVIRONMENT_NAME = '^(test|production)$'; SERVICE_USER = '^[A-Za-z_][A-Za-z0-9_-]*$'; APP_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$'; DB_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$' }; foreach ($name in $rules.Keys) { $value = [Environment]::GetEnvironmentVariable($name); if ($value -and $value -notmatch $rules[$name]) { Write-Error ('Invalid value for ' + $name + ': ' + $value); exit 1 } }"
+powershell.exe -NoProfile -Command "$rules = @{ SSH_HOST = '^[A-Za-z0-9._@-]+$'; BRANCH = '^[A-Za-z0-9][A-Za-z0-9._/-]*$'; INSTANCE = '^[a-z][a-z0-9-]*$'; ENVIRONMENT_NAME = '^(test|production)$'; SERVICE_USER = '^[A-Za-z_][A-Za-z0-9_-]*$'; APP_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$'; DB_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$'; DB_BIND_ADDRESS = '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'; DB_PORT = '^[0-9]+$' }; foreach ($name in $rules.Keys) { $value = [Environment]::GetEnvironmentVariable($name); if ($value -and $value -notmatch $rules[$name]) { Write-Error ('Invalid value for ' + $name + ': ' + $value); exit 1 } }; $octets = $env:DB_BIND_ADDRESS.Split('.').ForEach({ [int]$_ }); if ($octets.Where({ $_ -gt 255 }).Count -or $octets[0] -eq 0 -or $octets[0] -eq 127 -or $octets[0] -ge 224) { Write-Error 'DB_BIND_ADDRESS must be a non-loopback unicast IPv4 address'; exit 1 }; $port = [int]$env:DB_PORT; if ($port -lt 1 -or $port -gt 65535) { Write-Error 'DB_PORT must be between 1 and 65535'; exit 1 }"
 if errorlevel 1 exit /b 1
 
 if defined APP_IMAGE if not defined DB_IMAGE (
@@ -130,7 +150,7 @@ if errorlevel 1 (
 )
 
 setlocal EnableDelayedExpansion
-set "REMOTE_ARGUMENTS= --environment !ENVIRONMENT_NAME!"
+set "REMOTE_ARGUMENTS= --environment !ENVIRONMENT_NAME! --db-bind-address !DB_BIND_ADDRESS! --db-port !DB_PORT!"
 if defined BRANCH set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! --branch !BRANCH!"
 if defined INSTANCE set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! --instance !INSTANCE!"
 if defined SERVICE_USER set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! --service-user !SERVICE_USER!"
@@ -155,7 +175,8 @@ exit /b 0
 echo Usage:
 echo   scarab-bootstrap.bat --host SSH_HOST [--branch BRANCH] [--instance NAME]
 echo       [--environment test^|production] [--service-user USER]
-echo       [--app-image IMAGE] [--db-image IMAGE] [--check]
+echo       [--app-image IMAGE] [--db-image IMAGE] --db-bind-address IPV4
+echo       [--db-port PORT] [--check]
 echo.
 echo Defaults:
 echo   latest published GitHub release; environment test; remote SSH user;

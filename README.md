@@ -245,7 +245,9 @@ FHS provisionados e não deve ser iniciado diretamente do checkout.
 O runtime usa [deploy/podman-compose.yml](deploy/podman-compose.yml) em todos os ambientes.
 Esse arquivo não contém build nem caminhos do checkout. O override
 [deploy/podman-compose.build.yml](deploy/podman-compose.build.yml) acrescenta build somente
-no laboratório. [deploy/scarab-deploy.sh](deploy/scarab-deploy.sh) instala e opera ambos.
+no laboratório. [deploy/scarab-deploy.sh](deploy/scarab-deploy.sh) limita-se a `install` e
+`update`; [deploy/scarab-ops.sh](deploy/scarab-ops.sh) concentra ciclo de vida, diagnóstico e
+backup, usando a biblioteca compartilhada em `deploy/lib`.
 
 No host, cada instância segue a hierarquia Linux:
 
@@ -268,9 +270,12 @@ O código e as dependências são imutáveis na imagem em `/opt/scarab`. Nenhum 
 
 ### Serviço `db`
 
-O PostgreSQL usa bind mount persistente sob `/var/lib/<instância>` e não publica a porta 5432. A
+O PostgreSQL usa bind mount persistente sob `/var/lib/<instância>` e publica a porta 5432 do
+container no endereço IPv4 e porta do host definidos por `--db-bind-address` e `--db-port`. A
 imagem executa schema, procedures e criação idempotente do papel `scarab_app` na primeira
-inicialização. O instalador reaplica senha e grants mínimos em updates.
+inicialização. O instalador reaplica senha e grants mínimos em updates. Restrinja o endereço e o
+firewall à rede administrativa; wildcard, loopback, multicast e endereços não atribuídos ao host
+são recusados. O Compose não configura firewall nem TLS para clientes externos.
 
 ### Serviço `app`
 
@@ -305,6 +310,7 @@ sem instalar, use `--check`:
 bash deploy/scarab-bootstrap.sh \
     --branch rewrite/postgres-architecture \
     --instance scarab-test \
+    --db-bind-address <IP-LAN-DO-HOST> \
     --check
 ```
 
@@ -329,6 +335,7 @@ verifica o OpenSSH, envia o `.sh` e executa no host Linux o mesmo fluxo descrito
     --host ContainerHost `
     --branch rewrite/postgres-architecture `
     --instance scarab-test `
+    --db-bind-address <IP-LAN-DO-HOST> `
     --check
 ```
 
@@ -348,10 +355,11 @@ sudo bash deploy/scarab-deploy.sh install \
     --environment test \
     --instance scarab-test \
     --service-user "$(id -un)" \
+    --db-bind-address <IP-LAN-DO-HOST> \
     --source "$PWD"
 
 scarab-deploy update --instance scarab-test
-scarab-deploy test --instance scarab-test
+scarab-ops validate --instance scarab-test
 ```
 
 O instalador exige um host com systemd/logind, habilita `linger` para a conta rootless, recarrega o
@@ -365,9 +373,11 @@ systemctl --user is-enabled scarab-test.service
 systemctl --user is-active scarab-test.service
 ```
 
-No runtime, banco e aplicação usam `restart: unless-stopped`. No boot, a unidade inicia o banco,
-aguarda o healthcheck, reaplica o papel da aplicação e então inicia o app. Uma partida que falhar é
-repetida após 15 segundos, respeitando o limite de cinco partidas em uma janela de cinco minutos.
+No runtime, banco e aplicação usam `restart: unless-stopped`. No boot, a unidade chama
+`scarab-ops`, inicia o banco, aguarda o healthcheck, reaplica o papel da aplicação, executa uma
+consulta `SELECT 1`, confirma a publicação configurada da porta e então valida o app. Uma partida
+que falhar é repetida após 15 segundos, respeitando o limite de cinco partidas em uma janela de
+cinco minutos.
 
 O laboratório usa `/etc/scarab-test`, `/var/lib/scarab-test`, `/srv/scarab-test` e
 `/var/backups/scarab-test`, exatamente como produção usa os caminhos sem `-test`. Somente o
@@ -384,9 +394,12 @@ Também é possível executar **Tasks: Run Task** no VS Code:
 - `Scarab remoto: validar Compose`, `subir e reconstruir`, `teste funcional`, `status`, `logs`,
     `backup do banco` e `parar` operam a instância instalada.
 
-O teste funcional envia fixtures instaladas em `/srv/scarab-test/fixtures` e exige dois registros
-finais e seis entradas `SUCESSO`. Produção usa imagens imutáveis de registry, conta rootless
-dedicada, segredos provisionados e filesystems permanentes, mas conserva a mesma topologia.
+As tarefas operacionais usam `scarab-ops`. O teste funcional usa `examples/src/exe.bat`: ele exige
+o sandbox compartilhado e montado, confirma explicitamente o reset, aplica o override do sandbox e
+envia os seis arquivos de `store` um por vez. Cada etapa compara as contagens no PostgreSQL e
+informa as linhas recentes de auditoria em caso de divergência. Produção usa imagens imutáveis de
+registry, conta rootless dedicada, segredos provisionados e filesystems permanentes, mas conserva
+a mesma topologia.
 
 O procedimento completo, incluindo bootstrap seguro, comandos de validação, reset do laboratório
 e matriz de diferenças para produção, está na
@@ -422,6 +435,8 @@ O `config/config.json` (gitignored) pode sobrescrever qualquer campo do default 
 ## Itens a fazer / melhorias
 
 - [ ] Implementar funções base
+- [ ] Wiki de conexão ao banco usando dbeaver
+- [x] Separar instalação/atualização, operações e execução funcional remota, com acesso PostgreSQL configurável
 - [ ] Implementar módulo de conversão de arquivos de entrada e injestão de dados para compatibilidade
 - [ ] Implementar API REST usando PostgREST
 - Implementar API para upload de mídia via HTTP usando [https://tus.io/](https://tus.io/)

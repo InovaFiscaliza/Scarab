@@ -13,7 +13,13 @@ import pytest
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 BOOTSTRAP_SCRIPT = REPOSITORY_ROOT / "deploy" / "scarab-bootstrap.sh"
 DEPLOY_SCRIPT = REPOSITORY_ROOT / "deploy" / "scarab-deploy.sh"
+OPS_SCRIPT = REPOSITORY_ROOT / "deploy" / "scarab-ops.sh"
+RUNTIME_LIBRARY = REPOSITORY_ROOT / "deploy" / "lib" / "scarab-runtime.sh"
 BATCH_SCRIPT = REPOSITORY_ROOT / "deploy" / "scarab-bootstrap.bat"
+EXE_BATCH_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "exe.bat"
+EXE_SHELL_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "exe.sh"
+MOUNT_SANDBOX_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "mount-sandbox.sh"
+SHARE_SANDBOX_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "share-sandbox.bat"
 POSIX_ONLY = pytest.mark.skipif(
     os.name == "nt",
     reason="fake POSIX command paths cannot be passed through the Windows WSL launcher",
@@ -55,6 +61,13 @@ def bootstrap_environment(tmp_path: Path) -> dict[str, str]:
         """
         #!/usr/bin/env bash
         printf 'testuser:x:1000:1000::%s:/bin/bash\n' "$FAKE_SERVICE_HOME"
+        """,
+    )
+    _write_executable(
+        fake_bin / "ip",
+        """
+        #!/usr/bin/env bash
+        printf '2: eth0    inet 192.0.2.10/24 brd 192.0.2.255 scope global eth0\\n'
         """,
     )
     _write_executable(
@@ -119,14 +132,14 @@ def bootstrap_environment(tmp_path: Path) -> dict[str, str]:
         checkout="${!#}"
         required_paths=(
             deploy/scarab-deploy.sh
+            deploy/scarab-ops.sh
+            deploy/lib/scarab-runtime.sh
             deploy/podman-compose.yml
             deploy/podman-compose.build.yml
             deploy/Containerfile.app
             deploy/Containerfile.db
             deploy/scarab.env.example
             config/default_config.json
-            examples/sandbox/config.json
-            examples/data/test_01.tgz
         )
         for required_path in "${required_paths[@]}"; do
             mkdir -p "$checkout/$(dirname "$required_path")"
@@ -160,7 +173,13 @@ def _run_bootstrap(
     if bash is None:
         pytest.skip("bash is not available")
     return subprocess.run(
-        [bash, str(BOOTSTRAP_SCRIPT), *arguments],
+        [
+            bash,
+            str(BOOTSTRAP_SCRIPT),
+            "--db-bind-address",
+            "192.0.2.10",
+            *arguments,
+        ],
         check=False,
         capture_output=True,
         env=environment,
@@ -169,7 +188,7 @@ def _run_bootstrap(
 
 
 def test_shell_entry_points_have_valid_bash_syntax() -> None:
-    """Both Bash entry points parse before any host operations begin."""
+    """Deployment and operations entry points parse before host operations begin."""
     bash = shutil.which("bash")
     if bash is None:
         pytest.skip("bash is not available")
@@ -179,6 +198,10 @@ def test_shell_entry_points_have_valid_bash_syntax() -> None:
             "-n",
             "deploy/scarab-bootstrap.sh",
             "deploy/scarab-deploy.sh",
+            "deploy/scarab-ops.sh",
+            "deploy/lib/scarab-runtime.sh",
+            "examples/src/exe.sh",
+            "examples/src/mount-sandbox.sh",
         ],
         check=True,
         cwd=REPOSITORY_ROOT,
@@ -187,7 +210,7 @@ def test_shell_entry_points_have_valid_bash_syntax() -> None:
 
 def test_existing_stack_starts_application_after_database_provisioning() -> None:
     """Booting existing containers honors the database dependency order."""
-    contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    contents = RUNTIME_LIBRARY.read_text(encoding="utf-8")
     start_stack = contents[contents.index("start_stack() {") :]
     start_stack = start_stack[: start_stack.index("\n}\n")]
 
@@ -196,7 +219,7 @@ def test_existing_stack_starts_application_after_database_provisioning() -> None
         "wait_for_database",
         "provision_application_role",
         'podman start "$app_container"',
-        "wait_for_application",
+        "verify_stack",
     ]
     positions = [start_stack.index(operation) for operation in expected_order]
 
@@ -213,7 +236,49 @@ def test_installer_enables_systemd_boot_with_bounded_retry() -> None:
     assert "RestartSec=15s" in contents
     assert 'loginctl enable-linger "$service_user"' in contents
     assert 'systemctl --user enable "$instance.service"' in contents
+    assert "ExecStart=$OPS_INSTALL_PATH start" in contents
+    assert "ExecStop=$OPS_INSTALL_PATH stop" in contents
     assert "Optional systemd activation" not in contents
+
+
+def test_deploy_cli_only_exposes_install_and_update() -> None:
+    """Lifecycle and diagnostics belong to scarab-ops, not scarab-deploy."""
+    contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    dispatch = contents[contents.index('case "$command_name" in') :]
+
+    assert "install)" in dispatch
+    assert "update)" in dispatch
+    for command in ("validate", "start", "stop", "status", "logs", "backup", "test"):
+        assert f"    {command})" not in dispatch
+
+    assert "test_01.tgz" not in contents
+    assert "fixtures_dir" not in contents
+
+
+def test_operations_cli_owns_runtime_commands() -> None:
+    """The separate operations CLI exposes every non-deployment command."""
+    contents = OPS_SCRIPT.read_text(encoding="utf-8")
+    dispatch = contents[contents.index('case "$command_name" in') :]
+
+    for command in ("validate", "start", "stop", "restart", "status", "logs", "backup"):
+        assert f"    {command})" in dispatch
+    assert "    install)" not in dispatch
+    assert "    update)" not in dispatch
+
+
+def test_database_is_published_on_an_explicit_host_address() -> None:
+    """PostgreSQL publication requires an installed bind address and port."""
+    compose_contents = (REPOSITORY_ROOT / "deploy" / "podman-compose.yml").read_text(
+        encoding="utf-8"
+    )
+    deploy_contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert (
+        '"${SCARAB_DB_BIND_ADDRESS:?Set SCARAB_DB_BIND_ADDRESS}:'
+        '${SCARAB_DB_PORT:?Set SCARAB_DB_PORT}:5432"'
+    ) in compose_contents
+    assert "SCARAB_DB_BIND_ADDRESS=$db_bind_address" in deploy_contents
+    assert "SCARAB_DB_PORT=$db_port" in deploy_contents
 
 
 def test_bootstrap_preflights_systemd_requirements() -> None:
@@ -255,6 +320,7 @@ def test_storage_mount_contract_uses_domain_names() -> None:
         encoding="utf-8"
     )
     deploy_contents = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    runtime_contents = RUNTIME_LIBRARY.read_text(encoding="utf-8")
 
     expected_mounts = (
         '"${SCARAB_POST_DIR:?Set SCARAB_POST_DIR}:/mnt/post:Z"',
@@ -270,7 +336,7 @@ def test_storage_mount_contract_uses_domain_names() -> None:
         'trash_dir="$storage_root/trash"',
     )
     for directory in expected_host_directories:
-        assert directory in deploy_contents
+        assert directory in runtime_contents
 
     expected_environment = (
         "SCARAB_POST_DIR=$post_dir",
@@ -280,7 +346,7 @@ def test_storage_mount_contract_uses_domain_names() -> None:
     for variable in expected_environment:
         assert variable in deploy_contents
 
-    combined_contents = compose_contents + deploy_contents
+    combined_contents = compose_contents + deploy_contents + runtime_contents
     assert "/mnt/share" not in combined_contents
     assert "SCARAB_SHARE" not in combined_contents
 
@@ -386,6 +452,24 @@ def test_bootstrap_stops_when_sudo_validation_fails(
     assert not Path(bootstrap_environment["FAKE_GIT_CAPTURE"]).exists()
 
 
+@POSIX_ONLY
+@pytest.mark.parametrize("address", ["0.0.0.0", "127.0.0.1", "224.0.0.1"])
+def test_bootstrap_rejects_non_remote_database_addresses(
+    bootstrap_environment: dict[str, str], address: str
+) -> None:
+    """Wildcard, loopback, and multicast addresses cannot publish PostgreSQL."""
+    result = _run_bootstrap(
+        bootstrap_environment,
+        "--db-bind-address",
+        address,
+        "--check",
+    )
+
+    assert result.returncode != 0
+    assert "non-loopback unicast IPv4" in result.stderr
+    assert not Path(bootstrap_environment["FAKE_GIT_CAPTURE"]).exists()
+
+
 def test_windows_launcher_conditionally_forwards_instance() -> None:
     """The Windows wrapper does not synthesize an instance argument."""
     contents = BATCH_SCRIPT.read_text(encoding="utf-8")
@@ -393,3 +477,122 @@ def test_windows_launcher_conditionally_forwards_instance() -> None:
         'if defined INSTANCE set "REMOTE_ARGUMENTS=!REMOTE_ARGUMENTS! '
         '--instance !INSTANCE!"'
     ) in contents
+
+
+def test_remote_sandbox_reset_is_explicit_and_test_only() -> None:
+    """The scenario executor cannot reset production or run without confirmation."""
+    contents = EXE_SHELL_SCRIPT.read_text(encoding="utf-8")
+
+    assert '[[ "$SCARAB_ENVIRONMENT" == "test" ]]' in contents
+    assert '[[ "$confirm_reset" == "$instance" ]]' in contents
+    assert '[[ "$SCARAB_POSTGRES_DIR" == "$postgres_dir" ]]' in contents
+    assert '[[ "$SCARAB_POST_DIR" == "$post_dir" ]]' in contents
+    assert '[[ "$SCARAB_GET_DIR" == "$get_dir" ]]' in contents
+    assert '[[ "$SCARAB_TRASH_DIR" == "$trash_dir" ]]' in contents
+    assert 'temporary="$sandbox_dir/.$filename.uploading"' in contents
+    assert 'for fixture in "${fixtures[@]}"' in contents
+    assert "nome_original_arquivo" in contents
+    assert "mensagem_erro" in contents
+    assert "scarab-deploy test" not in contents
+
+
+def test_sandbox_mount_uses_encrypted_systemd_credentials() -> None:
+    """Persistent CIFS setup never stores the Windows password as plaintext."""
+    contents = MOUNT_SANDBOX_SCRIPT.read_text(encoding="utf-8")
+
+    assert "systemd-creds encrypt" in contents
+    assert "LoadCredentialEncrypted=cifs:" in contents
+    assert "credential_reference='${CREDENTIALS_DIRECTORY}/cifs'" in contents
+    assert "credentials=$credential_reference" in contents
+    assert 'chmod 0600 "$credential_plaintext"' in contents
+    assert 'rm -f -- "$credential_plaintext" "$unit_temporary"' in contents
+    assert "--with-key=host" in contents
+    assert 'systemctl enable --now "$unit_name"' in contents
+    assert 'cifs_version="3.1.1"' in contents
+    assert r"(\.[0-9]+)?$" in contents
+    assert '[[ -z "$domain" || "$domain" =~' in contents
+
+
+@POSIX_ONLY
+def test_sandbox_mount_accepts_default_cifs_version(tmp_path: Path) -> None:
+    """The default CIFS 3.1.1 value passes parser validation without host changes."""
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    _write_executable(
+        fake_bin / "id",
+        """
+        #!/usr/bin/env bash
+        case "${1:-}" in
+            -u) [[ "$#" -eq 1 ]] && printf '0\n' || printf '1000\n' ;;
+            -g) printf '1000\n' ;;
+            -gn) printf 'testgroup\n' ;;
+            *) exit 0 ;;
+        esac
+        """,
+    )
+    for command in (
+        "getent",
+        "install",
+        "mount",
+        "mount.cifs",
+        "mountpoint",
+        "runuser",
+        "systemctl",
+        "systemd-creds",
+        "umount",
+    ):
+        _write_executable(fake_bin / command, "#!/usr/bin/env bash\nexit 0\n")
+
+    environment = os.environ.copy()
+    environment["PATH"] = f"{fake_bin}{os.pathsep}{environment['PATH']}"
+    result = subprocess.run(
+        [
+            shutil.which("bash") or "bash",
+            str(MOUNT_SANDBOX_SCRIPT),
+            "--instance",
+            "parser-test",
+            "--server",
+            "192.0.2.20",
+            "--share",
+            "ScarabSandbox",
+            "--username",
+            "testuser",
+            "--service-user",
+            "testuser",
+            "--confirm-mount",
+            "parser-test",
+        ],
+        capture_output=True,
+        env=environment,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "Scarab instance is not installed" in result.stderr
+    assert "Invalid CIFS version" not in result.stderr
+
+
+def test_windows_executor_checks_remote_database_access() -> None:
+    """Windows validates TCP unconditionally and uses psql when configured."""
+    contents = EXE_BATCH_SCRIPT.read_text(encoding="utf-8")
+
+    assert "Test-NetConnection" in contents
+    assert "PGPASSFILE" in contents
+    assert "psql.exe" in contents
+    assert "exe.sh" in contents
+    assert "scarab-ops !OPERATION!" in contents
+
+    tasks_contents = (REPOSITORY_ROOT / ".vscode" / "tasks.json").read_text(
+        encoding="utf-8"
+    )
+    assert '"--db-port"' in tasks_contents
+    assert '"${input:scarabDbPort}"' in tasks_contents
+
+
+def test_windows_share_helper_publishes_only_the_sandbox() -> None:
+    """The SMB helper shares examples/sandbox rather than the repository root."""
+    contents = SHARE_SANDBOX_SCRIPT.read_text(encoding="utf-8")
+
+    assert "New-SmbShare" in contents
+    assert "examples\\sandbox" in contents

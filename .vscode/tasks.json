@@ -59,7 +59,7 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "/usr/local/sbin/scarab-deploy validate --instance scarab-test"
+                "/usr/local/sbin/scarab-ops validate --instance scarab-test"
             ],
             "problemMatcher": []
         },
@@ -83,12 +83,18 @@
         {
             "label": "Scarab remoto: teste funcional",
             "type": "process",
-            "command": "ssh",
+            "command": "${workspaceFolder}\\examples\\src\\exe.bat",
             "args": [
-                "-o",
-                "BatchMode=yes",
+                "--host",
                 "ContainerHost",
-                "/usr/local/sbin/scarab-deploy test --instance scarab-test"
+                "--operation",
+                "reset",
+                "--db-host",
+                "${input:scarabDbHost}",
+                "--db-port",
+                "${input:scarabDbPort}",
+                "--confirm-reset",
+                "scarab-test"
             ],
             "dependsOn": "Scarab remoto: subir e reconstruir",
             "problemMatcher": []
@@ -101,7 +107,7 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "/usr/local/sbin/scarab-deploy status --instance scarab-test"
+                "/usr/local/sbin/scarab-ops status --instance scarab-test"
             ],
             "problemMatcher": []
         },
@@ -113,7 +119,7 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "/usr/local/sbin/scarab-deploy logs --instance scarab-test"
+                "/usr/local/sbin/scarab-ops logs --instance scarab-test"
             ],
             "problemMatcher": []
         },
@@ -125,7 +131,7 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "/usr/local/sbin/scarab-deploy stop --instance scarab-test"
+                "/usr/local/sbin/scarab-ops stop --instance scarab-test"
             ],
             "problemMatcher": []
         },
@@ -137,9 +143,23 @@
                 "-o",
                 "BatchMode=yes",
                 "ContainerHost",
-                "/usr/local/sbin/scarab-deploy backup --instance scarab-test"
+                "/usr/local/sbin/scarab-ops backup --instance scarab-test"
             ],
             "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "scarabDbHost",
+            "type": "promptString",
+            "description": "Endereço do host PostgreSQL publicado para a estação Windows",
+            "default": "containerhost.hv"
+        },
+        {
+            "id": "scarabDbPort",
+            "type": "promptString",
+            "description": "Porta PostgreSQL publicada no host",
+            "default": "5432"
         }
     ]
 }

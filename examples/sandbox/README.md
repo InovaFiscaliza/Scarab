@@ -26,9 +26,10 @@ sandbox/
 └── trash/             # estado de rejeitados e mídias órfãs
 ```
 
-O sandbox não é montado no runtime. O `config.json` referencia os pontos de montagem independentes
-`/mnt/post`, `/mnt/get` e `/mnt/trash`. No host, eles correspondem a
-`/srv/<instância>/post`, `/srv/<instância>/get` e `/srv/<instância>/trash`.
+No laboratório remoto, o sandbox pode ser compartilhado pela estação Windows e montado sobre
+`/srv/<instância>` no host Linux. Assim, `post`, `get` e `trash` correspondem diretamente a
+`/mnt/post`, `/mnt/get` e `/mnt/trash` no container. `config.json` e `store` não são montados no
+container; o executor usa ambos pela camada de host.
 
 ## Execução com Podman
 
@@ -39,23 +40,30 @@ sudo bash deploy/scarab-deploy.sh install \
 	--environment test \
 	--instance scarab-test \
 	--service-user "$(id -un)" \
+	--db-bind-address <IP-LAN-DO-HOST> \
 	--source "$PWD"
 
 scarab-deploy update --instance scarab-test
-scarab-deploy test --instance scarab-test
 ```
 
-O instalador configura `/etc/scarab-test/config`, extrai as seis fixtures de `test_01.tgz` para
-`/srv/scarab-test/fixtures` e cria os diretórios de runtime `/srv/scarab-test/post`, `get` e
-`trash`. Eles são montados diretamente no container como `/mnt/post`, `/mnt/get` e `/mnt/trash`.
+O instalador não lê este diretório. Use `share-sandbox.bat` no Windows e `mount-sandbox.sh` no host
+Linux para sobrepor `/srv/scarab-test` com o share. A senha SMB é lida no terminal Linux e
+armazenada apenas como credencial criptografada do systemd.
 
-O comando `test` limpa o banco e os três diretórios de runtime, inicia o stack e copia as fixtures
-para `/srv/scarab-test/post`. Depois, valida `clientes_docs`, `carga_historico` e que a lixeira
-permaneceu vazia. Os snapshots do checkout não são alterados por essa execução.
+Na estação Windows, execute:
 
-Em um host Linux remoto, use `scarab-deploy test --instance scarab-test`. O aceite é entrada e
-lixeira vazias, dois registros finais (`REG-001` e `REG-003`) e seis linhas `SUCESSO` em
-`carga_historico`. Como este cenário não possui mídia, não se espera conteúdo em `get`.
+```powershell
+.\examples\src\exe.bat `
+    --host ContainerHost `
+    --operation reset `
+    --db-host <IP-LAN-DO-HOST> `
+    --confirm-reset scarab-test
+```
+
+O executor recusa produção, limpa o banco e as três áreas, aplica este `config.json` e envia cada
+fixture de `store` separadamente. O aceite é entrada, saída e lixeira vazias, dois registros finais
+(`REG-001` e `REG-003`) e seis linhas `SUCESSO` em `carga_historico`. Como este cenário não possui
+mídia, não se espera conteúdo em `get`.
 
 O passo a passo completo está no
 [runbook de implantação remota](https://github.com/InovaFiscaliza/Scarab/wiki/Podman-Compose-Servidor-Remoto).

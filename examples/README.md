@@ -20,14 +20,15 @@ apagado por completo ao restaurar outro cenário. Portanto:
 - considere permanentes somente as alterações gravadas intencionalmente em um arquivo de `data`;
 - use `add.bat` ou `upt.bat` apenas depois de revisar o conteúdo que será preservado.
 
-O sandbox não é montado no runtime publicado. No ambiente de teste, o instalador extrai as fixtures
-de `test_01.tgz`. Os diretórios persistentes do host são `/srv/<instância>/post`, `get` e `trash`,
-montados separadamente no container como `/mnt/post`, `/mnt/get` e `/mnt/trash`.
+O sandbox não é usado pelo instalador. No laboratório remoto, ele pode ser publicado como um share
+SMB da estação Windows e montado pelo host Linux sobre `/srv/<instância>`. Assim, `post`, `get` e
+`trash` continuam chegando ao container como `/mnt/post`, `/mnt/get` e `/mnt/trash`, enquanto
+`config.json` e `store` permanecem fora do container e são usados apenas pelo executor do cenário.
 
 O diretório `examples/data`, que contém os arquivos `test_NN.tgz`, não deve ser confundido com
 `examples/sandbox/store`. Este último guarda os descritores usados como fixtures. Em uma execução
-manual, copie-os para `examples/sandbox/post`; no teste implantado, o instalador extrai as fixtures
-de `test_01.tgz` e `scarab-deploy test` as copia para `/srv/scarab-test/post`.
+manual, copie-os para `examples/sandbox/post`; `examples/src/exe.bat` faz essa transferência um
+arquivo por vez e verifica o resultado no PostgreSQL após cada operação.
 
 Cada snapshot contém o diretório `sandbox` completo, incluindo a configuração e o estado das áreas
 do cenário. A estrutura e a execução do cenário funcional atual estão descritas em
@@ -91,71 +92,71 @@ script somente atualiza um arquivo que já exista em `data`. Como a operação s
 use-a apenas quando a mudança fizer parte do mesmo cenário; para preservar ambos os estados, use
 `add.bat`.
 
-## Execução em um host Podman remoto
+## Laboratório remoto com sandbox compartilhado
 
-Instale uma instância de laboratório com `deploy/scarab-deploy.sh`. Neste contexto, as
-**fixtures** são os seis descritores JSON de operações armazenados em `sandbox/store/` dentro do
-snapshot `examples/data/test_01.tgz`, por exemplo `01-insert-registro-001.json`,
-`04-update-registro-001-com-email.json` e `06-delete-registro-002.json`. O comando `install` extrai
-esses arquivos para `/srv/scarab-test/fixtures`; o checkout não é montado no runtime:
+No Windows, restaure o cenário com as seis fixtures e publique apenas o sandbox. O segundo comando
+exige um terminal elevado; ele concede acesso de alteração à conta informada, mas não lê nem
+armazena sua senha:
 
-```bash
-sudo bash deploy/scarab-deploy.sh install \
-  --environment test \
-  --instance scarab-test \
-  --service-user "$(id -un)" \
-  --source "$PWD"
+```powershell
+.\examples\src\rst.bat 1
+.\examples\src\share-sandbox.bat `
+    --share-name ScarabSandbox `
+    --user "DOMINIO\usuario"
 ```
 
-Como a conta rootless:
+Instale a instância informando o IPv4 do host Linux no qual PostgreSQL deve aceitar conexões. O
+bootstrap também aceita `--db-port` quando 5432 não estiver disponível:
 
-```bash
-scarab-deploy update --instance scarab-test
-scarab-deploy test --instance scarab-test
+```powershell
+.\deploy\scarab-bootstrap.bat `
+    --host ContainerHost `
+    --branch rewrite/postgres-architecture `
+    --instance scarab-test `
+    --db-bind-address <IP-LAN-DO-HOST>
 ```
 
-Em um banco recém-criado, o resultado esperado é dois registros finais e seis históricos com
-status `SUCESSO`. Consulte o
-[runbook de implantação remota](https://github.com/InovaFiscaliza/Scarab/wiki/Podman-Compose-Servidor-Remoto)
-para configuração de SSH, `.env`, consultas de aceite, reset e diferenças obrigatórias de produção.
+O host Linux precisa do pacote `cifs-utils`. Envie o helper e execute-o em um terminal SSH com TTY;
+ele solicitará a senha SMB diretamente no terminal, criptografará a credencial com `systemd-creds`
+e habilitará o mount para os próximos boots:
 
-## Fluxo recomendado para um teste completo
+```powershell
+scp .\examples\src\mount-sandbox.sh ContainerHost:.scarab-mount-sandbox.sh
+ssh -tt ContainerHost 'sudo bash ~/.scarab-mount-sandbox.sh --instance scarab-test --server <IP-DA-ESTACAO-WINDOWS> --share ScarabSandbox --username <usuario> --domain <DOMINIO> --service-user "$(id -un)" --confirm-mount scarab-test'
+```
 
-1. Restaure o cenário de testes, por exemplo `test_01.tgz` com `examples/src/rst.bat` para recriar o sandbox em um estado conhecido:
+O serviço systemd do mount é `scarab-test-sandbox.service`; a credencial cifrada fica sob
+`/etc/credstore.encrypted`, e somente o arquivo efêmero entregue pelo systemd aparece em `/run`.
+Restrinja SMB no firewall da estação ao host Linux confiável.
 
-  ```powershell
-  .\examples\src\rst.bat 1
-  ```
+Depois do primeiro build, execute o cenário pela estação Windows. O reset só aceita uma instância
+instalada como `test` e exige confirmação com o nome exato:
 
-2. Faça somente os ajustes necessários nos arquivos e na configuração dentro de `sandbox`.
-3. Depois de revisar as mudanças, atualize o snapshot consumido pelo teste com
-  `examples/src/upt.bat` ou crie um novo snapshot com `examples/src/add.bat`:
+```powershell
+ssh ContainerHost "scarab-deploy update --instance scarab-test"
+.\examples\src\exe.bat `
+    --host ContainerHost `
+    --operation reset `
+    --db-host <IP-LAN-DO-HOST> `
+    --confirm-reset scarab-test
+```
 
-  ```powershell
-  .\examples\src\upt.bat 1
-  ```
-    ou
+O executor apaga o banco e `post/get/trash`, aplica `sandbox/config.json`, inicia o stack e move os
+seis JSON de `store` para `post` um por vez. Após cada arquivo, compara as contagens esperadas de
+`clientes_docs`, histórico e sucessos; em caso de divergência, exibe as linhas recentes de
+`carga_historico`. Também testa a porta TCP a partir do Windows. Se `psql.exe` e um `PGPASSFILE`
+estiverem disponíveis, executa ainda a consulta diretamente pela porta publicada.
 
-  ```powershell
-  .\examples\src\add.bat
-  ```
+Por padrão, o cliente libpq procura `%APPDATA%\postgresql\pgpass.conf`. Provisione por um canal
+seguro uma linha no formato `<host>:<porta>:scarab:scarab_app:<senha>` e defina `PGPASSFILE` caso
+use outro caminho. O executor nunca lê, imprime ou transfere essa senha.
 
-  `examples/src/add.bat` cria outro snapshot, por exemplo `test_02.tgz`, caso o último cenário configurado seja o `test_01.tgz`.
+Operações não destrutivas podem ser encaminhadas pelo mesmo BAT:
 
-4. Na raiz do checkout no host Podman, reexecute o comando `install` de
-  `deploy/scarab-deploy.sh`. Ele substitui as fixtures em `/srv/scarab-test/fixtures` pelos seis JSON atualizados do snapshot:
+```powershell
+.\examples\src\exe.bat --host ContainerHost --operation status
+.\examples\src\exe.bat --host ContainerHost --operation logs
+```
 
-  ```bash
-  sudo bash deploy/scarab-deploy.sh install \
-    --environment test \
-    --instance scarab-test \
-    --service-user "$(id -un)" \
-    --source "$PWD"
-  ```
-
-5. Execute `scarab-deploy test --instance scarab-test`.
-6. Verifique o resultado no PostgreSQL e em `/srv/scarab-test/post`, `get` e `trash`.
-
-Esse ciclo mantém os testes reproduzíveis: os snapshots permanecem em `data`, enquanto o
-`sandbox` é apenas a cópia de autoria e pode ser recriado sem ser tratado como armazenamento de
-runtime.
+Para preservar uma alteração do cenário, use `upt.bat`; para mantê-la como outro cenário, use
+`add.bat`. Esses comandos alteram apenas os snapshots sob `examples/data`.

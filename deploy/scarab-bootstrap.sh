@@ -11,7 +11,8 @@ usage() {
 Usage:
   scarab-bootstrap.sh [--branch BRANCH] [--instance NAME]
       [--environment test|production] [--service-user USER]
-      [--app-image IMAGE] [--db-image IMAGE]
+            [--app-image IMAGE] [--db-image IMAGE]
+            --db-bind-address IPV4 [--db-port PORT]
 
 Options and defaults:
   --branch BRANCH
@@ -25,6 +26,10 @@ Options and defaults:
       Rootless service account (default: invoking user, or SUDO_USER when root).
   --app-image IMAGE, --db-image IMAGE
       Optional immutable images. Both are required for production.
+  --db-bind-address IPV4
+      IPv4 address on which PostgreSQL is published. Required.
+  --db-port PORT
+      Host port published to PostgreSQL container port 5432 (default: 5432).
   --check
       Run all prerequisite, access, clone, and source checks without installing.
   -h, --help
@@ -76,6 +81,27 @@ validate_value() {
         die "$label must be a non-empty single-line value that does not begin with '-'."
 }
 
+validate_ipv4_address() {
+    local address="$1"
+    local -a octets
+    [[ "$address" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+        die "Database bind address must be an IPv4 literal: $address"
+    IFS=. read -r -a octets <<<"$address"
+    local octet
+    for octet in "${octets[@]}"; do
+        ((10#$octet <= 255)) || die "Invalid IPv4 address: $address"
+    done
+    ((10#${octets[0]} != 0 && 10#${octets[0]} != 127 && 10#${octets[0]} < 224)) ||
+        die "Database bind address must be a non-loopback unicast IPv4 address: $address"
+}
+
+validate_port() {
+    local port="$1"
+    [[ "$port" =~ ^[0-9]+$ ]] || die "Database port must be numeric: $port"
+    ((10#$port >= 1 && 10#$port <= 65535)) ||
+        die "Database port must be between 1 and 65535: $port"
+}
+
 branch=""
 instance=""
 environment_name="test"
@@ -83,6 +109,8 @@ service_user=""
 app_image=""
 db_image=""
 check_only=false
+db_bind_address=""
+db_port="5432"
 
 while (($#)); do
     case "$1" in
@@ -116,6 +144,16 @@ while (($#)); do
             db_image="$2"
             shift 2
             ;;
+        --db-bind-address)
+            (($# >= 2)) || die "--db-bind-address requires a value."
+            db_bind_address="$2"
+            shift 2
+            ;;
+        --db-port)
+            (($# >= 2)) || die "--db-port requires a value."
+            db_port="$2"
+            shift 2
+            ;;
         --check)
             check_only=true
             shift
@@ -133,6 +171,9 @@ done
 [[ "$(uname -s)" == "Linux" ]] || die "This bootstrap must run on a Linux host."
 [[ "$environment_name" == "test" || "$environment_name" == "production" ]] ||
     die "--environment must be test or production."
+[[ -n "$db_bind_address" ]] || die "--db-bind-address is required."
+validate_ipv4_address "$db_bind_address"
+validate_port "$db_port"
 if [[ -n "$branch" ]]; then
     validate_value "Branch" "$branch"
 fi
@@ -156,12 +197,15 @@ require_command env
 require_command git
 require_command getent
 require_command id
+require_command ip
 require_command loginctl
 require_command mktemp
 require_command podman
 require_command rm
 require_command runuser
 require_command systemctl
+ip -4 -o address show | grep -Fq " $db_bind_address/" ||
+    die "Database bind address is not assigned to this host: $db_bind_address"
 
 operator_uid="$(id -u)"
 if [[ -z "$service_user" ]]; then
@@ -261,6 +305,8 @@ run_as_service_user env GIT_TERMINAL_PROMPT=0 \
 
 required_paths=(
     deploy/scarab-deploy.sh
+    deploy/scarab-ops.sh
+    deploy/lib/scarab-runtime.sh
     deploy/podman-compose.yml
     deploy/podman-compose.build.yml
     deploy/Containerfile.app
@@ -268,9 +314,6 @@ required_paths=(
     deploy/scarab.env.example
     config/default_config.json
 )
-if [[ "$environment_name" == "test" ]]; then
-    required_paths+=(examples/sandbox/config.json examples/data/test_01.tgz)
-fi
 for required_path in "${required_paths[@]}"; do
     if [[ ! -f "$checkout_dir/$required_path" ]]; then
         if [[ "$using_latest_release" == true ]]; then
@@ -291,6 +334,8 @@ deploy_arguments=(
     --environment "$environment_name"
     --service-user "$service_user"
     --source "$checkout_dir"
+    --db-bind-address "$db_bind_address"
+    --db-port "$db_port"
 )
 if [[ -n "$instance" ]]; then
     deploy_arguments+=(--instance "$instance")
