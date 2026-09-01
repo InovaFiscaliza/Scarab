@@ -106,6 +106,13 @@ if not exist "%BASH_SCRIPT%" (
     exit /b 1
 )
 
+if not defined BRANCH (
+    where.exe git.exe >nul 2>&1
+    if not errorlevel 1 (
+        for /f "delims=" %%B in ('git.exe -C "%~dp0.." branch --show-current 2^>nul') do if not defined BRANCH set "BRANCH=%%B"
+    )
+)
+
 where.exe powershell.exe >nul 2>&1 || (
     echo ERROR: Required command not found: powershell.exe
     exit /b 1
@@ -206,6 +213,12 @@ echo       Validate access, prerequisites, source, and arguments without
 echo       installing or updating the instance.
 echo   -h, --help
 echo       Show this help message.
+echo.
+echo Defaults:
+echo   current local Git branch when this script is inside a checkout;
+echo   otherwise the latest published GitHub release; environment test;
+echo   remote SSH user; no --instance argument, so scarab-deploy uses its
+echo   default instance scarab.
 echo.
 echo The Windows script requires ssh.exe and scp.exe with key-based access. It
 echo uploads scarab-bootstrap.sh to the Linux user's home and runs it there.

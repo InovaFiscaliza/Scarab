@@ -516,6 +516,15 @@ def test_windows_bootstrap_help_explains_mandatory_arguments() -> None:
     assert "if not defined DB_BIND_ADDRESS (" not in contents
     assert "if ($env:DB_BIND_ADDRESS) {" in contents
     assert 'if /I "%SERVICE_USER%"=="root" (' in contents
+    assert "current local Git branch" in contents
+
+
+def test_windows_bootstrap_uses_local_branch_when_not_specified() -> None:
+    """The Windows wrapper avoids incompatible releases in a source checkout."""
+    contents = BATCH_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'git.exe -C "%~dp0.." branch --show-current' in contents
+    assert 'if not defined BRANCH set "BRANCH=%%B"' in contents
 
 
 @POSIX_ONLY
