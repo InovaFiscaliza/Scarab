@@ -255,6 +255,7 @@ def test_deploy_cli_only_exposes_install_and_update() -> None:
     assert (
         '"$source_root/deploy/mount-host-volumes.sh" "$MOUNT_INSTALL_PATH"' in contents
     )
+    assert 'die "The rootless service user cannot be root."' in contents
 
 
 def test_operations_cli_owns_runtime_commands() -> None:
@@ -299,6 +300,14 @@ def test_bootstrap_preflights_systemd_requirements() -> None:
 
     for command in ("loginctl", "runuser", "systemctl"):
         assert f"require_command {command}" in contents
+
+
+def test_bootstrap_handles_non_login_paths_for_administrative_commands() -> None:
+    """SSH sessions without /usr/sbin still find runuser and related tools."""
+    for script in (BOOTSTRAP_SCRIPT, RUNTIME_LIBRARY, MOUNT_HOST_VOLUMES_SCRIPT):
+        contents = script.read_text(encoding="utf-8")
+        assert "for system_path in /usr/local/sbin /usr/sbin /sbin" in contents
+        assert "export PATH" in contents
 
 
 def test_update_activates_systemd_service_after_starting_stack() -> None:
@@ -505,6 +514,8 @@ def test_windows_bootstrap_help_explains_mandatory_arguments() -> None:
     )
     assert "production requires both --app-image and --db-image" in contents
     assert "if not defined DB_BIND_ADDRESS (" not in contents
+    assert "if ($env:DB_BIND_ADDRESS) {" in contents
+    assert 'if /I "%SERVICE_USER%"=="root" (' in contents
 
 
 @POSIX_ONLY

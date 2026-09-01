@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+for system_path in /usr/local/sbin /usr/sbin /sbin; do
+    case ":${PATH:-}:" in
+        *":$system_path:"*) ;;
+        *) PATH="${PATH:+$PATH:}$system_path" ;;
+    esac
+done
+export PATH
+
 die() {
     printf 'ERROR: %s\n' "$*" >&2
     exit 1

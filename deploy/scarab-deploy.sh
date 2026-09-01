@@ -174,6 +174,9 @@ install_instance() {
         die "--environment must be test or production."
     [[ "$service_user" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]] ||
         die "--service-user must be a valid Linux account name."
+    service_uid="$(id -u "$service_user" 2>/dev/null || true)"
+    [[ -n "$service_uid" && "$service_uid" -ne 0 ]] ||
+        die "The rootless service user cannot be root."
     if [[ -z "$db_bind_address" && -r "$compose_env" ]]; then
         db_bind_address="$(grep -m1 '^SCARAB_DB_BIND_ADDRESS=' "$compose_env" | cut -d= -f2- || true)"
     fi

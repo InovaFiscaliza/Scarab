@@ -2,6 +2,14 @@
 
 set -Eeuo pipefail
 
+for system_path in /usr/local/sbin /usr/sbin /sbin; do
+    case ":${PATH:-}:" in
+        *":$system_path:"*) ;;
+        *) PATH="${PATH:+$PATH:}$system_path" ;;
+    esac
+done
+export PATH
+
 readonly REPOSITORY_URL="https://github.com/InovaFiscaliza/Scarab.git"
 readonly LATEST_RELEASE_URL="https://github.com/InovaFiscaliza/Scarab/releases/latest"
 readonly RELEASE_TAG_URL_PREFIX="https://github.com/InovaFiscaliza/Scarab/releases/tag/"
@@ -235,7 +243,6 @@ require_command loginctl
 require_command mktemp
 require_command podman
 require_command rm
-require_command runuser
 require_command systemctl
 resolve_db_bind_address
 ip -4 -o address show | grep -Fq " $db_bind_address/" ||
@@ -248,6 +255,7 @@ if [[ -z "$service_user" ]]; then
             die "--service-user is required when the bootstrap is run directly as root."
         service_user="$SUDO_USER"
     else
+     require_command runuser
         service_user="$(id -un)"
     fi
 fi

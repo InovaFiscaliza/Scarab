@@ -2,6 +2,14 @@
 
 set -Eeuo pipefail
 
+for system_path in /usr/local/sbin /usr/sbin /sbin; do
+    case ":${PATH:-}:" in
+        *":$system_path:"*) ;;
+        *) PATH="${PATH:+$PATH:}$system_path" ;;
+    esac
+done
+export PATH
+
 usage() {
     cat <<'EOF'
 Usage:

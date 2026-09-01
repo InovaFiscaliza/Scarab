@@ -97,6 +97,10 @@ if not defined SSH_HOST (
     echo ERROR: --host is required.
     exit /b 1
 )
+if /I "%SERVICE_USER%"=="root" (
+    echo ERROR: --service-user must be a non-root account for rootless Podman.
+    exit /b 1
+)
 if not exist "%BASH_SCRIPT%" (
     echo ERROR: Companion script not found: %BASH_SCRIPT%
     exit /b 1
@@ -115,7 +119,7 @@ where.exe scp.exe >nul 2>&1 || (
     exit /b 1
 )
 
-powershell.exe -NoProfile -Command "$rules = @{ SSH_HOST = '^[A-Za-z0-9._@-]+$'; BRANCH = '^[A-Za-z0-9][A-Za-z0-9._/-]*$'; INSTANCE = '^[a-z][a-z0-9-]*$'; ENVIRONMENT_NAME = '^(test|production)$'; SERVICE_USER = '^[A-Za-z_][A-Za-z0-9_-]*$'; APP_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$'; DB_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$'; DB_BIND_ADDRESS = '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'; DB_PORT = '^[0-9]+$' }; foreach ($name in $rules.Keys) { $value = [Environment]::GetEnvironmentVariable($name); if ($value -and $value -notmatch $rules[$name]) { Write-Error ('Invalid value for ' + $name + ': ' + $value); exit 1 } }; $octets = $env:DB_BIND_ADDRESS.Split('.').ForEach({ [int]$_ }); if ($octets.Where({ $_ -gt 255 }).Count -or $octets[0] -eq 0 -or $octets[0] -eq 127 -or $octets[0] -ge 224) { Write-Error 'DB_BIND_ADDRESS must be a non-loopback unicast IPv4 address'; exit 1 }; $port = [int]$env:DB_PORT; if ($port -lt 1 -or $port -gt 65535) { Write-Error 'DB_PORT must be between 1 and 65535'; exit 1 }"
+powershell.exe -NoProfile -Command "$rules = @{ SSH_HOST = '^[A-Za-z0-9._@-]+$'; BRANCH = '^[A-Za-z0-9][A-Za-z0-9._/-]*$'; INSTANCE = '^[a-z][a-z0-9-]*$'; ENVIRONMENT_NAME = '^(test|production)$'; SERVICE_USER = '^[A-Za-z_][A-Za-z0-9_-]*$'; APP_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$'; DB_IMAGE = '^[A-Za-z0-9][A-Za-z0-9._/@:-]*$'; DB_BIND_ADDRESS = '^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$'; DB_PORT = '^[0-9]+$' }; foreach ($name in $rules.Keys) { $value = [Environment]::GetEnvironmentVariable($name); if ($value -and $value -notmatch $rules[$name]) { Write-Error ('Invalid value for ' + $name + ': ' + $value); exit 1 } }; if ($env:DB_BIND_ADDRESS) { $octets = $env:DB_BIND_ADDRESS.Split('.').ForEach({ [int]$_ }); if ($octets.Where({ $_ -gt 255 }).Count -or $octets[0] -eq 0 -or $octets[0] -eq 127 -or $octets[0] -ge 224) { Write-Error 'DB_BIND_ADDRESS must be a non-loopback unicast IPv4 address'; exit 1 } }; $port = [int]$env:DB_PORT; if ($port -lt 1 -or $port -gt 65535) { Write-Error 'DB_PORT must be between 1 and 65535'; exit 1 }"
 if errorlevel 1 exit /b 1
 
 if defined APP_IMAGE if not defined DB_IMAGE (
