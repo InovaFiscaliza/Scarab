@@ -116,17 +116,22 @@ bootstrap também aceita `--db-port` quando 5432 não estiver disponível:
     --db-bind-address <IP-LAN-DO-HOST>
 ```
 
-O host Linux precisa do pacote `cifs-utils`. Envie o helper e execute-o em um terminal SSH com TTY;
-ele solicitará a senha SMB diretamente no terminal, criptografará a credencial com `systemd-creds`
-e habilitará o mount para os próximos boots:
+O host Linux precisa do pacote `cifs-utils`. O `install` copia o helper de
+`deploy/mount-host-volumes.sh` para `/usr/local/sbin/mount-host-volumes`. Ele confirma a instalação
+com `mount.cifs -V` e deixa cliente e servidor negociarem automaticamente o dialeto SMB. Execute-o
+em um terminal SSH com TTY; ele solicitará a senha SMB diretamente no terminal e habilitará o
+mount para os próximos boots:
 
 ```powershell
-scp .\examples\src\mount-sandbox.sh ContainerHost:.scarab-mount-sandbox.sh
-ssh -tt ContainerHost 'sudo bash ~/.scarab-mount-sandbox.sh --instance scarab-test --server <IP-DA-ESTACAO-WINDOWS> --share ScarabSandbox --username <usuario> --domain <DOMINIO> --service-user "$(id -un)" --confirm-mount scarab-test'
+ssh -tt ContainerHost 'sudo /usr/local/sbin/mount-host-volumes --instance scarab-test --server <IP-DA-ESTACAO-WINDOWS> --share ScarabSandbox --username <usuario> --domain <DOMINIO> --service-user "$(id -un)" --confirm-mount scarab-test'
 ```
 
 O serviço systemd do mount é `scarab-test-sandbox.service`; a credencial cifrada fica sob
 `/etc/credstore.encrypted`, e somente o arquivo efêmero entregue pelo systemd aparece em `/run`.
+Esse modo padrão exige systemd 250 ou mais recente e `systemd-creds`. Em RHEL 8 ou outro host com
+systemd anterior, acrescente `--legacy`: a credencial ficará em
+`/etc/scarab-test/.credentials/.cifs`, dentro de um diretório `0700` e arquivo `0600`, ambos de
+`root`. O script recusa automaticamente o modo moderno incompatível e sugere esse fallback.
 Restrinja SMB no firewall da estação ao host Linux confiável.
 
 Depois do primeiro build, execute o cenário pela estação Windows. O reset só aceita uma instância

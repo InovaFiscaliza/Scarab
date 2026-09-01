@@ -46,9 +46,11 @@ sudo bash deploy/scarab-deploy.sh install \
 scarab-deploy update --instance scarab-test
 ```
 
-O instalador não lê este diretório. Use `share-sandbox.bat` no Windows e `mount-sandbox.sh` no host
-Linux para sobrepor `/srv/scarab-test` com o share. A senha SMB é lida no terminal Linux e
-armazenada apenas como credencial criptografada do systemd.
+O instalador não lê este diretório. Use `share-sandbox.bat` no Windows e o comando instalado
+`/usr/local/sbin/mount-host-volumes` no host Linux para sobrepor `/srv/scarab-test` com o share. A
+senha SMB é lida no terminal Linux. O padrão usa credencial criptografada do systemd; em RHEL 8,
+`--legacy` usa um arquivo oculto `0600` dentro de `/etc/scarab-test/.credentials`, protegido com
+modo `0700`.
 
 Na estação Windows, execute:
 

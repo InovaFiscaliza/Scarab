@@ -125,9 +125,13 @@ treeView-beta
         deploy/
             Containerfile.app
             Containerfile.db
+            lib/
+                scarab-runtime.sh
+            mount-host-volumes.sh ## configures persistent host volume mounts
             podman-compose.build.yml
             podman-compose.yml
             scarab-deploy.sh ## script used on container deployment (local)
+            scarab-ops.sh ## script used for lifecycle and operational commands
             scarab-bootstrap.sh ## script used to bootstrap the environment from a linux system (remote)
             scarab-bootstrap.bat ## script used to bootstrap the environment from a Windows system (remote)
             scarab.env.example ## example environment file
@@ -247,7 +251,9 @@ Esse arquivo não contém build nem caminhos do checkout. O override
 [deploy/podman-compose.build.yml](deploy/podman-compose.build.yml) acrescenta build somente
 no laboratório. [deploy/scarab-deploy.sh](deploy/scarab-deploy.sh) limita-se a `install` e
 `update`; [deploy/scarab-ops.sh](deploy/scarab-ops.sh) concentra ciclo de vida, diagnóstico e
-backup, usando a biblioteca compartilhada em `deploy/lib`.
+backup, usando a biblioteca compartilhada em `deploy/lib`. O instalador também copia
+[deploy/mount-host-volumes.sh](deploy/mount-host-volumes.sh) para
+`/usr/local/sbin/mount-host-volumes`, auxiliando a configuração dos volumes no host.
 
 No host, cada instância segue a hierarquia Linux:
 

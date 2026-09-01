@@ -18,7 +18,7 @@ RUNTIME_LIBRARY = REPOSITORY_ROOT / "deploy" / "lib" / "scarab-runtime.sh"
 BATCH_SCRIPT = REPOSITORY_ROOT / "deploy" / "scarab-bootstrap.bat"
 EXE_BATCH_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "exe.bat"
 EXE_SHELL_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "exe.sh"
-MOUNT_SANDBOX_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "mount-sandbox.sh"
+MOUNT_HOST_VOLUMES_SCRIPT = REPOSITORY_ROOT / "deploy" / "mount-host-volumes.sh"
 SHARE_SANDBOX_SCRIPT = REPOSITORY_ROOT / "examples" / "src" / "share-sandbox.bat"
 POSIX_ONLY = pytest.mark.skipif(
     os.name == "nt",
@@ -134,6 +134,7 @@ def bootstrap_environment(tmp_path: Path) -> dict[str, str]:
             deploy/scarab-deploy.sh
             deploy/scarab-ops.sh
             deploy/lib/scarab-runtime.sh
+            deploy/mount-host-volumes.sh
             deploy/podman-compose.yml
             deploy/podman-compose.build.yml
             deploy/Containerfile.app
@@ -200,8 +201,8 @@ def test_shell_entry_points_have_valid_bash_syntax() -> None:
             "deploy/scarab-deploy.sh",
             "deploy/scarab-ops.sh",
             "deploy/lib/scarab-runtime.sh",
+            "deploy/mount-host-volumes.sh",
             "examples/src/exe.sh",
-            "examples/src/mount-sandbox.sh",
         ],
         check=True,
         cwd=REPOSITORY_ROOT,
@@ -253,6 +254,9 @@ def test_deploy_cli_only_exposes_install_and_update() -> None:
 
     assert "test_01.tgz" not in contents
     assert "fixtures_dir" not in contents
+    assert (
+        '"$source_root/deploy/mount-host-volumes.sh" "$MOUNT_INSTALL_PATH"' in contents
+    )
 
 
 def test_operations_cli_owns_runtime_commands() -> None:
@@ -496,9 +500,9 @@ def test_remote_sandbox_reset_is_explicit_and_test_only() -> None:
     assert "scarab-deploy test" not in contents
 
 
-def test_sandbox_mount_uses_encrypted_systemd_credentials() -> None:
-    """Persistent CIFS setup never stores the Windows password as plaintext."""
-    contents = MOUNT_SANDBOX_SCRIPT.read_text(encoding="utf-8")
+def test_sandbox_mount_supports_modern_and_legacy_credentials() -> None:
+    """CIFS credentials use encrypted storage or an explicit protected fallback."""
+    contents = MOUNT_HOST_VOLUMES_SCRIPT.read_text(encoding="utf-8")
 
     assert "systemd-creds encrypt" in contents
     assert "LoadCredentialEncrypted=cifs:" in contents
@@ -508,14 +512,31 @@ def test_sandbox_mount_uses_encrypted_systemd_credentials() -> None:
     assert 'rm -f -- "$credential_plaintext" "$unit_temporary"' in contents
     assert "--with-key=host" in contents
     assert 'systemctl enable --now "$unit_name"' in contents
-    assert 'cifs_version="3.1.1"' in contents
-    assert r"(\.[0-9]+)?$" in contents
     assert '[[ -z "$domain" || "$domain" =~' in contents
+    assert 'legacy_credential_dir="$etc_dir/.credentials"' in contents
+    assert 'legacy_credential_file="$legacy_credential_dir/.cifs"' in contents
+    assert 'install -d -o root -g root -m 0700 "$legacy_credential_dir"' in contents
+    assert "install -o root -g root -m 0600" in contents
+    assert "--legacy" in contents
+    assert "mount.cifs is required; install the cifs-utils package first" in contents
+    assert "mount.cifs -V" in contents
+    assert "--cifs-version" not in contents
+    assert "vers=$cifs_version" not in contents
+
+
+def test_sandbox_mount_help_labels_mandatory_and_optional_arguments() -> None:
+    """Help clearly separates required values from optional behavior switches."""
+    contents = MOUNT_HOST_VOLUMES_SCRIPT.read_text(encoding="utf-8")
+
+    assert "Mandatory arguments:" in contents
+    assert "Optional arguments:" in contents
+    assert "--legacy" in contents
+    assert "--cifs-version" not in contents
 
 
 @POSIX_ONLY
-def test_sandbox_mount_accepts_default_cifs_version(tmp_path: Path) -> None:
-    """The default CIFS 3.1.1 value passes parser validation without host changes."""
+def test_sandbox_mount_requires_modern_systemd_or_legacy_mode(tmp_path: Path) -> None:
+    """RHEL 8-style systemd is rejected unless protected legacy storage is explicit."""
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     _write_executable(
@@ -530,47 +551,83 @@ def test_sandbox_mount_accepts_default_cifs_version(tmp_path: Path) -> None:
         esac
         """,
     )
-    for command in (
-        "getent",
-        "install",
-        "mount",
-        "mount.cifs",
-        "mountpoint",
-        "runuser",
-        "systemctl",
-        "systemd-creds",
-        "umount",
-    ):
+    _write_executable(
+        fake_bin / "mount.cifs",
+        """
+        #!/usr/bin/env bash
+        [[ "${1:-}" == "-V" ]] && printf 'mount.cifs version: 6.8\n'
+        exit 0
+        """,
+    )
+    _write_executable(
+        fake_bin / "systemctl",
+        """
+        #!/usr/bin/env bash
+        [[ "${1:-}" == "--version" ]] && printf 'systemd 239 (239-82.el8)\n'
+        exit 0
+        """,
+    )
+    for command in ("getent", "install", "mount", "mountpoint", "runuser", "umount"):
         _write_executable(fake_bin / command, "#!/usr/bin/env bash\nexit 0\n")
 
     environment = os.environ.copy()
     environment["PATH"] = f"{fake_bin}{os.pathsep}{environment['PATH']}"
-    result = subprocess.run(
-        [
-            shutil.which("bash") or "bash",
-            str(MOUNT_SANDBOX_SCRIPT),
-            "--instance",
-            "parser-test",
-            "--server",
-            "192.0.2.20",
-            "--share",
-            "ScarabSandbox",
-            "--username",
-            "testuser",
-            "--service-user",
-            "testuser",
-            "--confirm-mount",
-            "parser-test",
-        ],
+    arguments = [
+        shutil.which("bash") or "bash",
+        str(MOUNT_HOST_VOLUMES_SCRIPT),
+        "--instance",
+        "parser-test",
+        "--server",
+        "192.0.2.20",
+        "--share",
+        "ScarabSandbox",
+        "--username",
+        "testuser",
+        "--service-user",
+        "testuser",
+        "--confirm-mount",
+        "parser-test",
+    ]
+    modern_result = subprocess.run(
+        arguments,
+        capture_output=True,
+        env=environment,
+        text=True,
+        check=False,
+    )
+    legacy_result = subprocess.run(
+        [*arguments, "--legacy"],
+        capture_output=True,
+        env=environment,
+        text=True,
+        check=False,
+    )
+    _write_executable(
+        fake_bin / "systemctl",
+        """
+        #!/usr/bin/env bash
+        [[ "${1:-}" == "--version" ]] && printf 'systemd 257 (257.13)\n'
+        exit 0
+        """,
+    )
+    missing_creds_result = subprocess.run(
+        arguments,
         capture_output=True,
         env=environment,
         text=True,
         check=False,
     )
 
-    assert result.returncode != 0
-    assert "Scarab instance is not installed" in result.stderr
-    assert "Invalid CIFS version" not in result.stderr
+    assert modern_result.returncode != 0
+    assert "systemd 250 or newer" in modern_result.stderr
+    assert "--legacy" in modern_result.stderr
+    assert legacy_result.returncode != 0
+    assert "Scarab instance is not installed" in legacy_result.stderr
+    assert "systemd-creds" not in legacy_result.stderr
+    assert "mount.cifs version: 6.8" in legacy_result.stdout
+    assert missing_creds_result.returncode != 0
+    assert "systemd-creds is required" in missing_creds_result.stderr
+    assert "--legacy" in missing_creds_result.stderr
 
 
 def test_windows_executor_checks_remote_database_access() -> None:

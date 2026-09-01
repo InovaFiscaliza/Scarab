@@ -307,6 +307,7 @@ required_paths=(
     deploy/scarab-deploy.sh
     deploy/scarab-ops.sh
     deploy/lib/scarab-runtime.sh
+    deploy/mount-host-volumes.sh
     deploy/podman-compose.yml
     deploy/podman-compose.build.yml
     deploy/Containerfile.app

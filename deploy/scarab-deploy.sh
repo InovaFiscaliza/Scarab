@@ -4,6 +4,7 @@ set -Eeuo pipefail
 
 readonly INSTALL_PATH="/usr/local/sbin/scarab-deploy"
 readonly OPS_INSTALL_PATH="/usr/local/sbin/scarab-ops"
+readonly MOUNT_INSTALL_PATH="/usr/local/sbin/mount-host-volumes"
 readonly RUNTIME_LIBRARY_PATH="/usr/local/lib/scarab/scarab-runtime.sh"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -217,6 +218,7 @@ install_instance() {
     [[ -f "$source_root/deploy/podman-compose.build.yml" ]] || die "Build Compose file is missing."
     [[ -f "$source_root/deploy/scarab-ops.sh" ]] || die "Operations script is missing."
     [[ -f "$source_root/deploy/lib/scarab-runtime.sh" ]] || die "Runtime library is missing."
+    [[ -f "$source_root/deploy/mount-host-volumes.sh" ]] || die "Host volume setup script is missing."
     [[ -f "$source_root/deploy/scarab.env.example" ]] || die "Environment template is missing."
     [[ -f "$source_root/config/default_config.json" ]] || die "Default configuration is missing."
 
@@ -271,6 +273,8 @@ install_instance() {
         "$source_root/deploy/podman-compose.build.yml" "$build_file"
     install -o root -g root -m 0755 "$source_root/deploy/scarab-deploy.sh" "$INSTALL_PATH"
     install -o root -g root -m 0755 "$source_root/deploy/scarab-ops.sh" "$OPS_INSTALL_PATH"
+    install -o root -g root -m 0755 \
+        "$source_root/deploy/mount-host-volumes.sh" "$MOUNT_INSTALL_PATH"
     install -o root -g root -m 0644 \
         "$source_root/deploy/lib/scarab-runtime.sh" "$RUNTIME_LIBRARY_PATH"
     install -o root -g "$service_group" -m 0640 \

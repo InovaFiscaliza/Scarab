@@ -134,7 +134,9 @@ da infraestrutura.
 `scarab-deploy` expõe somente `install`, `update` e ajuda. `scarab-ops` expõe `validate`, `start`,
 `stop`, `restart`, `status`, `logs` e `backup`. Ambos reutilizam
 `/usr/local/lib/scarab/scarab-runtime.sh`; a unidade systemd chama `scarab-ops start/stop`.
-Fixtures e resets de laboratório não fazem parte dos artefatos nem da CLI de deployment.
+O instalador copia `deploy/mount-host-volumes.sh` para `/usr/local/sbin/mount-host-volumes`, onde
+ele pode configurar mounts persistentes no host. Fixtures e resets de laboratório não fazem parte
+dos artefatos nem da CLI de deployment.
 
 ---
 
