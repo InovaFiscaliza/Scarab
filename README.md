@@ -104,12 +104,14 @@ Rotina de lixeira e manutenção: compactação periódica dos arquivos em `/tra
 ---
 config:
     'theme': 'base'
-    'themeVariables':
-      'primaryColor': '#9090ff'
-      'secondaryColor': '#808080'
-      'primaryTextColor': '#eeeeee'
-      'primaryBorderColor': '#ffffff'
-      'lineColor': '#808080'
+    themeVariables:
+      primaryColor: '#9090ff'
+      secondaryColor: '#808080'
+      primaryBorderColor: '#ffffff'
+      treeView:
+        labelColor: '#808080'
+        lineColor: '#9090ff'
+        descriptionColor: '#bbbbbb'
 ---
 treeView-beta
     Scarab/
