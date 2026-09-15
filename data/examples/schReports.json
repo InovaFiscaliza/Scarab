@@ -28,6 +28,9 @@
             ],
             "teams": [
                 "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
+            ],
+            "request": [
+                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - REQUEST/regulatron"
             ]
         }
     },
@@ -37,7 +40,8 @@
         },
         "data file regex": {
             "parquet": ".*\\.parquet$",
-            "teams": ".*\\.teams$"
+            "teams": ".*\\.teams$",
+            "request": "^regulatron.*\\.request$"
         },
         "catalog names": [
             "Z:/sp/GET/SCH/relatos.xlsx",
@@ -153,5 +157,5 @@
             "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
-    "last clean": "2026-08-20 13:37:58"
+    "last clean": "2026-09-15 06:09:14"
 }
