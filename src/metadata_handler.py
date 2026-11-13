@@ -677,6 +677,12 @@ class DataHandler:
             list: List of columns in the DataFrame.
             str: Name of the table to be used as defined in the config file.
         """
+        # If the DataFrame is empty, log a message and return an empty DataFrame
+        if len(df.columns) == 0:
+            self.log.debug(
+                f"No data in DataFrame for table {table} in file '{file}'. Returning empty DataFrame."
+            )
+            return pd.DataFrame(), [], table
 
         # Add columns that will be included in the output
         transformations = [
@@ -687,13 +693,6 @@ class DataHandler:
         ]
 
         [df := transform(df) for transform in transformations]
-
-        # If the DataFrame still empty, log a message and return an empty DataFrame
-        if len(df.columns) == 0:
-            self.log.debug(
-                f"No data in DataFrame for table {table} in file '{file}'. Returning empty DataFrame."
-            )
-            return pd.DataFrame(), [], table
 
         # Remove escaped characters from column names
         df.columns = self.config.limit_character_scope(df.columns.tolist())
