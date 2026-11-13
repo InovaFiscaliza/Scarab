@@ -44,6 +44,7 @@
             "project": "PROJETO",
             "tasks": "TAREFAS",
             "emissions": "EMISS\u00d5ES",
+            "channels": "CANAIS",
             "_": "PUBLICA\u00c7\u00c3O"
         },
         "input to ignore": [
@@ -58,7 +59,9 @@
             "_"
         ],
         "in columns": {
-            "_": [],
+            "_": [
+                "processedAt"
+            ],
             "project": [
                 "macroTheme"
             ],
@@ -86,11 +89,17 @@
                 "fboMax",
                 "irregular",
                 "riskLevel"
+            ],
+            "channels": [
+                "transponder",
+                "freqCenter",
+                "bandWidthkHz"
             ]
         },
         "key": {
             "_": [
-                "jsonFileName"
+                "jsonFileName",
+                "correlationKey"
             ],
             "project": [
                 "correlationKey",
@@ -118,6 +127,12 @@
                 "service",
                 "station",
                 "description"
+            ],
+            "channels": [
+                "correlationKey",
+                "transponder",
+                "freqCenter",
+                "bandWidthkHz"
             ]
         },
         "association": {
@@ -145,6 +160,14 @@
                     }
                 }
             },
+            "channels": {
+                "FK": {
+                    "project": {
+                        "name": "correlationKey",
+                        "delete orphan": true
+                    }
+                }
+            },
             "_": {
                 "FK": {
                     "project": {
@@ -161,8 +184,9 @@
             "_": "processedAt"
         },
         "filename data format": {
-            "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
+            "_": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$",
+            "channels": "(\\w+)_(\\d{8})_(?P<correlationKey>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
         }
     },
-    "last clean": "2026-08-20 07:38:12"
+    "last clean": "2026-11-13 10:25:32"
 }
