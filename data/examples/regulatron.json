@@ -18,7 +18,7 @@
         "get": {
             "pdf": [
                 "Z:/sp/GET/Regulatron/Screenshots",
-                "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - GET/Regulatron/Screenshots"
+                "C:/Users/sfi.office365.pd/OneDrive - ANATEL/InovaFiscaliza/GET/Regulatron/Screenshots"
             ],
             "teams": [
                 "C:/Users/sfi.office365.pd/ANATEL/InovaFiscaliza - DataHub - NOTIFY/Teams"
@@ -132,7 +132,7 @@
             "_": "jsonFileName"
         },
         "add file timestamp": {
-            "_": "processedAt"
+            "_": "createdAt"
         },
         "filename data format": {
             "_": "^[^_]+(?:_[^_]+)+_(?P<key>\\w+-\\w+-\\w+-\\w+-\\w+)\\.json$"
@@ -143,5 +143,5 @@
             ]
         }
     },
-    "last clean": "2026-08-20 12:46:17"
+    "last clean": "2026-11-10 20:59:09"
 }
